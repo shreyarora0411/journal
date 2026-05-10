@@ -1,0 +1,65 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Expo
+.expo
+.expo-shared
+web-build
+ios
+android
+*.orig.*
+
+# Environments
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.ipa
+*.apk
+*.aab
+
+# Metro
+.metro-health-check*
+
+# OS
+.DS_Store
+*.pem
+
+# IDE
+.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.cursor
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Coverage
+coverage
+*.lcov
+
+# Supabase
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# EAS
+.easignore.local

@@ -4,10 +4,12 @@ import { log } from '@/lib/log';
 import * as Contacts from 'expo-contacts';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView } from 'react-native';
+import { Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMatchContacts } from '../api/use-match-contacts';
 import { useMatchedFriends } from '../api/use-matched-friends';
+
+const isWeb = Platform.OS === 'web';
 
 export function FriendsScreen() {
   const [permissionTried, setPermissionTried] = useState(false);
@@ -63,10 +65,14 @@ export function FriendsScreen() {
           Find your people
         </Text>
         <Text variant="body" color="textMuted" marginBottom="xl">
-          Match your contacts privately. We hash phone numbers before they leave your device.
+          {isWeb
+            ? 'Contact matching only runs on the iOS / Android app. Skip for now.'
+            : 'Match your contacts privately. We hash phone numbers before they leave your device.'}
         </Text>
 
-        {!permissionTried || (matchContacts.isPending && friends.length === 0) ? (
+        {isWeb ? (
+          <Button label="Skip" variant="ghost" size="lg" fullWidth onPress={onContinue} />
+        ) : !permissionTried || (matchContacts.isPending && friends.length === 0) ? (
           <Box gap="m">
             <Button
               label={matchContacts.isPending ? 'Matching…' : 'Match my contacts'}

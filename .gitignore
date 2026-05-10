@@ -38,12 +38,13 @@ android
 .DS_Store
 *.pem
 
-# IDE
+# IDE / agent
 .idea
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 .cursor
+.claude
 
 # Logs
 *.log

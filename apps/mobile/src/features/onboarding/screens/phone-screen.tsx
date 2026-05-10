@@ -1,8 +1,9 @@
 import { Box, Button, Input, Text } from '@/components';
-import { useStartSession } from '@/features/auth';
+import { useAuthStore, useStartSession } from '@/features/auth';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { isLikelyValidPhone } from '@journal/shared';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export function PhoneScreen() {
   const [phone, setPhone] = useState('');
   const start = useStartSession();
+  const session = useAuthStore((s) => s.session);
+  const router = useRouter();
   const toast = useToast();
 
   useEffect(() => {
@@ -27,9 +30,13 @@ export function PhoneScreen() {
       return;
     }
     try {
-      await start.mutateAsync({ phone });
+      // Skip re-creating an anonymous user if we already have one (e.g. user
+      // tapped Continue twice). Just stamp the new phone hash and move on.
+      if (!session) {
+        await start.mutateAsync({ phone });
+      }
       log.event('onboarding.screen_completed', { screen: 'phone' });
-      // The auth state change pushes the user forward via AuthGate.
+      router.replace('/(auth)/framing');
     } catch (err) {
       log.error('startSession failed', err);
       toast.show({ message: 'Could not start. Try again.', variant: 'error' });

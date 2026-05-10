@@ -42,7 +42,13 @@ export function Pill({ label, variant = 'default', onPress }: Props) {
 
   if (onPress) {
     return (
-      <Pressable accessibilityRole="button" onPress={onPress}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        // Pills are visually small; hitSlop expands the touch area to ~44pt.
+        hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+      >
         {content}
       </Pressable>
     );

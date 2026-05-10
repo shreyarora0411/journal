@@ -2,13 +2,17 @@ import { ToastContext, type ToastInput, type ToastVariant } from '@/hooks/use-to
 import type { Theme } from '@/theme';
 import { useTheme } from '@shopify/restyle';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Text';
 
 type Visible = ToastInput & { id: number };
 
 const DEFAULT_DURATION = 3200;
+
+// useNativeDriver requires the RCTAnimation native module; on web it just
+// warns and falls back to JS. Skip the flag on web.
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 const colorFor = (variant: ToastVariant, theme: Theme) => {
   if (variant === 'error') return theme.colors.errorBg;
@@ -28,20 +32,24 @@ export function Toast({ toast, onDone }: { toast: Visible; onDone: () => void })
         toValue: 1,
         duration: 220,
         easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
       Animated.timing(translateY, {
         toValue: 0,
         duration: 220,
         easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
 
     const t = setTimeout(() => {
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-        Animated.timing(translateY, { toValue: 8, duration: 180, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(translateY, {
+          toValue: 8,
+          duration: 180,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
       ]).start(() => onDone());
     }, toast.durationMs ?? DEFAULT_DURATION);
 

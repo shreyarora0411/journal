@@ -62,6 +62,8 @@ export function Button({
             backgroundColor: bg,
             opacity: isInactive ? 0.5 : pressed ? 0.85 : 1,
             alignSelf: fullWidth ? 'stretch' : 'flex-start',
+            // WCAG AA — minimum tap target 44x44.
+            minHeight: 44,
           }}
         >
           {loading ? (

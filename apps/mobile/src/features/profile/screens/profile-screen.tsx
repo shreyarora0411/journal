@@ -1,6 +1,7 @@
 import { Avatar, Box, Button, Card, Pill, Text } from '@/components';
 import { useAuthStore, useProfile, useSignOut } from '@/features/auth';
 import { useFollowCounts } from '@/features/follows';
+import { InviteButton } from '@/features/invite';
 import { Link } from 'expo-router';
 import { Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -63,7 +64,8 @@ export function ProfileScreen() {
           </Box>
         )}
 
-        <Box marginTop="xl">
+        <Box marginTop="xl" gap="m">
+          <InviteButton />
           <Button
             label={signOut.isPending ? 'Signing out…' : 'Sign out'}
             variant="ghost"

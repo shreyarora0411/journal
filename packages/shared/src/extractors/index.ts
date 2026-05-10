@@ -1,4 +1,13 @@
-// Entity extraction lives here. Built in Phase 2.
-// Imported by both the mobile client (for previews) and edge functions (for real runs).
-
+export { EXTRACTION_PROMPT_V0 } from './prompts/v0';
 export const PROMPT_VERSION = 'v0' as const;
+
+export type ExtractedEntityProposal = {
+  kind: 'venue' | 'area' | 'tip';
+  name: string;
+  quote?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type ExtractionPayload = {
+  entities: ExtractedEntityProposal[];
+};

@@ -1,9 +1,7 @@
 import { Box, Button, Input, Text } from '@/components';
 import { useUpdateProfile } from '@/features/auth';
-import { useAuthStore } from '@/features/auth';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
-import { hashPhone } from '@/lib/phone-hash';
 import { DisplayNameSchema } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -13,7 +11,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export function FramingScreen() {
   const [name, setName] = useState('');
   const update = useUpdateProfile();
-  const session = useAuthStore((s) => s.session);
   const router = useRouter();
   const toast = useToast();
 
@@ -31,12 +28,7 @@ export function FramingScreen() {
       return;
     }
     try {
-      const phone = session?.user.phone ?? '';
-      const phoneHash = phone ? await hashPhone(phone) : undefined;
-      await update.mutateAsync({
-        display_name: parsed.data,
-        ...(phoneHash ? { phone_hash_hex: phoneHash } : {}),
-      });
+      await update.mutateAsync({ display_name: parsed.data });
       log.event('onboarding.screen_completed', { screen: 'framing' });
       router.replace('/(auth)/instagram');
     } catch (err) {

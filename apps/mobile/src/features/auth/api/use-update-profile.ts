@@ -5,7 +5,7 @@ import { useAuthStore } from '../state';
 import { authKeys } from './keys';
 import type { Profile } from './use-profile';
 
-type Vars = ProfileUpdate & { onboarding_completed?: boolean; phone_hash_hex?: string };
+type Vars = ProfileUpdate & { onboarding_completed?: boolean };
 
 export const useUpdateProfile = () => {
   const qc = useQueryClient();
@@ -22,7 +22,6 @@ export const useUpdateProfile = () => {
 
       const update: Record<string, unknown> = { ...validated };
       if (vars.onboarding_completed) update.onboarding_completed_at = new Date().toISOString();
-      if (vars.phone_hash_hex) update.phone_hash = `\\x${vars.phone_hash_hex}`;
 
       const supabase = getSupabase();
       const { data, error } = await supabase

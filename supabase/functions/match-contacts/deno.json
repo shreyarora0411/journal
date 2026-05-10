@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@journal/shared": "../../../packages/shared/src/index.ts"
+  }
+}

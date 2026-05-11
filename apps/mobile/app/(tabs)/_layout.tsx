@@ -63,6 +63,7 @@ export default function TabsLayout() {
       {/* Hidden routes — kept inside (tabs) so the bar persists. */}
       <Tabs.Screen name="trip/[id]/index" options={{ href: null }} />
       <Tabs.Screen name="trip/[id]/confirm" options={{ href: null }} />
+      <Tabs.Screen name="trip/[id]/edit" options={{ href: null }} />
       <Tabs.Screen name="place/[name]" options={{ href: null }} />
       <Tabs.Screen name="list/[id]" options={{ href: null }} />
       <Tabs.Screen name="list/new" options={{ href: null }} />

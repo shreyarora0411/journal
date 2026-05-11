@@ -65,7 +65,20 @@ export default function TripDetailScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
-      <DetailHeader title={trip.title} />
+      <DetailHeader
+        title={trip.title}
+        right={
+          isMine ? (
+            <Link href={`/trip/${trip.id}/edit` as never} asChild>
+              <Pressable hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Text variant="body" fontFamily="Inter_500Medium">
+                  Edit
+                </Text>
+              </Pressable>
+            </Link>
+          ) : null
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         {cover ? (
           <Box marginBottom="l">

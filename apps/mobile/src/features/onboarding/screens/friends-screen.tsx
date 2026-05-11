@@ -87,7 +87,7 @@ export function FriendsScreen() {
         ) : (
           <Box flex={1}>
             <Text variant="label" marginBottom="s">
-              {friends.length === 0 ? 'NO ONE FROM YOUR CONTACTS YET' : 'ALREADY ON JOURNAL'}
+              {friends.length === 0 ? 'NO ONE FROM YOUR CONTACTS YET' : 'ALREADY ON POSTMARK'}
             </Text>
             <ScrollView style={{ flex: 1 }}>
               <Box gap="s">
@@ -97,7 +97,11 @@ export function FriendsScreen() {
                       <Avatar size="md" uri={f.avatar_url} fallback={f.display_name ?? '?'} />
                       <Box flex={1}>
                         <Text variant="body">{f.display_name ?? 'Someone'}</Text>
-                        {f.handle ? <Text variant="caption">@{f.handle}</Text> : null}
+                        {f.badge ? (
+                          <Text variant="caption">{f.badge}</Text>
+                        ) : f.handle ? (
+                          <Text variant="caption">@{f.handle}</Text>
+                        ) : null}
                       </Box>
                     </Box>
                   </Card>

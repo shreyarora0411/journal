@@ -6,9 +6,9 @@ import { Text } from 'react-native';
  * Five-tab IA per the Postmark brief §6 (Information architecture):
  *   Book / Search / Add / Friends / You
  *
- * `Add` is meant to be a bottom-sheet trigger; in v0 it routes to the same
- * Quick log form via a normal tab nav. Convert to a modal presentation when
- * we polish the Add flow (CLAUDE.md §8).
+ * Detail routes (trip, place, list, friend, map, year-in-travel) live inside
+ * (tabs) so the bottom tab bar persists on them. Each is hidden from the tab
+ * bar with `href: null`.
  */
 export default function TabsLayout() {
   return (
@@ -59,6 +59,16 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 16 }}>●</Text>,
         }}
       />
+
+      {/* Hidden routes — kept inside (tabs) so the bar persists. */}
+      <Tabs.Screen name="trip/[id]/index" options={{ href: null }} />
+      <Tabs.Screen name="trip/[id]/confirm" options={{ href: null }} />
+      <Tabs.Screen name="place/[name]" options={{ href: null }} />
+      <Tabs.Screen name="list/[id]" options={{ href: null }} />
+      <Tabs.Screen name="list/new" options={{ href: null }} />
+      <Tabs.Screen name="friend/[handle]" options={{ href: null }} />
+      <Tabs.Screen name="map" options={{ href: null }} />
+      <Tabs.Screen name="year-in-travel" options={{ href: null }} />
     </Tabs>
   );
 }

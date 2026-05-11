@@ -8,3 +8,4 @@ export { Pill } from './Pill';
 export { Card } from './Card';
 export { PhotoFrame } from './PhotoFrame';
 export { Toast, ToastProvider } from './Toast';
+export { DetailHeader } from './DetailHeader';

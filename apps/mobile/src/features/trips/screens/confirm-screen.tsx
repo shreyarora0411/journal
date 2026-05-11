@@ -1,4 +1,4 @@
-import { Box, Button, Card, Input, Pill, Text } from '@/components';
+import { Box, Button, Card, DetailHeader, Input, Pill, Text } from '@/components';
 import { useConfirmEntity, useExtractedEntities, useRejectEntity, useTrip } from '@/features/trips';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
@@ -20,6 +20,7 @@ export default function ConfirmScreen() {
   if (tripQ.isLoading || entitiesQ.isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+        <DetailHeader title="Review" />
         <Box flex={1} padding="xl">
           <Text variant="caption">Loading…</Text>
         </Box>
@@ -71,6 +72,7 @@ export default function ConfirmScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+      <DetailHeader title="Review" />
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Text variant="title" marginBottom="s">
           Looks like

@@ -1,4 +1,4 @@
-import { Avatar, Box, Button, Card, Pill, Text } from '@/components';
+import { Avatar, Box, Button, Card, DetailHeader, Pill, Text } from '@/components';
 import { useSaveToWishlist } from '@/features/wishlist';
 import { useToast } from '@/hooks/use-toast';
 import { photoColor } from '@/theme';
@@ -38,6 +38,7 @@ export default function PlaceDetailScreen() {
   if (q.isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+        <DetailHeader />
         <Box flex={1} padding="xl">
           <Text variant="caption">Loading…</Text>
         </Box>
@@ -51,6 +52,7 @@ export default function PlaceDetailScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+      <DetailHeader title={display} />
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
         <Box style={{ height: 150, backgroundColor: headerColor }} />
         <Box padding="l">

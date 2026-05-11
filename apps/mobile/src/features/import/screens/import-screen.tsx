@@ -65,12 +65,11 @@ export default function ImportScreen() {
       toast.show({ message: 'Pick at least one trip.', variant: 'error' });
       return;
     }
-    let createdId: string | null = null;
     for (const p of chosen) {
       try {
         const startISO = new Date(p.startMs).toISOString().slice(0, 10);
         const endISO = new Date(p.endMs).toISOString().slice(0, 10);
-        const r = await createTrip.mutateAsync({
+        await createTrip.mutateAsync({
           title: p.suggestedTitle,
           place_name: p.suggestedTitle,
           start_date: startISO,
@@ -78,17 +77,17 @@ export default function ImportScreen() {
           note: undefined,
           visibility: 'friends_of_friends',
         });
-        createdId = r.trip.id;
       } catch (err) {
         log.error('import trip create failed', err);
       }
     }
     toast.show({
-      message: `Drafted ${chosen.length} trip${chosen.length === 1 ? '' : 's'}.`,
+      message: `Drafted ${chosen.length} trip${chosen.length === 1 ? '' : 's'}. They'll appear in your Book.`,
       variant: 'success',
     });
-    if (createdId) router.replace(`/trip/${createdId}` as never);
-    else router.back();
+    // Stay in the onboarding flow — drafts will be visible on Book once
+    // the user finishes Friends/Welcome and lands on the tabs.
+    router.replace('/(auth)/friends' as never);
   };
 
   return (

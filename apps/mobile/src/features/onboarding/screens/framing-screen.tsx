@@ -1,9 +1,11 @@
 import { Box, Button, Text } from '@/components';
-import { useAuthStore, useUpdateProfile } from '@/features/auth';
+import { useAuthStore, useProfile, useUpdateProfile, useUploadAvatar } from '@/features/auth';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
 import { DisplayNameSchema } from '@journal/shared';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -27,9 +29,12 @@ export function FramingScreen() {
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const update = useUpdateProfile();
+  const uploadAvatar = useUploadAvatar();
+  const profile = useProfile();
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
   const router = useRouter();
   const toast = useToast();
+  const avatarUri = profile.data?.avatar_url ?? null;
 
   useEffect(() => {
     log.event('onboarding.screen_entered', { screen: 'framing' });
@@ -66,8 +71,31 @@ export function FramingScreen() {
     }
   };
 
-  const onAddPhoto = () => {
-    toast.show({ message: 'Photos arrive in v1. Continue for now.', variant: 'info' });
+  const onAddPhoto = async () => {
+    if (Platform.OS !== 'web') {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        toast.show({ message: 'No photo permission.', variant: 'error' });
+        return;
+      }
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+      allowsEditing: true,
+      aspect: [1, 1],
+      exif: false,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (!asset) return;
+    try {
+      await uploadAvatar.mutateAsync(asset.uri);
+      toast.show({ message: 'Photo set.', variant: 'success' });
+    } catch (err) {
+      log.error('avatar upload failed', err);
+      toast.show({ message: 'Upload failed. Try again.', variant: 'error' });
+    }
   };
 
   return (
@@ -101,18 +129,31 @@ export function FramingScreen() {
                   width: 96,
                   height: 96,
                   borderRadius: 48,
-                  borderWidth: 1.4,
+                  borderWidth: avatarUri ? 0 : 1.4,
                   borderStyle: 'dashed',
                   borderColor: 'rgba(0,0,0,0.25)',
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: '#FAF8F3',
+                  overflow: 'hidden',
                 }}
               >
-                <Text style={{ fontSize: 24, color: '#9A9A9A' }}>＋</Text>
-                <Text variant="meta" marginTop="xs">
-                  Add photo
-                </Text>
+                {avatarUri ? (
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={{ width: 96, height: 96, borderRadius: 48 }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 24, color: '#9A9A9A' }}>
+                      {uploadAvatar.isPending ? '…' : '＋'}
+                    </Text>
+                    <Text variant="meta" marginTop="xs">
+                      Add photo
+                    </Text>
+                  </>
+                )}
               </Pressable>
             </Box>
 

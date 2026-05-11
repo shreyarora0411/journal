@@ -1,5 +1,6 @@
 import { Box, Button, Input, Pill, Text, Textarea } from '@/components';
 import { useCreateTripQuick } from '@/features/trips';
+import { DateField } from '@/features/trips/components/DateField';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -131,12 +132,11 @@ export function LogScreen() {
                   control={control}
                   name="start_date"
                   render={({ field: { onChange, value } }) => (
-                    <Input
+                    <DateField
                       label="Start"
-                      placeholder="2026-03-12"
+                      placeholder="Pick"
                       value={value ?? ''}
-                      onChangeText={onChange}
-                      error={errors.start_date?.message}
+                      onChange={onChange}
                     />
                   )}
                 />
@@ -146,12 +146,11 @@ export function LogScreen() {
                   control={control}
                   name="end_date"
                   render={({ field: { onChange, value } }) => (
-                    <Input
+                    <DateField
                       label="End"
-                      placeholder="2026-03-17"
+                      placeholder="Pick"
                       value={value ?? ''}
-                      onChangeText={onChange}
-                      error={errors.end_date?.message}
+                      onChange={onChange}
                     />
                   )}
                 />

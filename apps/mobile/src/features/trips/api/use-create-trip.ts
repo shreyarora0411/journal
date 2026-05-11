@@ -62,7 +62,8 @@ export const useCreateTripQuick = () => {
     },
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: tripKeys.list(userId) });
-      qc.setQueryData(tripKeys.detail(result.trip.id), null); // force refetch on view
+      qc.invalidateQueries({ queryKey: tripKeys.detail(result.trip.id) });
+      qc.invalidateQueries({ queryKey: ['feed', userId] });
     },
   });
 };

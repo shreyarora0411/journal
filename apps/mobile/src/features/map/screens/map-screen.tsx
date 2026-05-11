@@ -1,4 +1,4 @@
-import { Box, Pill, Text } from '@/components';
+import { Box, DetailHeader, Pill, Text } from '@/components';
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +22,7 @@ export default function MapScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+      <DetailHeader title="Your map" />
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Text variant="title" marginBottom="m">
           Your map

@@ -1,4 +1,4 @@
-import { Box, Button, Input, Text, Textarea } from '@/components';
+import { Box, Button, DetailHeader, Input, Text, Textarea } from '@/components';
 import { useCreateList } from '@/features/lists';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'expo-router';
@@ -28,6 +28,7 @@ export default function CreateListScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+      <DetailHeader title="New list" />
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         <Text variant="title" marginBottom="m">
           New list

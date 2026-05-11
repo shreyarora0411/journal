@@ -1,4 +1,4 @@
-import { Box, Button, Card, Input, Text } from '@/components';
+import { Box, Button, Card, DetailHeader, Input, Text } from '@/components';
 import { useAuthStore } from '@/features/auth';
 import {
   useAddListItem,
@@ -28,6 +28,7 @@ export default function ListDetailScreen() {
   if (listQ.isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+        <DetailHeader />
         <Box flex={1} padding="xl">
           <Text variant="caption">Loading…</Text>
         </Box>
@@ -37,6 +38,7 @@ export default function ListDetailScreen() {
   if (!listQ.data) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+        <DetailHeader />
         <Box flex={1} padding="xl">
           <Text variant="title" marginBottom="m">
             List not found
@@ -77,6 +79,7 @@ export default function ListDetailScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+      <DetailHeader title={list.title} />
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Text variant="label">A LIST BY YOU</Text>
         <Text variant="display" marginTop="xs">

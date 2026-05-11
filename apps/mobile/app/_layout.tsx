@@ -52,7 +52,7 @@ function AuthGate() {
     const onboarded = profileQ.data?.onboarding_completed_at != null;
 
     if (onboarded) {
-      if (inAuthGroup) router.replace('/(tabs)/feed');
+      if (inAuthGroup) router.replace('/(tabs)/book');
       return;
     }
 

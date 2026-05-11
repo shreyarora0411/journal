@@ -20,7 +20,7 @@ export function WelcomeScreen() {
       await update.mutateAsync({ onboarding_completed: true });
       log.event('onboarding.screen_completed', { screen: 'welcome' });
       log.event('onboarding.completed');
-      router.replace('/(tabs)/feed');
+      router.replace('/(tabs)/book');
     } catch (err) {
       log.error('welcome completion failed', err);
       toast.show({ message: 'Could not finish setup. Try again.', variant: 'error' });

@@ -9,7 +9,7 @@ import type { Profile } from '@/features/auth';
  */
 export const onboardingNextRoute = (profile: Profile | null): string => {
   if (!profile) return '/(auth)/framing';
-  if (profile.onboarding_completed_at) return '/(tabs)/feed';
+  if (profile.onboarding_completed_at) return '/(tabs)/book';
   if (!profile.display_name) return '/(auth)/framing';
   return '/(auth)/instagram';
 };

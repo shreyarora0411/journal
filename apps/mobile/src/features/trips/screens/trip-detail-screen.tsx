@@ -30,7 +30,7 @@ export default function TripDetailScreen() {
 
   if (tripQ.isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
         <Box flex={1} padding="xl">
           <Text variant="caption">Loading…</Text>
         </Box>
@@ -40,7 +40,7 @@ export default function TripDetailScreen() {
 
   if (!tripQ.data) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
         <Box flex={1} padding="xl">
           <Text variant="title" marginBottom="m">
             Not found
@@ -57,7 +57,7 @@ export default function TripDetailScreen() {
   const cover = trip.photos.find((p) => p.id === trip.cover_photo_id) ?? trip.photos[0];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         {cover ? (
           <Box marginBottom="l">

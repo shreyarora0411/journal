@@ -5,12 +5,12 @@ import { initPostHog } from '@/lib/posthog';
 import { initSentry } from '@/lib/sentry';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { theme } from '@/theme';
-import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import {
-  Newsreader_400Regular,
-  Newsreader_400Regular_Italic,
-  Newsreader_500Medium,
-} from '@expo-google-fonts/newsreader';
+  Fraunces_400Regular,
+  Fraunces_400Regular_Italic,
+  Fraunces_500Medium,
+} from '@expo-google-fonts/fraunces';
+import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import { ThemeProvider } from '@shopify/restyle';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Font from 'expo-font';
@@ -76,9 +76,9 @@ export default function RootLayout() {
     (async () => {
       try {
         await Font.loadAsync({
-          Newsreader_400Regular,
-          Newsreader_400Regular_Italic,
-          Newsreader_500Medium,
+          Fraunces_400: Fraunces_400Regular,
+          Fraunces_400Italic: Fraunces_400Regular_Italic,
+          Fraunces_500: Fraunces_500Medium,
           Inter_400Regular,
           Inter_500Medium,
         });

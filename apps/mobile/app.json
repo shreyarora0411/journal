@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "Journal",
-    "slug": "journal",
-    "scheme": "journal",
+    "name": "Postmark",
+    "slug": "postmark",
+    "scheme": "postmark",
     "version": "0.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.shreyarora.journal"
+      "bundleIdentifier": "com.shreyarora.postmark"
     },
     "android": {
-      "package": "com.shreyarora.journal",
+      "package": "com.shreyarora.postmark",
       "adaptiveIcon": {
-        "backgroundColor": "#FAF8F5"
+        "backgroundColor": "#FAF8F3"
       }
     },
     "web": {
@@ -27,7 +27,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FAF8F5",
+          "backgroundColor": "#FAF8F3",
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain"

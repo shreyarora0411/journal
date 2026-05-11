@@ -17,7 +17,7 @@ export function ProfileScreen() {
   const profile = profileQ.data;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Box flexDirection="row" alignItems="center" gap="m" marginBottom="l">
           <Avatar

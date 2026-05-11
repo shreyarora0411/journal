@@ -21,7 +21,7 @@ export function FeedScreen() {
   const rows = useMemo(() => (feed.data?.pages ?? []).flatMap((p) => p.rows), [feed.data?.pages]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <FlatList
         contentContainerStyle={{ padding: 24, paddingBottom: 80 }}
         data={rows}

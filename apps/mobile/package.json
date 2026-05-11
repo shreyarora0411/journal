@@ -13,8 +13,8 @@
     "build": "expo export"
   },
   "dependencies": {
+    "@expo-google-fonts/fraunces": "^0.2.3",
     "@expo-google-fonts/inter": "^0.2.3",
-    "@expo-google-fonts/newsreader": "^0.2.3",
     "@expo/metro-runtime": "~4.0.1",
     "@hookform/resolvers": "^3.9.1",
     "@journal/shared": "workspace:*",
@@ -48,6 +48,8 @@
     "react-native-screens": "~4.4.0",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "~0.19.13",
+    "expo-media-library": "~17.0.5",
+    "react-native-maps": "1.18.0",
     "zod": "^3.23.8",
     "zustand": "^5.0.2"
   },

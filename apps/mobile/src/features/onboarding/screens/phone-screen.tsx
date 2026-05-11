@@ -44,7 +44,7 @@ export function PhoneScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -54,7 +54,7 @@ export function PhoneScreen() {
             Your phone
           </Text>
           <Text variant="body" color="textMuted" marginBottom="xl">
-            We use your number only to find friends already on Journal. We never call or text it.
+            We use your number only to find friends already on Postmark. We never call or text it.
           </Text>
           <Box gap="l">
             <Input

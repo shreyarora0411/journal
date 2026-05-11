@@ -59,7 +59,7 @@ export function FriendsScreen() {
   const friends = matched.data ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <Box flex={1} padding="xl">
         <Text variant="title" marginBottom="s">
           Find your people

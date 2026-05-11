@@ -37,7 +37,7 @@ export default function FriendProfileScreen() {
 
   if (userQ.isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
         <Box flex={1} padding="xl">
           <Text variant="caption">Loading…</Text>
         </Box>
@@ -47,7 +47,7 @@ export default function FriendProfileScreen() {
 
   if (!userQ.data) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
         <Box flex={1} padding="xl">
           <Text variant="title" marginBottom="m">
             Not found
@@ -65,7 +65,7 @@ export default function FriendProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Box flexDirection="row" alignItems="center" gap="m" marginBottom="m">
           <Avatar size="lg" uri={u.avatar_url} fallback={u.display_name ?? u.handle ?? '?'} />

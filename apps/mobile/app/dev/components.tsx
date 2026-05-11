@@ -23,7 +23,7 @@ export default function DevComponents() {
   if (!__DEV__) return null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <Stack.Screen options={{ title: 'Components', headerShown: true }} />
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         <Text variant="title" marginBottom="m">
@@ -34,10 +34,10 @@ export default function DevComponents() {
         </Text>
 
         <Section title="Text variants">
-          <Text variant="title">Title — Newsreader medium</Text>
+          <Text variant="title">Title — Fraunces medium</Text>
           <Text variant="body">Body — Inter regular, sets the rhythm.</Text>
           <Text variant="caption">Caption — secondary, smaller.</Text>
-          <Text variant="quote">"Friend voice — Newsreader italic."</Text>
+          <Text variant="quote">"Friend voice — Fraunces italic."</Text>
           <Text variant="label">LABEL — UPPERCASE TRACKED</Text>
         </Section>
 

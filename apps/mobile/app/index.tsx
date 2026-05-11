@@ -13,10 +13,10 @@ export default function Landing() {
   if (isSupabaseConfigured()) return <Redirect href="/(auth)/phone" />;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <Box flex={1} justifyContent="center" alignItems="center" padding="xl">
         <Text variant="title" textAlign="center" marginBottom="m">
-          Journal
+          Postmark
         </Text>
         <Text variant="body" color="textMuted" textAlign="center" marginBottom="xl">
           Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in apps/mobile/.env to

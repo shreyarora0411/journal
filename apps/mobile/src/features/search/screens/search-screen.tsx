@@ -34,7 +34,7 @@ export function SearchScreen() {
   }, [results.data, filter]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
       <Box padding="l" paddingBottom="none">
         <Text variant="title" marginBottom="m">
           Search

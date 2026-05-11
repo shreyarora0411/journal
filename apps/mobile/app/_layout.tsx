@@ -43,7 +43,8 @@ function AuthGate() {
     const inDevGroup = segments[0] === 'dev';
 
     if (!session) {
-      if (!inAuthGroup) router.replace('/(auth)/phone');
+      // Unauthenticated users enter via the Cover screen (#01 in design pack).
+      if (!inAuthGroup) router.replace('/(auth)/cover');
       return;
     }
     if (profileQ.isLoading) return;

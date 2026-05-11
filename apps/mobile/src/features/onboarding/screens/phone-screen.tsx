@@ -36,7 +36,7 @@ export function PhoneScreen() {
         await start.mutateAsync({ phone });
       }
       log.event('onboarding.screen_completed', { screen: 'phone' });
-      router.replace('/(auth)/problem');
+      router.replace('/(auth)/framing');
     } catch (err) {
       log.error('startSession failed', err);
       toast.show({ message: 'Could not start. Try again.', variant: 'error' });

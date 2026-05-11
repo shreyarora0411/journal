@@ -7,12 +7,15 @@ import { useEffect } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const bubbles: { side: 'out' | 'in'; text: string }[] = [
+const bubbles: { side: 'out' | 'in'; text: string; opacity?: number }[] = [
   { side: 'out', text: 'Going to Goa next week, where to stay?' },
   { side: 'in', text: "Try Tito's" },
   { side: 'in', text: "Tito's is over. Try Anjuna" },
   { side: 'in', text: 'Actually Assagao not Anjuna' },
   { side: 'out', text: 'Wait who else has been recently?' },
+  // Trailing fade — design pack shows a dimming "…" bubble to suggest the chat
+  // continues offscreen. Empty text + ellipsis glyph is enough.
+  { side: 'out', text: '…', opacity: 0.45 },
 ];
 
 export default function ProblemScreen() {
@@ -40,6 +43,7 @@ export default function ProblemScreen() {
                 borderBottomRightRadius: b.side === 'out' ? 4 : 14,
                 borderBottomLeftRadius: b.side === 'in' ? 4 : 14,
                 maxWidth: '78%',
+                opacity: b.opacity ?? 1,
               }}
             >
               <Text
@@ -65,7 +69,7 @@ export default function ProblemScreen() {
         <Box marginTop="xl">
           <Button
             label="Continue"
-            onPress={() => router.replace('/(auth)/promise' as never)}
+            onPress={() => router.push('/(auth)/promise' as never)}
             fullWidth
             size="lg"
           />

@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, ScrollView } from 'react-native';
+import { Platform, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLoadCameraRoll } from '../api/use-load-photos';
 import type { ProposedTrip } from '../lib/cluster';
@@ -20,7 +20,10 @@ const fmt = (ms: number) => {
  * Sequence:
  *   1. Tap "Read my photos" → permission prompt → expo-media-library scan
  *   2. Cluster into proposed trips (gap > 36h)
- *   3. User selects which clusters to save → one trip per cluster
+ *   3. User names each cluster ("Where to?") and picks which to save
+ *
+ * Drafts saved without a name fall back to the date-range string so they
+ * still render usefully on Book.
  */
 export default function ImportScreen() {
   const load = useLoadCameraRoll();
@@ -29,6 +32,7 @@ export default function ImportScreen() {
   const toast = useToast();
   const [proposed, setProposed] = useState<ProposedTrip[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [titles, setTitles] = useState<Record<string, string>>({});
   const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
@@ -69,9 +73,12 @@ export default function ImportScreen() {
       try {
         const startISO = new Date(p.startMs).toISOString().slice(0, 10);
         const endISO = new Date(p.endMs).toISOString().slice(0, 10);
+        const userTitle = titles[p.id]?.trim() ?? '';
+        const title = userTitle.length > 0 ? userTitle : `Untitled · ${p.suggestedTitle}`;
+        const place = userTitle.length > 0 ? userTitle : 'Untitled';
         await createTrip.mutateAsync({
-          title: p.suggestedTitle,
-          place_name: p.suggestedTitle,
+          title,
+          place_name: place,
           start_date: startISO,
           end_date: endISO,
           note: undefined,
@@ -85,8 +92,6 @@ export default function ImportScreen() {
       message: `Drafted ${chosen.length} trip${chosen.length === 1 ? '' : 's'}. They'll appear in your Book.`,
       variant: 'success',
     });
-    // Stay in the onboarding flow — drafts will be visible on Book once
-    // the user finishes Friends/Welcome and lands on the tabs.
     router.replace('/(auth)/friends' as never);
   };
 
@@ -97,8 +102,8 @@ export default function ImportScreen() {
           Already a traveller?
         </Text>
         <Text variant="caption" marginBottom="l">
-          We'll cluster your last six months of photos into trip drafts. Nothing leaves your phone
-          until you save.
+          We'll cluster your last six months of photos into trip drafts. Add a destination to each
+          one — you can flesh out the prose later.
         </Text>
 
         {isWeb ? (
@@ -124,17 +129,40 @@ export default function ImportScreen() {
                 const on = selected.has(p.id);
                 return (
                   <Card key={p.id}>
-                    <Box flexDirection="row" alignItems="center" gap="m">
+                    <Box flexDirection="row" alignItems="flex-start" gap="m">
                       <Pill
                         label={on ? '✓' : ' '}
                         variant={on ? 'on' : 'default'}
                         onPress={() => toggle(p.id)}
                       />
-                      <Box flex={1}>
-                        <Text variant="placeName">{p.suggestedTitle}</Text>
+                      <Box flex={1} gap="s">
                         <Text variant="meta">
                           {fmt(p.startMs)} → {fmt(p.endMs)} · {p.photos.length} photos
                         </Text>
+                        <View
+                          style={{
+                            borderWidth: 1,
+                            borderColor: 'rgba(0,0,0,0.15)',
+                            borderRadius: 10,
+                            paddingHorizontal: 10,
+                            paddingVertical: 10,
+                            backgroundColor: '#FFFFFF',
+                          }}
+                        >
+                          <TextInput
+                            placeholder="Where to?"
+                            placeholderTextColor="#9A9A9A"
+                            value={titles[p.id] ?? ''}
+                            onChangeText={(v) => setTitles((s) => ({ ...s, [p.id]: v }))}
+                            style={{
+                              fontFamily: 'Fraunces_500',
+                              fontSize: 16,
+                              color: '#1A1A1A',
+                              paddingVertical: 2,
+                            }}
+                            autoCapitalize="words"
+                          />
+                        </View>
                       </Box>
                     </Box>
                   </Card>

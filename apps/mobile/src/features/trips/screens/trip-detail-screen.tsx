@@ -3,10 +3,15 @@ import { useAuthStore } from '@/features/auth';
 import { useTrip } from '@/features/trips';
 import type { VenueKind } from '@journal/shared';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PhotoUploader } from '../components/PhotoUploader';
 import { SignedPhoto } from '../components/SignedPhoto';
+
+const placeHref = (name: string, country?: string | null) => {
+  const c = country ? `?country=${encodeURIComponent(country)}` : '';
+  return `/place/${encodeURIComponent(name)}${c}` as never;
+};
 
 const venueGroupTitle: Record<VenueKind, string> = {
   stay: 'Stays',
@@ -125,14 +130,31 @@ export default function TripDetailScreen() {
                   </Text>
                   <Box gap="s">
                     {place.areas.map((a) => (
-                      <Card key={a.id}>
-                        <Text variant="body">{a.name}</Text>
-                        {a.quote ? (
-                          <Text variant="quote" marginTop="xs">
-                            “{a.quote}”
-                          </Text>
-                        ) : null}
-                      </Card>
+                      <Link key={a.id} href={placeHref(a.name, place.country)} asChild>
+                        <Pressable>
+                          <Card>
+                            <Box
+                              flexDirection="row"
+                              justifyContent="space-between"
+                              alignItems="center"
+                            >
+                              <Box flex={1}>
+                                <Text variant="body" fontFamily="Inter_500Medium">
+                                  {a.name}
+                                </Text>
+                                {a.quote ? (
+                                  <Text variant="quote" marginTop="xs">
+                                    “{a.quote}”
+                                  </Text>
+                                ) : null}
+                              </Box>
+                              <Text variant="meta" marginLeft="s">
+                                ›
+                              </Text>
+                            </Box>
+                          </Card>
+                        </Pressable>
+                      </Link>
                     ))}
                   </Box>
                 </Box>
@@ -145,14 +167,31 @@ export default function TripDetailScreen() {
                   </Text>
                   <Box gap="s">
                     {group.items.map((v) => (
-                      <Card key={v.id}>
-                        <Text variant="body">{v.name}</Text>
-                        {v.quote ? (
-                          <Text variant="quote" marginTop="xs">
-                            “{v.quote}”
-                          </Text>
-                        ) : null}
-                      </Card>
+                      <Link key={v.id} href={placeHref(v.name, place.country)} asChild>
+                        <Pressable>
+                          <Card>
+                            <Box
+                              flexDirection="row"
+                              justifyContent="space-between"
+                              alignItems="center"
+                            >
+                              <Box flex={1}>
+                                <Text variant="body" fontFamily="Inter_500Medium">
+                                  {v.name}
+                                </Text>
+                                {v.quote ? (
+                                  <Text variant="quote" marginTop="xs">
+                                    “{v.quote}”
+                                  </Text>
+                                ) : null}
+                              </Box>
+                              <Text variant="meta" marginLeft="s">
+                                ›
+                              </Text>
+                            </Box>
+                          </Card>
+                        </Pressable>
+                      </Link>
                     ))}
                   </Box>
                 </Box>

@@ -10,7 +10,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  * and a link to /dev/components.
  */
 export default function Landing() {
-  if (isSupabaseConfigured()) return <Redirect href="/(auth)/phone" />;
+  // Initial entry — always start at Cover. AuthGate in _layout will fast-forward
+  // an authenticated user to the right next step (or straight to /tabs/book if
+  // they're already onboarded) once the session resolves.
+  if (isSupabaseConfigured()) return <Redirect href="/(auth)/cover" />;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>

@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DiscoverSection } from '../components/DiscoverSection';
 
 type Filter = 'all' | SearchKind;
 
@@ -60,9 +61,12 @@ export function SearchScreen() {
 
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 16 }}>
         {q.trim().length < 2 ? (
-          <Text variant="caption" marginTop="l">
-            Type a place. Your friends have probably been.
-          </Text>
+          <>
+            <Text variant="caption" marginTop="l">
+              Type a place. Your friends have probably been.
+            </Text>
+            <DiscoverSection />
+          </>
         ) : results.isLoading ? (
           <Text variant="caption" marginTop="l">
             Searching…

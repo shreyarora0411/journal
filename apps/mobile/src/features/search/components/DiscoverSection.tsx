@@ -5,7 +5,7 @@ import { Pressable } from 'react-native';
 import { useDiscover } from '../api/use-discover';
 
 /**
- * Discover lives inside Search (Postmark brief §6). Tier 2 of the discovery
+ * Discover lives inside Search (lore brief §6). Tier 2 of the discovery
  * hierarchy: friends-of-friends. Shown only when the user has FoF candidates;
  * stays silent otherwise.
  */

@@ -19,7 +19,7 @@ export default function ConfirmScreen() {
 
   if (tripQ.isLoading || entitiesQ.isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         <DetailHeader title="Review" />
         <Box flex={1} padding="xl">
           <Text variant="caption">Loading…</Text>
@@ -71,7 +71,7 @@ export default function ConfirmScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <DetailHeader title="Review" />
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Text variant="title" marginBottom="s">

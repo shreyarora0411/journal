@@ -21,7 +21,7 @@ export default function MapScreen() {
   const wishlistCount = (q.data ?? []).filter((r) => r.status === 'wishlist').length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <DetailHeader title="Your map" />
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Text variant="title" marginBottom="m">
@@ -74,7 +74,7 @@ function MapRow({ row }: { row: MapDestination }) {
           width: 10,
           height: 10,
           borderRadius: 5,
-          backgroundColor: row.status === 'visited' ? '#993C1D' : 'transparent',
+          backgroundColor: row.status === 'visited' ? '#FF4D2E' : 'transparent',
           borderWidth: row.status === 'wishlist' ? 1.4 : 0,
           borderColor: '#5F5E5A',
         }}

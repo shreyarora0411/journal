@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Postmark",
-    "slug": "postmark",
-    "scheme": "postmark",
+    "name": "lore",
+    "slug": "lore",
+    "scheme": "lore",
     "version": "0.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",

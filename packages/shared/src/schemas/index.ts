@@ -25,9 +25,22 @@ export const DisplayNameSchema = z
 
 export const OtpCodeSchema = z.string().regex(/^\d{6}$/, 'Six digits');
 
-export const ProfileUpdateSchema = z.object({
-  display_name: DisplayNameSchema.optional(),
-  avatar_url: z.string().url().nullable().optional(),
-  default_visibility: VisibilitySchema.optional(),
+export const HomeCitySchema = z.object({
+  home_city: z.string().trim().min(1).max(80).optional(),
+  home_lat: z.number().min(-90).max(90).optional(),
+  home_lng: z.number().min(-180).max(180).optional(),
+  home_country_code: z
+    .string()
+    .regex(/^[A-Z]{2}$/, 'ISO 3166-1 alpha-2')
+    .optional(),
 });
+export type HomeCity = z.infer<typeof HomeCitySchema>;
+
+export const ProfileUpdateSchema = z
+  .object({
+    display_name: DisplayNameSchema.optional(),
+    avatar_url: z.string().url().nullable().optional(),
+    default_visibility: VisibilitySchema.optional(),
+  })
+  .merge(HomeCitySchema);
 export type ProfileUpdate = z.infer<typeof ProfileUpdateSchema>;

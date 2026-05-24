@@ -10,7 +10,10 @@ import {
   Fraunces_400Regular_Italic,
   Fraunces_500Medium,
 } from '@expo-google-fonts/fraunces';
+import { Geist_400Regular, Geist_500Medium } from '@expo-google-fonts/geist';
+import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
+import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import { ThemeProvider } from '@shopify/restyle';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Font from 'expo-font';
@@ -44,7 +47,7 @@ function AuthGate() {
 
     if (!session) {
       // Unauthenticated users enter via the Cover screen (#01 in design pack).
-      if (!inAuthGroup) router.replace('/(auth)/cover');
+      if (!inAuthGroup) router.replace('/(auth)/welcome');
       return;
     }
     if (profileQ.isLoading) return;
@@ -77,6 +80,13 @@ export default function RootLayout() {
     (async () => {
       try {
         await Font.loadAsync({
+          // New lore-redesign type stack
+          InstrumentSerif_400Italic: InstrumentSerif_400Regular_Italic,
+          Geist_400Regular,
+          Geist_500Medium,
+          JetBrainsMono_400Regular,
+          // Legacy — still referenced by slice-1/2/3 screens until they're
+          // rebuilt in Batch A. Will be dropped once nothing imports them.
           Fraunces_400: Fraunces_400Regular,
           Fraunces_400Italic: Fraunces_400Regular_Italic,
           Fraunces_500: Fraunces_500Medium,

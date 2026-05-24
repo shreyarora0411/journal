@@ -1,217 +1,238 @@
-import { Avatar, Box, Button, Card, Pill, Text } from '@/components';
-import { useAuthStore, useProfile, useSignOut } from '@/features/auth';
-import { useFollowCounts } from '@/features/follows';
-import { InviteButton } from '@/features/invite';
-import { useMyLists } from '@/features/lists';
-import { photoColor } from '@/theme';
-import { Link, useRouter } from 'expo-router';
-import { Pressable, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFavouriteFour, useSetFavouriteFour } from '../api/use-favourite-four';
-import { useUserTrips } from '../api/use-user-trips';
+import { Eyebrow, Face, Page, Photo, PullQuote, StatusSpace } from '@/components';
+import { ME } from '@/features/feed/lib/fixtures';
+import { log } from '@/lib/log';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+const CORAL = '#FF4D2E';
+const GOLD = '#FFB300';
+const INK = '#1A1410';
+const MUTE = '#7A716A';
+const TINT = '#FAF6F0';
+const HAIR = '#EFEAE2';
+
+/**
+ * Profile · Travel book (#12 of the redesign — Batch C).
+ *
+ * Layout per the brief:
+ *   - 68pt face + name + handle + settings cog
+ *   - Italic-serif tagline pull quote
+ *   - 3-stat row (white outlined / tinted / coral-filled)
+ *   - Coral→gold gradient "My 2026, so far" Wrapped teaser
+ *   - 2-column photo grid of trip cards
+ */
 export function ProfileScreen() {
-  const profileQ = useProfile();
-  const userId = useAuthStore((s) => s.session?.user.id ?? null);
-  const counts = useFollowCounts(userId);
-  const trips = useUserTrips(userId);
-  const lists = useMyLists();
-  const favourites = useFavouriteFour(userId);
-  const setFavourites = useSetFavouriteFour();
-  const signOut = useSignOut();
   const router = useRouter();
 
-  const profile = profileQ.data;
-  const myTrips = trips.data ?? [];
-  const favList = favourites.data ?? [];
-  const favIds = new Set(favList.map((t) => t.id));
-  const canPin = favList.length < 4;
-
-  const onPin = async (tripId: string) => {
-    const next = [...favList.map((t) => t.id), tripId].slice(0, 4);
-    await setFavourites.mutateAsync(next);
-  };
-
-  const onUnpin = async (tripId: string) => {
-    const next = favList.filter((t) => t.id !== tripId).map((t) => t.id);
-    await setFavourites.mutateAsync(next);
-  };
+  useEffect(() => {
+    log.event('profile.screen_entered');
+  }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
-        <Box flexDirection="row" alignItems="center" gap="m" marginBottom="m">
-          <Avatar
-            size="lg"
-            uri={profile?.avatar_url ?? null}
-            fallback={profile?.display_name ?? 'You'}
-          />
-          <Box flex={1}>
-            <Text variant="title">{profile?.display_name ?? 'You'}</Text>
-            {profile?.handle ? <Text variant="caption">@{profile.handle}</Text> : null}
-          </Box>
-        </Box>
+    <Page>
+      <StatusSpace />
 
-        <Box
-          flexDirection="row"
-          gap="m"
-          marginBottom="l"
-          paddingVertical="s"
-          style={{ borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)' }}
+      {/* Header — face + name + cog */}
+      <View style={styles.header}>
+        <Face uri={ME.avatarUri} size="lg" />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name}>{ME.name}</Text>
+          <Text style={styles.handle}>{ME.handle}</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Settings">
+          <Text style={styles.cog}>⚙︎</Text>
+        </Pressable>
+      </View>
+
+      {/* Tagline */}
+      <View style={{ marginTop: 16 }}>
+        <PullQuote size="sm" color={MUTE}>
+          {ME.tagline}
+        </PullQuote>
+      </View>
+
+      {/* 3-stat row */}
+      <View style={styles.statRow}>
+        <View style={[styles.stat, styles.statOutlined]}>
+          <Text style={[styles.statValue, { color: INK }]}>{ME.trips}</Text>
+          <Text style={[styles.statLabel, { color: MUTE }]}>Trips</Text>
+        </View>
+        <View style={[styles.stat, styles.statTinted]}>
+          <Text style={[styles.statValue, { color: INK }]}>{ME.countries}</Text>
+          <Text style={[styles.statLabel, { color: MUTE }]}>Countries</Text>
+        </View>
+        <View style={[styles.stat, styles.statFilled]}>
+          <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{ME.tipsGiven}</Text>
+          <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.85 }]}>Tips I gave</Text>
+        </View>
+      </View>
+
+      {/* Wrapped teaser — the ONE allowed gradient (see brief rule 4) */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open my 2026 Wrapped"
+        onPress={() => router.push('/wrapped' as never)}
+        style={{ marginTop: 20 }}
+      >
+        <LinearGradient
+          colors={[CORAL, GOLD]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.wrappedCard}
         >
-          <Box flex={1}>
-            <Text variant="title">{myTrips.length}</Text>
-            <Text variant="meta">trips</Text>
-          </Box>
-          <Box flex={1}>
-            <Text variant="title">{counts.data?.followers ?? 0}</Text>
-            <Text variant="meta">followers</Text>
-          </Box>
-          <Box flex={1}>
-            <Text variant="title">{counts.data?.following ?? 0}</Text>
-            <Text variant="meta">following</Text>
-          </Box>
-        </Box>
-
-        <Text variant="label" marginBottom="s">
-          FAVOURITE FOUR
-        </Text>
-        <Box flexDirection="row" flexWrap="wrap" marginBottom="l" style={{ gap: 8 }}>
-          {[0, 1, 2, 3].map((slot) => {
-            const t = favList[slot];
-            if (t) {
-              return (
-                <Pressable
-                  key={slot}
-                  onLongPress={() => onUnpin(t.id)}
-                  onPress={() => router.push(`/trip/${t.id}` as never)}
-                  style={{ width: '48%' }}
-                >
-                  <Box>
-                    <Box
-                      style={{
-                        width: '100%',
-                        height: 84,
-                        borderRadius: 6,
-                        backgroundColor: photoColor(t.id),
-                      }}
-                    />
-                    <Text variant="placeName" marginTop="xs" numberOfLines={1}>
-                      {t.title}
-                    </Text>
-                  </Box>
-                </Pressable>
-              );
-            }
-            return (
-              <Box
-                key={slot}
-                style={{
-                  width: '48%',
-                  height: 84,
-                  borderRadius: 6,
-                  borderWidth: 1,
-                  borderStyle: 'dashed',
-                  borderColor: '#9A9A9A',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Text variant="meta">empty</Text>
-              </Box>
-            );
-          })}
-        </Box>
-        {canPin && myTrips.length > 0 ? (
-          <Box marginBottom="l">
-            <Text variant="caption" marginBottom="s">
-              Pick anchor trips. Tap to add — long-press a pinned one to remove.
+          <View>
+            <Text style={styles.wrappedEyebrow}>MY 2026, SO FAR</Text>
+            <Text style={styles.wrappedHeadline}>I really{'\n'}moved this year.</Text>
+            <Text style={styles.wrappedFooter}>
+              {ME.trips} trips · {ME.countries} countries · {ME.tipsGiven} tips
             </Text>
-            <Box flexDirection="row" flexWrap="wrap" style={{ gap: 8 }}>
-              {myTrips
-                .filter((t) => !favIds.has(t.id))
-                .slice(0, 8)
-                .map((t) => (
-                  <Pill key={t.id} label={t.title} onPress={() => onPin(t.id)} />
-                ))}
-            </Box>
-          </Box>
-        ) : null}
+          </View>
+          <Text style={styles.wrappedChevron}>›</Text>
+        </LinearGradient>
+      </Pressable>
 
-        <Box
-          flexDirection="row"
-          alignItems="center"
-          justifyContent="space-between"
-          marginBottom="s"
-        >
-          <Text variant="label">LISTS</Text>
-          <Link href="/list/new" asChild>
-            <Pressable>
-              <Text variant="meta">+ New</Text>
+      {/* My book — 2-col grid */}
+      <View style={{ marginTop: 28 }}>
+        <Eyebrow>My book</Eyebrow>
+        <View style={styles.grid}>
+          {ME.myTrips.map((t) => (
+            <Pressable
+              key={t.id}
+              accessibilityRole="button"
+              accessibilityLabel={t.destination}
+              onPress={() => router.push(`/(tabs)/trip-notebook/${t.id}` as never)}
+              style={styles.tripCard}
+            >
+              <Photo uri={t.coverUri} aspectRatio={4 / 5} radius={14}>
+                <View style={styles.tripOverlay}>
+                  <Text style={styles.tripDest}>{t.destination}</Text>
+                  <Text style={styles.tripMeta}>
+                    {t.monthLabel} · {t.placesCount} places
+                  </Text>
+                </View>
+              </Photo>
             </Pressable>
-          </Link>
-        </Box>
-        {(lists.data ?? []).length === 0 ? (
-          <Text variant="caption" marginBottom="l">
-            No lists yet. Lists are opinions — "Cities I'd live in," "Coffee maps."
-          </Text>
-        ) : (
-          <Box gap="s" marginBottom="l">
-            {(lists.data ?? []).slice(0, 5).map((l) => (
-              <Link key={l.id} href={`/list/${l.id}`} asChild>
-                <Pressable>
-                  <Box
-                    flexDirection="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    paddingVertical="s"
-                    style={{ borderBottomWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)' }}
-                  >
-                    <Text variant="placeName">{l.title}</Text>
-                    <Text variant="meta">›</Text>
-                  </Box>
-                </Pressable>
-              </Link>
-            ))}
-          </Box>
-        )}
-
-        <Box
-          flexDirection="row"
-          alignItems="center"
-          justifyContent="space-between"
-          marginBottom="s"
-        >
-          <Text variant="label">YOUR MAP</Text>
-          <Link href={'/map' as never} asChild>
-            <Pressable>
-              <Text variant="meta">View →</Text>
-            </Pressable>
-          </Link>
-        </Box>
-        <Box marginBottom="l">
-          <Link href={'/year-in-travel' as never} asChild>
-            <Pressable>
-              <Card>
-                <Text variant="placeName">Your 2026 in travel</Text>
-                <Text variant="caption" marginTop="xs">
-                  Trips, cities, distance, taste twin.
-                </Text>
-              </Card>
-            </Pressable>
-          </Link>
-        </Box>
-
-        <Box marginTop="m" gap="m">
-          <InviteButton />
-          <Button
-            label={signOut.isPending ? 'Signing out…' : 'Sign out'}
-            variant="ghost"
-            loading={signOut.isPending}
-            onPress={() => signOut.mutate()}
-          />
-        </Box>
-      </ScrollView>
-    </SafeAreaView>
+          ))}
+        </View>
+      </View>
+    </Page>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingTop: 8,
+  },
+  name: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 28,
+    color: INK,
+    letterSpacing: -0.6,
+  },
+  handle: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: MUTE,
+    marginTop: 2,
+  },
+  cog: { fontSize: 20, color: MUTE },
+  statRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 20,
+  },
+  stat: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  statOutlined: {
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: '#FFFFFF',
+  },
+  statTinted: { backgroundColor: TINT },
+  statFilled: { backgroundColor: CORAL },
+  statValue: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 28,
+    letterSpacing: -0.6,
+  },
+  statLabel: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 9,
+    letterSpacing: 1.2,
+    marginTop: 4,
+  },
+  wrappedCard: {
+    borderRadius: 18,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  wrappedEyebrow: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: '#FFFFFF',
+    opacity: 0.92,
+  },
+  wrappedHeadline: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 28,
+    lineHeight: 32,
+    color: '#FFFFFF',
+    letterSpacing: -0.6,
+    marginTop: 8,
+  },
+  wrappedFooter: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 12,
+    color: '#FFFFFF',
+    opacity: 0.92,
+    marginTop: 12,
+  },
+  wrappedChevron: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 32,
+    color: '#FFFFFF',
+    marginLeft: 12,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 14,
+  },
+  tripCard: {
+    width: '48%',
+  },
+  tripOverlay: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+  },
+  tripDest: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 24,
+    color: '#FFFFFF',
+    letterSpacing: -0.4,
+  },
+  tripMeta: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: '#FFFFFF',
+    opacity: 0.92,
+    marginTop: 4,
+  },
+});

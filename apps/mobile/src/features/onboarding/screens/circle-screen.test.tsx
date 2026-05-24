@@ -1,0 +1,86 @@
+import { fireEvent, renderWithProviders, screen } from '@/test/render';
+import { CircleScreen } from './circle-screen';
+
+const mockReplace = jest.fn();
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn() }),
+}));
+
+const mockShow = jest.fn();
+jest.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ show: mockShow }),
+  ToastContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
+}));
+
+const mockMatchContactsMutate = jest.fn();
+const mockMatched = jest.fn();
+jest.mock('../api/use-match-contacts', () => ({
+  useMatchContacts: () => ({ mutateAsync: mockMatchContactsMutate, isPending: false }),
+}));
+jest.mock('../api/use-matched-friends', () => ({
+  useMatchedFriends: () => mockMatched(),
+}));
+
+jest.mock('@/features/follows', () => ({
+  useFollow: () => ({ mutateAsync: jest.fn(), isPending: false }),
+}));
+
+beforeEach(() => {
+  mockReplace.mockReset();
+  mockShow.mockReset();
+  mockMatched.mockReset();
+  mockMatched.mockReturnValue({ data: [], refetch: jest.fn() });
+});
+
+describe('CircleScreen', () => {
+  it('renders the step 1 eyebrow, headline, and three connector cards', () => {
+    renderWithProviders(<CircleScreen />);
+    expect(screen.getByText('STEP 1 OF 4')).toBeTruthy();
+    expect(screen.getByText('Bring\nyour circle.')).toBeTruthy();
+    expect(screen.getByLabelText('Instagram')).toBeTruthy();
+    expect(screen.getByLabelText('Contacts')).toBeTruthy();
+    expect(screen.getByLabelText('WhatsApp chat')).toBeTruthy();
+  });
+
+  it('tapping the Instagram card toasts coming-soon', () => {
+    renderWithProviders(<CircleScreen />);
+    fireEvent.press(screen.getByLabelText('Instagram'));
+    expect(mockShow).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringMatching(/Instagram.*coming soon/i) }),
+    );
+  });
+
+  it('renders the matched-friends card when there are matches', () => {
+    mockMatched.mockReturnValue({
+      data: [
+        { id: 'a', display_name: 'Tara', handle: '@tara', avatar_url: null, badge: '', score: 1 },
+        { id: 'b', display_name: 'Kabir', handle: '@kbr', avatar_url: null, badge: '', score: 1 },
+      ],
+      refetch: jest.fn(),
+    });
+    renderWithProviders(<CircleScreen />);
+    // The phrase appears in two places — the Contacts connector subtitle
+    // and the matched-friends card. The card-specific affordance is the
+    // "Add all N" pill.
+    expect(screen.getAllByText('2 friends already on lore.').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByLabelText('Add all 2')).toBeTruthy();
+  });
+
+  it('Continue routes to /(auth)/import when matches exist', () => {
+    mockMatched.mockReturnValue({
+      data: [
+        { id: 'a', display_name: 'Tara', handle: '@tara', avatar_url: null, badge: '', score: 1 },
+      ],
+      refetch: jest.fn(),
+    });
+    renderWithProviders(<CircleScreen />);
+    fireEvent.press(screen.getByLabelText('Continue'));
+    expect(mockReplace).toHaveBeenCalledWith('/(auth)/import');
+  });
+
+  it('Skip always routes to taste-makers fallback', () => {
+    renderWithProviders(<CircleScreen />);
+    fireEvent.press(screen.getByLabelText('Skip'));
+    expect(mockReplace).toHaveBeenCalledWith('/(auth)/taste-makers');
+  });
+});

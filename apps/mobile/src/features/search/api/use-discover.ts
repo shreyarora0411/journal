@@ -15,7 +15,7 @@ export type DiscoverUser = {
 
 /**
  * Friends-of-friends candidates the viewer doesn't already follow.
- * Per Postmark brief §10, Tier 2 of the discovery hierarchy.
+ * Per lore brief §10, Tier 2 of the discovery hierarchy.
  */
 export const useDiscover = () => {
   const viewerId = useAuthStore((s) => s.session?.user.id ?? null);

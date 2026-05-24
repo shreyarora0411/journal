@@ -8,3 +8,4 @@ export {
   useRejectEntity,
 } from './api/use-extracted-entities';
 export { tripKeys } from './api/keys';
+export { TripNotebookScreen } from './screens/trip-notebook-screen';

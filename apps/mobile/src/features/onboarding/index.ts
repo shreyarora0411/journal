@@ -1,3 +1,7 @@
+export { LoginScreen } from './screens/login-screen';
+export { CircleScreen } from './screens/circle-screen';
+export { TasteMakersScreen } from './screens/taste-makers-screen';
+export { SeedScreen } from './screens/seed-screen';
 export { PhoneScreen } from './screens/phone-screen';
 export { FramingScreen } from './screens/framing-screen';
 export { InstagramScreen } from './screens/instagram-screen';

@@ -6,6 +6,7 @@ import { getSupabase } from '@/lib/supabase';
 import { DisplayNameSchema } from '@journal/shared';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -17,7 +18,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StepIndicator } from '../components/StepIndicator';
+import { OnboardingStepHeader } from '../components/OnboardingStepHeader';
 
 /**
  * Identity (#05 in the design pack). Captures display name + a one-line bio
@@ -28,6 +29,7 @@ import { StepIndicator } from '../components/StepIndicator';
 export function FramingScreen() {
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
+  const [homeCity, setHomeCity] = useState('');
   const update = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
   const profile = useProfile();
@@ -49,8 +51,43 @@ export function FramingScreen() {
       });
       return;
     }
+    const trimmedHome = homeCity.trim();
+    if (trimmedHome.length === 0) {
+      toast.show({ message: 'Tell us where you live.', variant: 'error' });
+      return;
+    }
     try {
-      await update.mutateAsync({ display_name: parsed.data });
+      // Forward-geocode the home city to lat/lng + country code so the
+      // camera-roll import can classify clusters by distance-from-home
+      // (ADR 0009). Geocoder failure is non-blocking — we still save the
+      // typed city string.
+      let home_lat: number | undefined;
+      let home_lng: number | undefined;
+      let home_country_code: string | undefined;
+      try {
+        const geo = await Location.geocodeAsync(trimmedHome);
+        const hit = geo[0];
+        if (hit) {
+          home_lat = hit.latitude;
+          home_lng = hit.longitude;
+          const reverse = await Location.reverseGeocodeAsync({
+            latitude: hit.latitude,
+            longitude: hit.longitude,
+          });
+          const code = reverse[0]?.isoCountryCode;
+          if (code && /^[A-Z]{2}$/.test(code)) home_country_code = code;
+        }
+      } catch (err) {
+        log.warn('home city geocode failed', { error: String(err) });
+      }
+
+      await update.mutateAsync({
+        display_name: parsed.data,
+        home_city: trimmedHome,
+        home_lat,
+        home_lng,
+        home_country_code,
+      });
       // Bio is in users.bio (added in migration 0005). Best-effort — if the
       // column doesn't exist yet (pre-migration), silently skip.
       if (bio.trim().length > 0 && userId) {
@@ -64,10 +101,17 @@ export function FramingScreen() {
         }
       }
       log.event('onboarding.screen_completed', { screen: 'framing' });
-      router.replace('/(auth)/instagram');
+      router.replace('/(auth)/circle');
     } catch (err) {
-      log.error('framing update failed', err);
-      toast.show({ message: 'Could not save. Try again.', variant: 'error' });
+      // Surface the real reason in the toast so we can debug on-device
+      // instead of seeing "[object Object]". Supabase errors carry a
+      // human-readable `.message`; everything else falls back to String().
+      const reason =
+        err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : String(err);
+      log.error('framing update failed', { error: reason });
+      toast.show({ message: `Could not save: ${reason}`, variant: 'error' });
     }
   };
 
@@ -99,17 +143,19 @@ export function FramingScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Box flex={1} padding="l">
-          <StepIndicator step={2} total={4} />
+          <OnboardingStepHeader step={2} total={4} showBack />
 
           <ScrollView
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 24 }}
+            // Enough bottom padding that the last field's eyebrow + helper
+            // text stay visible above an open keyboard on tall phones.
+            contentContainerStyle={{ paddingBottom: 220 }}
           >
             <Box marginTop="l">
               <Text variant="display" style={{ fontSize: 36, lineHeight: 42 }}>
@@ -134,7 +180,7 @@ export function FramingScreen() {
                   borderColor: 'rgba(0,0,0,0.25)',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: '#FAF8F3',
+                  backgroundColor: '#FFFFFF',
                   overflow: 'hidden',
                 }}
               >
@@ -165,18 +211,24 @@ export function FramingScreen() {
                 <View
                   style={{
                     borderWidth: 1,
-                    borderColor: 'rgba(0,0,0,0.15)',
-                    borderRadius: 12,
+                    borderColor: '#1A1410',
+                    borderRadius: 14,
                     paddingHorizontal: 12,
                     paddingVertical: 12,
                     backgroundColor: '#FFFFFF',
                   }}
                 >
                   <TextInput
+                    // selectionColor pins the iOS cursor + selection highlight
+                    // to coral. textContentType="name" + autoComplete suppress
+                    // the system's gold autofill chip on the field itself.
+                    selectionColor="#FF4D2E"
+                    textContentType="name"
+                    autoComplete="name"
                     style={{
-                      fontFamily: 'Inter_400Regular',
+                      fontFamily: 'Geist_400Regular',
                       fontSize: 16,
-                      color: '#1A1A1A',
+                      color: '#1A1410',
                       paddingVertical: 2,
                     }}
                     placeholder="Shrey Arora"
@@ -197,18 +249,21 @@ export function FramingScreen() {
                 <View
                   style={{
                     borderWidth: 1,
-                    borderColor: 'rgba(0,0,0,0.15)',
-                    borderRadius: 12,
+                    borderColor: '#1A1410',
+                    borderRadius: 14,
                     paddingHorizontal: 12,
                     paddingVertical: 12,
                     backgroundColor: '#FFFFFF',
                   }}
                 >
                   <TextInput
+                    selectionColor="#FF4D2E"
+                    textContentType="none"
+                    autoComplete="off"
                     style={{
-                      fontFamily: 'Fraunces_400Italic',
-                      fontSize: 14,
-                      color: '#1A1A1A',
+                      fontFamily: 'InstrumentSerif_400Italic',
+                      fontSize: 16,
+                      color: '#1A1410',
                       paddingVertical: 2,
                     }}
                     placeholder="Mostly cities, sometimes mountains."
@@ -218,6 +273,43 @@ export function FramingScreen() {
                     maxLength={140}
                   />
                 </View>
+              </Box>
+
+              <Box>
+                <Text variant="label" marginBottom="s">
+                  WHERE DO YOU LIVE?
+                </Text>
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#1A1410',
+                    borderRadius: 14,
+                    paddingHorizontal: 12,
+                    paddingVertical: 12,
+                    backgroundColor: '#FFFFFF',
+                  }}
+                >
+                  <TextInput
+                    selectionColor="#FF4D2E"
+                    textContentType="addressCity"
+                    autoComplete="off"
+                    style={{
+                      fontFamily: 'Geist_400Regular',
+                      fontSize: 16,
+                      color: '#1A1410',
+                      paddingVertical: 2,
+                    }}
+                    placeholder="Mumbai, Bangalore, Delhi…"
+                    placeholderTextColor="#9A9A9A"
+                    value={homeCity}
+                    onChangeText={setHomeCity}
+                    autoCapitalize="words"
+                    maxLength={80}
+                  />
+                </View>
+                <Text variant="meta" marginTop="xs">
+                  We use this to recognise which of your photos are trips. Stays private.
+                </Text>
               </Box>
             </Box>
           </ScrollView>

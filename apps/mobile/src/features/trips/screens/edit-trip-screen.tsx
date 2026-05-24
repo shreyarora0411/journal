@@ -100,7 +100,7 @@ export default function EditTripScreen() {
 
   if (tripQ.isLoading || !hydrated) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         <DetailHeader title="Edit" />
         <Box flex={1} padding="xl">
           <Text variant="caption">Loading…</Text>
@@ -111,7 +111,7 @@ export default function EditTripScreen() {
 
   if (!tripQ.data) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         <DetailHeader title="Edit" />
         <Box flex={1} padding="xl">
           <Text variant="title" marginBottom="m">
@@ -123,7 +123,7 @@ export default function EditTripScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <DetailHeader title="Edit trip" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}

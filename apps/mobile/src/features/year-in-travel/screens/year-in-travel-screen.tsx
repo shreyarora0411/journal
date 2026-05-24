@@ -144,7 +144,7 @@ export default function YearInTravelScreen() {
   const onShare = async () => {
     const r = recap.data;
     if (!r) return;
-    const text = `My ${r.year} in travel — ${r.tripCount} trips, ${r.cityCount} cities${r.topDestination ? `, most asked about ${r.topDestination}` : ''}. On Postmark.`;
+    const text = `My ${r.year} in travel — ${r.tripCount} trips, ${r.cityCount} cities${r.topDestination ? `, most asked about ${r.topDestination}` : ''}. On lore.`;
     try {
       await Linking.openURL(buildWhatsAppLink(text));
     } catch {
@@ -154,7 +154,7 @@ export default function YearInTravelScreen() {
 
   if (recap.isLoading || !recap.data) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#993C1D' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FF4D2E' }}>
         <Box flex={1} padding="xl">
           <Text variant="caption" style={{ color: 'rgba(255,255,255,0.8)' }}>
             Loading…
@@ -166,7 +166,7 @@ export default function YearInTravelScreen() {
 
   const r = recap.data;
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#993C1D' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FF4D2E' }}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Text style={[styles.eyebrow]}>Your {r.year}</Text>
         <Text style={[styles.display]}>in travel.</Text>

@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export function MyListsScreen() {
   const q = useMyLists();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Box
           flexDirection="row"

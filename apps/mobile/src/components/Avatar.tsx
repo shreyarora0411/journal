@@ -48,7 +48,7 @@ export function Avatar({ size = 'md', uri, fallback }: Props) {
       justifyContent="center"
       accessibilityLabel={fallback}
     >
-      <Text style={{ color: '#993C1D', fontFamily: 'Inter_500Medium', fontSize }}>
+      <Text style={{ color: '#FF4D2E', fontFamily: 'Inter_500Medium', fontSize }}>
         {initials(fallback)}
       </Text>
     </Box>

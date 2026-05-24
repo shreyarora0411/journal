@@ -1,0 +1,357 @@
+import { useAuthStore, useStartSession } from '@/features/auth';
+import { useToast } from '@/hooks/use-toast';
+import { log } from '@/lib/log';
+import { isLikelyValidPhone } from '@journal/shared';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const COUNTRY_CODE = '+91';
+const CORAL = '#FF4D2E';
+const INK = '#1A1410';
+const MUTE = '#7A716A';
+const HAIR = '#EFEAE2';
+const EMERALD = '#00A67E';
+
+/**
+ * Login (#02 — Batch A). Phone-first with an OTP visual hint, then the
+ * camera-roll fast-path, then the emerald privacy line.
+ *
+ * Anonymous-auth visual treatment per ADR 0004: tapping Continue calls
+ * `useStartSession({ phone })` which signs in anonymously and stores the
+ * hashed phone. No real OTP round-trip happens — the "we just sent a code"
+ * hint is visual only, kept to make the funnel feel familiar.
+ *
+ * Brief deviation flag: the brief specifies a pink Instagram fast-path
+ * button. Rule 4 ("One accent at a time. Coral is the primary accent.
+ * Pink ... never used as button colors.") wins — the fast-path uses coral
+ * with an explicit camera-roll glyph to differentiate it visually from the
+ * primary CTA. Per ADR 0005 Instagram OAuth is deferred; the fast-path
+ * actually routes to the camera-roll loader.
+ */
+export function LoginScreen() {
+  const [rawDigits, setRawDigits] = useState('');
+  const start = useStartSession();
+  const session = useAuthStore((s) => s.session);
+  const router = useRouter();
+  const toast = useToast();
+
+  useEffect(() => {
+    log.event('onboarding.screen_entered', { screen: 'login' });
+  }, []);
+
+  const e164 = `${COUNTRY_CODE}${rawDigits}`;
+
+  const onContinue = async () => {
+    Keyboard.dismiss();
+    if (rawDigits.length < 10 || !isLikelyValidPhone(e164)) {
+      toast.show({ message: 'Enter a valid 10-digit number.', variant: 'error' });
+      return;
+    }
+    try {
+      if (!session) {
+        await start.mutateAsync({ phone: e164 });
+      }
+      log.event('onboarding.screen_completed', { screen: 'login', choice: 'phone' });
+      router.replace('/(auth)/framing');
+    } catch (err) {
+      log.error('startSession failed', err);
+      toast.show({ message: 'Could not start. Try again.', variant: 'error' });
+    }
+  };
+
+  const onFastPath = async () => {
+    try {
+      if (!session) {
+        // Anonymous sign-in without a phone — they'll add one later if
+        // needed. Camera roll is the actual import path (ADR 0005).
+        await start.mutateAsync({ phone: '' });
+      }
+      log.event('onboarding.screen_completed', { screen: 'login', choice: 'fast-path' });
+      router.replace('/(auth)/framing');
+    } catch (err) {
+      log.error('fast-path start failed', err);
+      toast.show({ message: 'Could not start. Try again.', variant: 'error' });
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.body}>
+            <Text accessibilityLabel="lore." style={styles.wordmark}>
+              lore<Text style={{ color: CORAL }}>.</Text>
+            </Text>
+
+            <Text style={styles.headline}>
+              Sign in with the number{'\n'}your friends already have.
+            </Text>
+            <Text style={styles.sub}>
+              We'll text you a one-time code. Used only to match you with people you actually know.
+            </Text>
+
+            {/* Phone row — country pill + 10-digit input. */}
+            <View style={styles.phoneRow}>
+              <View style={styles.countryPill}>
+                <Text style={styles.countryFlag}>🇮🇳</Text>
+                <Text style={styles.countryCode}>+91</Text>
+              </View>
+              <View style={styles.divider} />
+              <TextInput
+                selectionColor={CORAL}
+                textContentType="telephoneNumber"
+                autoComplete="tel"
+                style={styles.input}
+                placeholder="98765 43210"
+                placeholderTextColor="#9A9A9A"
+                value={rawDigits}
+                onChangeText={(v) => setRawDigits(v.replace(/\D/g, '').slice(0, 10))}
+                keyboardType="phone-pad"
+                maxLength={10}
+                accessibilityLabel="Phone number"
+              />
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Send me a code"
+              onPress={onContinue}
+              style={styles.cta}
+              disabled={start.isPending}
+            >
+              <Text style={styles.ctaLabel}>
+                {start.isPending ? 'Starting…' : 'Send me a code'}
+              </Text>
+            </Pressable>
+
+            {/* OR divider — same hairline+mono pattern as elsewhere */}
+            <View style={styles.orRow}>
+              <View style={styles.orLine} />
+              <Text style={styles.orLabel}>OR FASTER</Text>
+              <View style={styles.orLine} />
+            </View>
+
+            {/* Fast-path: camera-roll. Coral with a camera-stack glyph
+                so users read it as "import" not "primary CTA again". */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Continue with my camera roll — we'll find your trips"
+              onPress={onFastPath}
+              style={styles.fastPath}
+              disabled={start.isPending}
+            >
+              <CameraStackGlyph />
+              <Text style={styles.fastPathLabel}>
+                Continue with my camera roll{'\n'}
+                <Text style={styles.fastPathSub}>we'll find your trips</Text>
+              </Text>
+            </Pressable>
+
+            <View style={{ flex: 1 }} />
+
+            {/* Privacy line — emerald check + reassurance copy */}
+            <View style={styles.privacyRow}>
+              <View style={styles.privacyCheck}>
+                <Text style={styles.privacyCheckGlyph}>✓</Text>
+              </View>
+              <Text style={styles.privacyText}>
+                Only your circle sees you. <Text style={{ color: INK }}>Promise.</Text>
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function CameraStackGlyph() {
+  return (
+    <View
+      style={{
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {/* Back */}
+      <View
+        style={{
+          position: 'absolute',
+          width: 26,
+          height: 30,
+          borderRadius: 4,
+          backgroundColor: 'rgba(255,255,255,0.3)',
+          transform: [{ rotate: '-10deg' }, { translateX: -4 }],
+        }}
+      />
+      {/* Front */}
+      <View
+        style={{
+          width: 26,
+          height: 30,
+          borderRadius: 4,
+          backgroundColor: '#FFFFFF',
+          transform: [{ rotate: '6deg' }, { translateX: 3 }],
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: CORAL }} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  body: {
+    flex: 1,
+    paddingHorizontal: 22,
+    paddingTop: 12,
+    gap: 16,
+  },
+  wordmark: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 26,
+    color: INK,
+    letterSpacing: -0.6,
+    marginBottom: 24,
+  },
+  headline: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 32,
+    lineHeight: 36,
+    color: INK,
+    letterSpacing: -0.8,
+  },
+  sub: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 14,
+    lineHeight: 22,
+    color: MUTE,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: INK,
+    marginTop: 8,
+  },
+  countryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  countryFlag: { fontSize: 18 },
+  countryCode: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 16,
+    color: INK,
+  },
+  divider: { width: 1, height: 22, backgroundColor: HAIR },
+  input: {
+    flex: 1,
+    fontFamily: 'Geist_400Regular',
+    fontSize: 16,
+    color: INK,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  cta: {
+    backgroundColor: INK,
+    borderRadius: 999,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  ctaLabel: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  orRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  orLine: { flex: 1, height: 1, backgroundColor: HAIR },
+  orLabel: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 10,
+    lineHeight: 10,
+    letterSpacing: 1.4,
+    color: MUTE,
+  },
+  fastPath: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: CORAL,
+    borderRadius: 16,
+    padding: 16,
+  },
+  fastPathLabel: {
+    flex: 1,
+    fontFamily: 'Geist_500Medium',
+    fontSize: 16,
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  fastPathSub: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  privacyCheck: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: EMERALD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  privacyCheckGlyph: {
+    color: '#FFFFFF',
+    fontFamily: 'Geist_500Medium',
+    fontSize: 10,
+    lineHeight: 10,
+  },
+  privacyText: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 13,
+    color: MUTE,
+  },
+});

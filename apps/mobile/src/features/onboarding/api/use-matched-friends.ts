@@ -14,7 +14,7 @@ export type MatchedFriend = {
 };
 
 /**
- * Smart contact picks for onboarding (Postmark brief screen 06).
+ * Smart contact picks for onboarding (lore brief screen 06).
  *
  * Pulls hashed contact matches, joins to profile data, then enriches with:
  *   - `mutuals`: number of friends already common with the viewer (FoF tier)
@@ -74,7 +74,7 @@ export const useMatchedFriends = () => {
         else if (lastTrip.has(m.id)) badge = `Just back from ${lastTrip.get(m.id)}`;
         else if (trips >= 5) badge = 'Travels often';
         else if (trips > 0) badge = `${trips} trip${trips === 1 ? '' : 's'}`;
-        else badge = 'New on Postmark';
+        else badge = 'New on lore';
         const score = (isMutual ? 100 : 0) + trips * 5;
         return { ...m, badge, score };
       });

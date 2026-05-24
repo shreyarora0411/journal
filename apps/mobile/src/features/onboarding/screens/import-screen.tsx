@@ -21,7 +21,7 @@ export function ImportScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <Box flex={1} padding="xl" justifyContent="center">
         <Text variant="title" marginBottom="m">
           Pulling your trips…

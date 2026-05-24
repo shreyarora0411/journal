@@ -27,7 +27,7 @@ export default function CreateListScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <DetailHeader title="New list" />
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         <Text variant="title" marginBottom="m">

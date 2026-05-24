@@ -1,4 +1,5 @@
 import { Avatar, Box, Button, Text } from '@/components';
+import { useUpdateProfile } from '@/features/auth';
 import { useFollow } from '@/features/follows';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
@@ -9,18 +10,18 @@ import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMatchContacts } from '../api/use-match-contacts';
 import { useMatchedFriends } from '../api/use-matched-friends';
-import { StepIndicator } from '../components/StepIndicator';
+import { OnboardingStepHeader } from '../components/OnboardingStepHeader';
 
 const isWeb = Platform.OS === 'web';
 
 /**
- * Invite (#06 in the design pack). Friends-on-Postmark from your contacts
+ * Invite (#06 in the design pack). Friends-on-lore from your contacts
  * with badges. Tap a row to toggle selection; tap the CTA to follow the
  * selected set in one shot, then advance to welcome.
  *
  * The button copy says "Follow N" rather than "Invite N" because everyone in
- * the list is already on Postmark — the design's "Invite" wording is
- * misleading once you've matched. If we later add not-yet-on-Postmark
+ * the list is already on lore — the design's "Invite" wording is
+ * misleading once you've matched. If we later add not-yet-on-lore
  * suggestions to the same list, we'll re-introduce an Invite mode.
  */
 export function FriendsScreen() {
@@ -29,6 +30,7 @@ export function FriendsScreen() {
   const matchContacts = useMatchContacts();
   const matched = useMatchedFriends();
   const follow = useFollow();
+  const update = useUpdateProfile();
   const router = useRouter();
   const toast = useToast();
 
@@ -82,14 +84,29 @@ export function FriendsScreen() {
     });
   };
 
-  const onSkip = () => {
+  // Legacy onboarding's final step. Marks the profile as completed and
+  // routes straight to the Book tab. Will be superseded once Batch A's
+  // Seed screen (#6) lands and friends-screen is retired.
+  const finishOnboarding = async () => {
+    try {
+      await update.mutateAsync({ onboarding_completed: true });
+    } catch (err) {
+      log.error('mark onboarding completed failed', err);
+      // Non-blocking — better to land on Book with the flag missing than
+      // to strand the user on this screen.
+    }
+    log.event('onboarding.completed');
+    router.replace('/(tabs)/book');
+  };
+
+  const onSkip = async () => {
     log.event('onboarding.screen_completed', { screen: 'friends', choice: 'skip' });
-    router.replace('/(auth)/welcome');
+    await finishOnboarding();
   };
 
   const onCommit = async () => {
     if (selected.size === 0) {
-      onSkip();
+      await onSkip();
       return;
     }
     try {
@@ -100,7 +117,7 @@ export function FriendsScreen() {
         screen: 'friends',
         choice: 'follow',
       });
-      router.replace('/(auth)/welcome');
+      await finishOnboarding();
     } catch (err) {
       log.error('bulk follow failed', err);
       toast.show({ message: 'Some follows failed. Try again.', variant: 'error' });
@@ -108,9 +125,9 @@ export function FriendsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <Box flex={1} padding="l">
-        <StepIndicator step={3} total={4} onSkip={onSkip} />
+        <OnboardingStepHeader step={3} total={4} showBack />
 
         <Box marginTop="l">
           <Text variant="display" style={{ fontSize: 36, lineHeight: 42 }}>

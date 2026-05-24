@@ -16,4 +16,4 @@ export const buildWhatsAppLink = (text: string, phone?: string): string => {
     : `whatsapp://send?text=${encoded}`;
 };
 
-export const DEFAULT_INVITE_TEXT = `I've been logging my trips on Postmark — quietly useful, only your friends can see. Want in?\n\nhttps://journal.app/invite`;
+export const DEFAULT_INVITE_TEXT = `I've been logging my trips on lore — quietly useful, only your friends can see. Want in?\n\nhttps://journal.app/invite`;

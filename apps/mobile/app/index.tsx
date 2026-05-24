@@ -10,16 +10,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  * and a link to /dev/components.
  */
 export default function Landing() {
-  // Initial entry — always start at Cover. AuthGate in _layout will fast-forward
-  // an authenticated user to the right next step (or straight to /tabs/book if
-  // they're already onboarded) once the session resolves.
-  if (isSupabaseConfigured()) return <Redirect href="/(auth)/cover" />;
+  // Initial entry — Welcome (#1 of the redesign Batch A). AuthGate in
+  // _layout will fast-forward an authenticated user to the right next step
+  // (or straight to /tabs/book if they're already onboarded) once the
+  // session resolves.
+  if (isSupabaseConfigured()) return <Redirect href="/(auth)/welcome" />;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <Box flex={1} justifyContent="center" alignItems="center" padding="xl">
         <Text variant="title" textAlign="center" marginBottom="m">
-          Postmark
+          lore
         </Text>
         <Text variant="body" color="textMuted" textAlign="center" marginBottom="xl">
           Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in apps/mobile/.env to

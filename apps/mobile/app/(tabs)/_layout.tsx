@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 
 /**
- * Five-tab IA per the Postmark brief §6 (Information architecture):
+ * Five-tab IA per the lore brief §6 (Information architecture):
  *   Book / Search / Add / Friends / You
  *
  * Detail routes (trip, place, list, friend, map, year-in-travel) live inside
@@ -64,12 +64,14 @@ export default function TabsLayout() {
       <Tabs.Screen name="trip/[id]/index" options={{ href: null }} />
       <Tabs.Screen name="trip/[id]/confirm" options={{ href: null }} />
       <Tabs.Screen name="trip/[id]/edit" options={{ href: null }} />
-      <Tabs.Screen name="place/[name]" options={{ href: null }} />
+      <Tabs.Screen name="place/[id]" options={{ href: null }} />
+      <Tabs.Screen name="destination/[slug]" options={{ href: null }} />
       <Tabs.Screen name="list/[id]" options={{ href: null }} />
       <Tabs.Screen name="list/new" options={{ href: null }} />
       <Tabs.Screen name="friend/[handle]" options={{ href: null }} />
       <Tabs.Screen name="map" options={{ href: null }} />
       <Tabs.Screen name="year-in-travel" options={{ href: null }} />
+      <Tabs.Screen name="house-rules" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -1,6 +1,8 @@
-# Journal (codename)
+# lore. (repo: journal)
 
-Friends-graph travel journal for affluent urban Indians. Read [CLAUDE.md](./CLAUDE.md) for the constitution and [docs/build-plan.md](./docs/build-plan.md) for the v0 plan.
+Friends-graph travel journal for affluent urban Indians. Product name is **lore.** (the trailing period in brand color is part of the wordmark; see [ADR 0007](./docs/decisions/0007-rename-to-lore.md)). Repo + workspace identifiers retain the `journal` / `postmark` codenames for continuity.
+
+Read [CLAUDE.md](./CLAUDE.md) for the constitution and [docs/build-plan.md](./docs/build-plan.md) for the v0 plan.
 
 ## Quick start
 

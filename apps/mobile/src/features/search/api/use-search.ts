@@ -44,9 +44,11 @@ export const useSearch = (rawQuery: string) => {
     queryFn: async (): Promise<SearchResult[]> => {
       if (!viewerId || debounced.length < 2) return [];
       const supabase = getSupabase();
+      // Migration 11 dropped the `viewer` parameter; the function reads
+      // `auth.uid()` internally so a malicious caller can't pass someone
+      // else's id and read their search results.
       const { data, error } = await supabase.rpc('search_friend_graph', {
         q: debounced,
-        viewer: viewerId,
       });
       if (error) throw error;
       return (data ?? []) as SearchResult[];

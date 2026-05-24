@@ -30,7 +30,7 @@ export function DetailHeader({ title, right, onBack }: Props) {
       style={{
         borderBottomWidth: 0.5,
         borderColor: 'rgba(0,0,0,0.08)',
-        backgroundColor: '#FAF8F3',
+        backgroundColor: '#FFFFFF',
       }}
     >
       <Pressable

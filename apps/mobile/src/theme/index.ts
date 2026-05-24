@@ -1,82 +1,104 @@
 import { createTheme } from '@shopify/restyle';
 
-// Postmark brand — see CLAUDE.md §5 (Design system).
-// Cream paper base, terracotta brand, 7-stop photo palette.
+/**
+ * lore design tokens — see the redesign brief.
+ *
+ * One accent (coral). Pink / emerald / gold are category markers only.
+ * The single gradient (coral → gold) appears on the Wrapped screen.
+ * Italic-serif is the human voice; never used for UI labels or buttons.
+ *
+ * Legacy aliases below the new palette are kept *only* so the slice-1/2/3
+ * screens still compile during Phase 0; they will be removed once Batch A
+ * lands and every screen consumes the new tokens directly.
+ */
 const palette = {
-  paper: '#FAF8F3',
-  ink: '#1A1A1A',
-  inkSecondary: '#5A5A5A',
-  inkTertiary: '#9A9A9A',
-  divider: 'rgba(0,0,0,0.08)',
-  dividerStrong: 'rgba(0,0,0,0.15)',
-  surface: '#FFFFFF',
-  surfaceTinted: '#F3F3F0',
-  // Brand
-  brand: '#993C1D',
-  brandSoft: '#FAECE7',
-  // 7-stop photo palette (used as colored fills when real photos absent)
-  coral: '#D85A30',
-  amber: '#854F0B',
-  teal: '#0F6E56',
-  tealLight: '#1D9E75',
-  pink: '#D4537E',
-  blue: '#185FA5',
-  gray: '#5F5E5A',
-  // Bubble palette (onboarding chat illustration)
-  bubbleIn: '#F5C4B3',
-  bubbleInText: '#712B13',
-  bubbleOut: '#B5D4F4',
-  bubbleOutText: '#0C447C',
+  // Core surfaces
+  bg: '#FFFFFF',
+  paper: '#FFFFFF',
+  tint: '#FAF6F0',
+  ink: '#1A1410',
+  mute: '#7A716A',
+  hair: '#EFEAE2',
+
+  // The one accent
+  coral: '#FF4D2E',
+  coralSoft: 'rgba(255, 77, 46, 0.10)',
+
+  // Category markers — appear next to a category pill or live-dot, never as buttons
+  pink: '#FF3D87',
+  pinkSoft: 'rgba(255, 61, 135, 0.10)',
+  emerald: '#00A67E',
+  emeraldSoft: 'rgba(0, 166, 126, 0.10)',
+  gold: '#FFB300',
+  goldSoft: 'rgba(255, 179, 0, 0.10)',
+
+  // Status / toast
+  errorBg: 'rgba(255, 77, 46, 0.95)',
+  successBg: 'rgba(0, 166, 126, 0.95)',
+
   // Misc
-  errorBg: 'rgba(168, 72, 47, 0.95)',
-  successBg: 'rgba(60, 90, 60, 0.95)',
   white: '#FFFFFF',
+  black: '#000000',
   transparent: 'transparent',
 } as const;
 
 export const theme = createTheme({
   colors: {
+    // New tokens
+    bg: palette.bg,
     paper: palette.paper,
+    tint: palette.tint,
     ink: palette.ink,
-    inkSecondary: palette.inkSecondary,
-    inkTertiary: palette.inkTertiary,
-    divider: palette.divider,
-    dividerStrong: palette.dividerStrong,
-    surface: palette.surface,
-    surfaceTinted: palette.surfaceTinted,
-    brand: palette.brand,
-    brandSoft: palette.brandSoft,
-    // Back-compat alias used by older components.
-    accent: palette.brand,
+    mute: palette.mute,
+    hair: palette.hair,
     coral: palette.coral,
-    amber: palette.amber,
-    teal: palette.teal,
-    tealLight: palette.tealLight,
+    coralSoft: palette.coralSoft,
     pink: palette.pink,
-    blue: palette.blue,
-    gray: palette.gray,
-    bubbleIn: palette.bubbleIn,
-    bubbleInText: palette.bubbleInText,
-    bubbleOut: palette.bubbleOut,
-    bubbleOutText: palette.bubbleOutText,
+    pinkSoft: palette.pinkSoft,
+    emerald: palette.emerald,
+    emeraldSoft: palette.emeraldSoft,
+    gold: palette.gold,
+    goldSoft: palette.goldSoft,
     errorBg: palette.errorBg,
     successBg: palette.successBg,
     white: palette.white,
+    black: palette.black,
     transparent: palette.transparent,
 
-    // semantic aliases
-    background: palette.paper,
+    // Semantic aliases used by primitives
+    background: palette.bg,
     text: palette.ink,
-    textMuted: palette.inkSecondary,
-    textHint: palette.inkTertiary,
-    border: palette.divider,
-    borderStrong: palette.dividerStrong,
-    cardBg: palette.surface,
+    textMuted: palette.mute,
+    textHint: palette.mute,
+    border: palette.hair,
+    borderStrong: palette.hair,
+    cardBg: palette.paper,
     primaryBg: palette.ink,
-    primaryFg: palette.paper,
-    accentBg: palette.brand,
+    primaryFg: palette.white,
+    accentBg: palette.coral,
     accentFg: palette.white,
-    accentSoft: palette.brandSoft,
+    accentSoft: palette.coralSoft,
+
+    // Legacy aliases — to be removed in Batch A as each screen migrates.
+    // Anything reading these gets the new look automatically.
+    inkSecondary: palette.mute,
+    inkTertiary: palette.mute,
+    divider: palette.hair,
+    dividerStrong: palette.hair,
+    surface: palette.paper,
+    surfaceTinted: palette.tint,
+    brand: palette.coral,
+    brandSoft: palette.coralSoft,
+    accent: palette.coral,
+    amber: palette.gold,
+    teal: palette.emerald,
+    tealLight: palette.emerald,
+    blue: palette.ink,
+    gray: palette.mute,
+    bubbleIn: palette.tint,
+    bubbleInText: palette.ink,
+    bubbleOut: palette.coralSoft,
+    bubbleOutText: palette.coral,
   },
   spacing: {
     none: 0,
@@ -89,10 +111,11 @@ export const theme = createTheme({
   },
   borderRadii: {
     none: 0,
-    s: 4,
-    m: 8,
-    l: 12,
-    xl: 20,
+    xs: 6,
+    s: 8,
+    m: 12,
+    l: 14,
+    xl: 18,
     pill: 999,
   },
   breakpoints: {
@@ -101,100 +124,135 @@ export const theme = createTheme({
   },
   textVariants: {
     defaults: {
-      fontFamily: 'Inter_400Regular',
+      fontFamily: 'Geist_400Regular',
       fontSize: 14,
       lineHeight: 22,
       color: 'text',
     },
-    // Display — Fraunces 500, big editorial moments (cover, year-in-travel)
+    // Display — Instrument Serif italic. Editorial titles, pull quotes,
+    // the wordmark. Letter-spacing tightens at larger sizes (-0.5 → -1.6).
     display: {
-      fontFamily: 'Fraunces_500',
+      fontFamily: 'InstrumentSerif_400Italic',
       fontSize: 44,
       lineHeight: 48,
       color: 'text',
+      letterSpacing: -1.2,
+    },
+    // Title — Instrument Serif italic, screen titles
+    title: {
+      fontFamily: 'InstrumentSerif_400Italic',
+      fontSize: 32,
+      lineHeight: 36,
+      color: 'text',
       letterSpacing: -0.8,
     },
-    // Title — Fraunces 500, screen titles + trip titles
-    title: {
-      fontFamily: 'Fraunces_500',
-      fontSize: 24,
+    // Heading — for mid-size moments
+    heading: {
+      fontFamily: 'InstrumentSerif_400Italic',
+      fontSize: 26,
       lineHeight: 30,
       color: 'text',
-      letterSpacing: -0.4,
+      letterSpacing: -0.6,
     },
-    // Headline — Inter 500, section headers
+    // Headline — sans 500, section headers (rare; prefer eyebrow)
     headline: {
-      fontFamily: 'Inter_500Medium',
-      fontSize: 18,
-      lineHeight: 24,
+      fontFamily: 'Geist_500Medium',
+      fontSize: 15,
+      lineHeight: 22,
       color: 'text',
     },
-    // Body — Inter 400
+    // Body — Geist 400, the default for UI
     body: {
-      fontFamily: 'Inter_400Regular',
+      fontFamily: 'Geist_400Regular',
       fontSize: 14,
       lineHeight: 22,
       color: 'text',
     },
-    // Place name in flow — Fraunces 400, smaller
-    placeName: {
-      fontFamily: 'Fraunces_400',
+    bodyMute: {
+      fontFamily: 'Geist_400Regular',
       fontSize: 14,
-      lineHeight: 20,
+      lineHeight: 22,
+      color: 'textMuted',
+    },
+    // Voice quote — Instrument Serif italic, for friend-quote pull quotes
+    quote: {
+      fontFamily: 'InstrumentSerif_400Italic',
+      fontSize: 22,
+      lineHeight: 28,
       color: 'text',
     },
-    // Voice quote — Fraunces italic
-    quote: {
-      fontFamily: 'Fraunces_400Italic',
-      fontSize: 13,
+    // Place name — Geist 500, where the brief shows a sans place name
+    placeName: {
+      fontFamily: 'Geist_500Medium',
+      fontSize: 15,
       lineHeight: 20,
       color: 'text',
     },
     caption: {
-      fontFamily: 'Inter_400Regular',
+      fontFamily: 'Geist_400Regular',
+      fontSize: 13,
+      lineHeight: 20,
+      color: 'textMuted',
+    },
+    // Eyebrow — JetBrains Mono 9–10px, uppercase, letter-spacing 1.4,
+    // always paired with a 6×6 colored dot via the Eyebrow primitive.
+    eyebrow: {
+      fontFamily: 'JetBrainsMono_400Regular',
+      fontSize: 10,
+      lineHeight: 14,
+      color: 'text',
+      letterSpacing: 1.4,
+    },
+    // Label — mono small caps for inline labels
+    label: {
+      fontFamily: 'JetBrainsMono_400Regular',
+      fontSize: 9,
+      lineHeight: 14,
+      color: 'textMuted',
+      letterSpacing: 1.4,
+    },
+    meta: {
+      fontFamily: 'Geist_400Regular',
       fontSize: 12,
       lineHeight: 18,
       color: 'textMuted',
-    },
-    label: {
-      fontFamily: 'Inter_500Medium',
-      fontSize: 11,
-      lineHeight: 16,
-      color: 'textHint',
-      letterSpacing: 0.5,
-    },
-    meta: {
-      fontFamily: 'Inter_400Regular',
-      fontSize: 11,
-      lineHeight: 16,
-      color: 'textHint',
     },
   },
   cardVariants: {
     defaults: {
       backgroundColor: 'cardBg',
-      borderColor: 'border',
+      borderColor: 'hair',
       borderWidth: 1,
-      borderRadius: 'm',
+      borderRadius: 'l',
+      padding: 'm',
+    },
+    tint: {
+      backgroundColor: 'tint',
+      borderRadius: 'l',
       padding: 'm',
     },
   },
   buttonVariants: {
     defaults: {
-      borderRadius: 'm',
+      borderRadius: 'pill',
       paddingHorizontal: 'l',
-      paddingVertical: 's',
+      paddingVertical: 'm',
     },
     primary: {
-      backgroundColor: 'primaryBg',
+      backgroundColor: 'ink',
+    },
+    accent: {
+      backgroundColor: 'coral',
     },
     ghost: {
       backgroundColor: 'transparent',
       borderWidth: 1,
-      borderColor: 'borderStrong',
+      borderColor: 'hair',
     },
-    accent: {
-      backgroundColor: 'accentBg',
+    link: {
+      backgroundColor: 'transparent',
+      paddingHorizontal: 'none',
+      paddingVertical: 'xs',
     },
   },
   pillVariants: {
@@ -202,36 +260,56 @@ export const theme = createTheme({
       borderRadius: 'pill',
       paddingHorizontal: 'm',
       paddingVertical: 'xs',
-      backgroundColor: 'surface',
+      backgroundColor: 'paper',
       borderWidth: 1,
-      borderColor: 'border',
+      borderColor: 'hair',
     },
     on: {
-      backgroundColor: 'primaryBg',
-      borderColor: 'primaryBg',
+      backgroundColor: 'ink',
+      borderColor: 'ink',
     },
     accent: {
-      backgroundColor: 'accentSoft',
-      borderColor: 'accentBg',
+      backgroundColor: 'coralSoft',
+      borderColor: 'coral',
+    },
+    filled: {
+      backgroundColor: 'coral',
+      borderColor: 'coral',
     },
   },
 });
 
 export type Theme = typeof theme;
 
-/** Photo accent palette — used as colored fills when no real photo exists. */
+/**
+ * Category metadata — each category has a primary color + a 10% soft tint.
+ * Used by `CategoryPill` and by recommendation cards in Batch B.
+ */
+export const CATEGORIES = {
+  stay: { label: 'Stay', color: palette.coral, soft: palette.coralSoft },
+  food: { label: 'Food', color: palette.pink, soft: palette.pinkSoft },
+  drinks: { label: 'Drinks', color: palette.emerald, soft: palette.emeraldSoft },
+  wander: { label: 'Wander', color: palette.gold, soft: palette.goldSoft },
+  buy: { label: 'Buy', color: palette.mute, soft: 'rgba(122, 113, 106, 0.10)' },
+} as const;
+
+export type Category = keyof typeof CATEGORIES;
+
+/**
+ * Photo palette — kept for backward compat with slice-1/2/3 screens that
+ * use `photoColor()` to assign deterministic fills to image-less cards.
+ * Will be removed once those screens are rebuilt in Batch B with real
+ * Unsplash/Supabase photos as the brief requires.
+ */
 export const PHOTO_PALETTE = [
   palette.coral,
-  palette.amber,
-  palette.teal,
-  palette.tealLight,
+  palette.gold,
+  palette.emerald,
   palette.pink,
-  palette.blue,
-  palette.gray,
-  palette.brand,
+  palette.mute,
+  palette.ink,
 ] as const;
 
-/** Deterministic pick from PHOTO_PALETTE for a given seed string. */
 export const photoColor = (seed: string): string => {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) | 0;

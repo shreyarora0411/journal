@@ -36,7 +36,7 @@ export function ActivityScreen() {
   const buckets: ActivityEvent['bucket'][] = ['today', 'yesterday', 'this_week', 'earlier'];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F3' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
         <Text variant="headline" marginBottom="m">
           Activity

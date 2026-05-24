@@ -111,11 +111,20 @@ export type Area = z.infer<typeof AreaSchema>;
 
 // ---- Tip -----------------------------------------------------------------
 
+/**
+ * Verdict (love/mid/skip) — see ADR 0010. Captured on the logger's Log
+ * screen, surfaced only on their own profile. Three buckets only — no
+ * stars, no 5-point scales.
+ */
+export const VerdictSchema = z.enum(['love', 'mid', 'skip']);
+export type Verdict = z.infer<typeof VerdictSchema>;
+
 export const TipInputSchema = z.object({
   parent_type: TipParentSchema,
   parent_id: UuidSchema,
   body: trimmed(2_000).min(1),
   kind: TipKindSchema,
+  verdict: VerdictSchema.nullable().optional(),
 });
 export type TipInput = z.infer<typeof TipInputSchema>;
 

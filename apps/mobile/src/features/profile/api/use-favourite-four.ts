@@ -19,20 +19,34 @@ export const useFavouriteFour = (userId: string | null | undefined) =>
     queryFn: async (): Promise<Trip[]> => {
       if (!userId) return [];
       const supabase = getSupabase();
-      // Migration 10: `favourite_four_trip_ids` is not in the public
-      // safe-column grant, so cross-user reads will fail with a permission
-      // error. For the pilot we only support owner self-reads via the
-      // `me()` RPC; friend-profile favourite-four needs a separate RPC
-      // (post-pilot). Returning [] for non-self for now.
+      // Migration 10: `favourite_four_trip_ids` is not in the safe-column
+      // grant, so cross-user reads fail. Pilot supports owner self-reads
+      // via me() (with legacy fallback). Friend-favourite-four needs a
+      // dedicated RPC post-pilot.
       const { data: me, error: meErr } = await supabase.auth.getUser();
       if (meErr || !me.user || me.user.id !== userId) return [];
-      const { data: u, error: uErr } = await supabase.rpc('me');
-      if (uErr) {
-        if (uErr.code === '42703') return []; // column missing pre-migration
-        throw uErr;
+
+      const { data: rpcRow, error: rpcErr } = await supabase.rpc('me');
+      let row: { favourite_four_trip_ids: string[] } | null = null;
+      if (!rpcErr) {
+        row = rpcRow as { favourite_four_trip_ids: string[] } | null;
+      } else if (rpcErr.code === 'PGRST202' || rpcErr.code === '42883') {
+        const { data: u, error: uErr } = await supabase
+          .from('users')
+          .select('favourite_four_trip_ids')
+          .eq('id', userId)
+          .maybeSingle();
+        if (uErr) {
+          if (uErr.code === '42703') return [];
+          throw uErr;
+        }
+        row = u as { favourite_four_trip_ids: string[] } | null;
+      } else if (rpcErr.code === '42703') {
+        return [];
+      } else {
+        throw rpcErr;
       }
-      const ids =
-        (u as { favourite_four_trip_ids: string[] } | null)?.favourite_four_trip_ids ?? [];
+      const ids = row?.favourite_four_trip_ids ?? [];
       if (ids.length === 0) return [];
       const { data: trips, error: tErr } = await supabase
         .from('trips')

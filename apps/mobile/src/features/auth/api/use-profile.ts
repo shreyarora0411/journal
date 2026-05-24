@@ -17,13 +17,61 @@ export type Profile = {
   home_country_code: string | null;
 };
 
-/**
- * Self-profile read. Migration 10 column-level-restricts SELECT on
- * `public.users` for `authenticated` — only the safe public columns are
- * grantable. We use the `public.me()` SECURITY DEFINER RPC for owner
- * self-reads so we can still pull the full row (phone_hash redaction
- * happens in the response shape below — we never expose it client-side).
- */
+// Columns the client cares about; project out of either me() (post mig 10)
+// or the legacy select() fallback so the rest of the app doesn't see
+// phone_hash by accident.
+const pickProfile = (row: Record<string, unknown>): Profile => ({
+  id: row.id as string,
+  handle: (row.handle as string | null) ?? null,
+  display_name: (row.display_name as string | null) ?? null,
+  avatar_url: (row.avatar_url as string | null) ?? null,
+  default_visibility: (row.default_visibility as Visibility) ?? 'friends_of_friends',
+  onboarding_completed_at: (row.onboarding_completed_at as string | null) ?? null,
+  home_city: (row.home_city as string | null) ?? null,
+  home_lat: (row.home_lat as number | null) ?? null,
+  home_lng: (row.home_lng as number | null) ?? null,
+  home_country_code: (row.home_country_code as string | null) ?? null,
+});
+
+// `me()` (migration 10) is preferred — it's a SECURITY DEFINER RPC that
+// bypasses the new column-level grant. On Supabase instances where the
+// migration hasn't landed yet (PGRST202 = function not found), we fall
+// back to the legacy column-selecting query so dev / pre-migration
+// pilots don't break. Logs a one-time warning so the gap is obvious.
+
+const FUNCTION_MISSING_CODES = new Set(['PGRST202', '42883']);
+let warnedMissingMe = false;
+
+const fetchSelf = async (userId: string): Promise<Profile | null> => {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.rpc('me');
+  if (!error && data) return pickProfile(data as Record<string, unknown>);
+
+  if (error && !FUNCTION_MISSING_CODES.has(error.code ?? '')) throw error;
+
+  if (!warnedMissingMe) {
+    // biome-ignore lint/suspicious/noConsole: surfaced once so the
+    // migration-not-pushed state is obvious in dev.
+    console.warn(
+      '[lore] public.me() not found on the database. Apply migration 10 ' +
+        '(users_rls_tighten). Falling back to legacy SELECT.',
+    );
+    warnedMissingMe = true;
+  }
+
+  const { data: row, error: legacyErr } = await supabase
+    .from('users')
+    .select(PROFILE_COLUMNS)
+    .eq('id', userId)
+    .maybeSingle();
+  if (legacyErr) throw legacyErr;
+  if (!row) return null;
+  return pickProfile(row as Record<string, unknown>);
+};
+
+export { fetchSelf };
+
 export const useProfile = () => {
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
   return useQuery({
@@ -31,32 +79,11 @@ export const useProfile = () => {
     enabled: Boolean(userId),
     queryFn: async (): Promise<Profile | null> => {
       if (!userId) return null;
-      const supabase = getSupabase();
-      const { data, error } = await supabase.rpc('me');
-      if (error) throw error;
-      if (!data) return null;
-      // `me()` returns the full row. Project only the fields the client
-      // app expects so we don't accidentally render phone_hash anywhere.
-      const row = data as Profile & { phone_hash?: unknown };
-      return {
-        id: row.id,
-        handle: row.handle,
-        display_name: row.display_name,
-        avatar_url: row.avatar_url,
-        default_visibility: row.default_visibility,
-        onboarding_completed_at: row.onboarding_completed_at,
-        home_city: row.home_city,
-        home_lat: row.home_lat,
-        home_lng: row.home_lng,
-        home_country_code: row.home_country_code,
-      };
+      return fetchSelf(userId);
     },
     staleTime: 30_000,
   });
 };
 
-// Kept for callers that still construct ad-hoc selects against `users`.
-// New code should prefer the me() RPC for self-reads and `public_profiles`
-// for cross-user reads.
 export const PROFILE_COLUMNS =
   'id, handle, display_name, avatar_url, default_visibility, onboarding_completed_at, home_city, home_lat, home_lng, home_country_code';

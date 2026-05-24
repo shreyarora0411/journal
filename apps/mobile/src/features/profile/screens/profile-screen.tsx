@@ -1,10 +1,11 @@
 import { Eyebrow, Face, Page, Photo, PullQuote, StatusSpace } from '@/components';
+import { useSignOut } from '@/features/auth';
 import { ME } from '@/features/feed/lib/fixtures';
 import { log } from '@/lib/log';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 const CORAL = '#FF4D2E';
 const GOLD = '#FFB300';
@@ -25,10 +26,29 @@ const HAIR = '#EFEAE2';
  */
 export function ProfileScreen() {
   const router = useRouter();
+  const signOut = useSignOut();
 
   useEffect(() => {
     log.event('profile.screen_entered');
   }, []);
+
+  const onSignOut = () => {
+    Alert.alert('Sign out?', 'You can sign back in with the same number.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await signOut.mutateAsync();
+            log.event('profile.signed_out');
+          } catch (err) {
+            log.error('sign out failed', err);
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <Page>
@@ -41,8 +61,8 @@ export function ProfileScreen() {
           <Text style={styles.name}>{ME.name}</Text>
           <Text style={styles.handle}>{ME.handle}</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Settings">
-          <Text style={styles.cog}>⚙︎</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut}>
+          <Text style={styles.cog}>⎋</Text>
         </Pressable>
       </View>
 

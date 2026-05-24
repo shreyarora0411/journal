@@ -18,19 +18,21 @@ describe('TasteMakersScreen', () => {
     expect(screen.getByText('Follow a few\ntaste-makers.')).toBeTruthy();
   });
 
-  it('renders all four taste-maker cards by name', () => {
+  it('renders the "Coming soon" holding state instead of stock-photo strangers', () => {
+    // Session 2 lock: ship the holding state. TASTE_MAKERS fixture is
+    // empty until real curated people land.
     renderWithProviders(<TasteMakersScreen />);
-    expect(screen.getByText('Tara Chandra')).toBeTruthy();
-    expect(screen.getByText('Kabir Mehta')).toBeTruthy();
-    expect(screen.getByText('Divyansh Rao')).toBeTruthy();
-    expect(screen.getByText('Anya Patel')).toBeTruthy();
+    expect(screen.getByText('Coming soon')).toBeTruthy();
+    expect(screen.getByText(/curating a small group of travelers/i)).toBeTruthy();
+    // No stock-photo names should appear
+    expect(screen.queryByText('Tara Chandra')).toBeNull();
+    expect(screen.queryByText('Kabir Mehta')).toBeNull();
   });
 
-  it('toggling Follow updates the CTA copy', () => {
+  it('CTA label reflects the empty state', () => {
     renderWithProviders(<TasteMakersScreen />);
-    expect(screen.getByText('Continue without following anyone')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Follow Tara Chandra'));
-    expect(screen.getByText(/Continue · following 1/)).toBeTruthy();
+    // With no taste-makers to follow, the CTA is just "Continue".
+    expect(screen.getByText('Continue')).toBeTruthy();
   });
 
   it('Continue routes to /(auth)/import', () => {

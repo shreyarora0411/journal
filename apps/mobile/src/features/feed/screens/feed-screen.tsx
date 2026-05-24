@@ -12,13 +12,11 @@ import { log } from '@/lib/log';
 import { Link, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { FRIEND_RECS, type FriendRec, LIVE_TRAVELERS, type LiveTraveler } from '../lib/fixtures';
+import { FRIEND_RECS, type FriendRec } from '../lib/fixtures';
 
 const CORAL = '#FF4D2E';
-const PINK = '#FF3D87';
 const INK = '#1A1410';
 const MUTE = '#7A716A';
-const TINT = '#FAF6F0';
 const HAIR = '#EFEAE2';
 
 /**
@@ -58,19 +56,9 @@ export function FeedScreen() {
         </View>
       </View>
 
-      {/* Right now strip */}
-      <View style={{ marginTop: 16 }}>
-        <Eyebrow color={PINK}>Right now</Eyebrow>
-        <View style={styles.liveStrip}>
-          {LIVE_TRAVELERS.map((t) => (
-            <LiveCard
-              key={t.id}
-              traveler={t}
-              onPress={() => router.push(`/destination/${t.destinationSlug}` as never)}
-            />
-          ))}
-        </View>
-      </View>
+      {/* "Right now" strip cut in Session 2 — there's no current_trip
+          system yet, so "Tara is here now" badges were fake. Will come
+          back as a real surface when we ship live-status. */}
 
       {/* Fresh from my circle */}
       <View style={{ marginTop: 24, gap: 16 }}>
@@ -94,30 +82,8 @@ function idFromRec(r: FriendRec): string {
   return 'hotel-k5';
 }
 
-function LiveCard({ traveler, onPress }: { traveler: LiveTraveler; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${traveler.name} is in ${traveler.destination}, day ${traveler.dayNumber}`}
-      onPress={onPress}
-      style={styles.liveCard}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Face uri={traveler.avatarUri} size="sm" />
-        <View style={styles.liveDot} />
-      </View>
-      <View style={{ flex: 1, marginLeft: 4 }}>
-        <Text style={styles.liveName}>{traveler.name}</Text>
-        <Text style={styles.liveSub}>
-          {traveler.destination} · Day {traveler.dayNumber}
-        </Text>
-      </View>
-      <View style={styles.liveAsk}>
-        <Text style={styles.liveAskLabel}>Ask →</Text>
-      </View>
-    </Pressable>
-  );
-}
+// `LiveCard` removed in Session 2 — no current_trip system; the badges
+// were fake. Will return when we ship a real live-status surface.
 
 function RecCard({ rec, onPress }: { rec: FriendRec; onPress: () => void }) {
   return (
@@ -150,12 +116,13 @@ function RecCard({ rec, onPress }: { rec: FriendRec; onPress: () => void }) {
         <PullQuote size="sm">{rec.quote}</PullQuote>
       </View>
 
-      {/* Footer */}
+      {/* Footer. Heart count only renders when > 0 — Session 2 brief:
+          "new trips with no verdicts shouldn't have a metric on them
+          yet". The fixture `hearts` field is no longer surfaced here;
+          real counts come from the trip_with_verdict_counts view via
+          useFeed once real trips exist. */}
       <View style={styles.recFooter}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={styles.heart}>♥</Text>
-          <Text style={styles.heartCount}>{rec.hearts}</Text>
-        </View>
+        <View style={{ flex: 1 }} />
         <Text style={styles.saveGlyph}>⌃</Text>
         <Text style={styles.addPlan}>Add to plan</Text>
       </View>
@@ -171,36 +138,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   headerGlyph: { fontSize: 22, color: INK },
-  liveStrip: { gap: 10, marginTop: 12 },
-  liveCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: TINT,
-    borderRadius: 16,
-  },
-  liveDot: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: PINK,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  liveName: { fontFamily: 'Geist_500Medium', fontSize: 14, color: INK },
-  liveSub: { fontFamily: 'Geist_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
-  liveAsk: {
-    backgroundColor: INK,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  liveAskLabel: { fontFamily: 'Geist_500Medium', fontSize: 12, color: '#FFFFFF' },
   recCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
@@ -231,8 +168,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: HAIR,
   },
-  heart: { fontSize: 14, color: CORAL },
-  heartCount: { fontFamily: 'Geist_500Medium', fontSize: 12, color: INK },
   saveGlyph: { fontSize: 16, color: MUTE },
   addPlan: { fontFamily: 'Geist_500Medium', fontSize: 13, color: CORAL, marginLeft: 'auto' },
 });

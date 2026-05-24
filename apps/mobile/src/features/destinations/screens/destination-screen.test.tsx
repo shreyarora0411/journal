@@ -18,12 +18,18 @@ beforeEach(() => {
 });
 
 describe('DestinationScreen', () => {
-  it('renders the title, country, and relational context line for Tokyo', () => {
+  it('renders the title and country for Tokyo', () => {
     mockSlug.mockReturnValue('tokyo');
     renderWithProviders(<DestinationScreen />);
     expect(screen.getByText('Tokyo')).toBeTruthy();
     expect(screen.getByText('Japan')).toBeTruthy();
-    expect(screen.getByText(/Tara is here now/)).toBeTruthy();
+  });
+
+  it('does NOT render the "Tara is here now" live cue line (Session 2 — cut)', () => {
+    // No current_trip system; the cue was hardcoded fake.
+    mockSlug.mockReturnValue('tokyo');
+    renderWithProviders(<DestinationScreen />);
+    expect(screen.queryByText(/is here now/)).toBeNull();
   });
 
   it('renders the filter pill row including "All N" and category counts', () => {

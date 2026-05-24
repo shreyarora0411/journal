@@ -17,6 +17,21 @@ export const useFollow = () => {
         .from('follows')
         .insert({ follower_id: viewerId, followed_id: followedId });
       if (error && error.code !== '23505') throw error; // ignore "already exists"
+
+      // Activity stream: emit a follow_started row so the followee's
+      // activity feed reflects the new connection (Session 2 task 5).
+      // Best-effort — failure is non-blocking.
+      supabase
+        .from('activity')
+        .insert({
+          user_id: viewerId,
+          type: 'follow_started',
+          payload: { followed_user_id: followedId },
+        })
+        .then(({ error: actErr }) => {
+          if (actErr) log.warn('activity insert failed', { error: actErr.message });
+        });
+
       log.event('follow.created');
       return { followedId };
     },

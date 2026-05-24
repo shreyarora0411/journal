@@ -12,12 +12,17 @@ beforeEach(() => {
 });
 
 describe('SearchScreen', () => {
-  it('renders the headline, search input, hero card, and Friends I trust list', () => {
+  it('renders the headline, search input, and Friends I trust list', () => {
     renderWithProviders(<SearchScreen />);
     expect(screen.getByText('Where are you going?')).toBeTruthy();
     expect(screen.getByLabelText('Search destinations')).toBeTruthy();
-    expect(screen.getByLabelText('Because Tara just got back — Tokyo')).toBeTruthy();
     expect(screen.getByText('FRIENDS I TRUST')).toBeTruthy();
+  });
+
+  it('does NOT render the "Because X just got back" hero (Session 2 — cut)', () => {
+    // No recency data backs it; the surface was a hardcoded fake.
+    renderWithProviders(<SearchScreen />);
+    expect(screen.queryByLabelText(/just got back/i)).toBeNull();
   });
 
   it('shows the four destinations from the fixture', () => {
@@ -30,7 +35,6 @@ describe('SearchScreen', () => {
 
   it('renders a HOT badge on hot destinations', () => {
     renderWithProviders(<SearchScreen />);
-    // Two destinations are flagged hot in the fixture
     expect(screen.getAllByText('HOT').length).toBeGreaterThanOrEqual(2);
   });
 

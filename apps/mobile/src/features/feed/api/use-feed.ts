@@ -11,6 +11,8 @@ export type FeedRow = Trip & {
     avatar_url: string | null;
   } | null;
   cover_photo_path: string | null;
+  /** Public love count (migration 13). 0 when nothing rendered yet. */
+  love_count: number;
 };
 
 const PAGE_SIZE = 10;
@@ -35,10 +37,13 @@ export const useFeed = () => {
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }): Promise<{ rows: FeedRow[]; nextCursor: string | null }> => {
       const supabase = getSupabase();
+      // Read from the view that pre-aggregates love_count per trip
+      // (migration 13). RLS on the underlying trips table still applies
+      // because the view is SECURITY INVOKER.
       let q = supabase
-        .from('trips')
+        .from('trip_with_verdict_counts')
         .select(
-          'id, user_id, title, start_date, end_date, note, cover_photo_id, visibility, imported_from, created_at, updated_at, deleted_at, author:user_id(id, display_name, handle, avatar_url), cover:cover_photo_id(storage_path)',
+          'id, user_id, title, start_date, end_date, note, cover_photo_id, visibility, imported_from, created_at, updated_at, deleted_at, love_count, author:user_id(id, display_name, handle, avatar_url), cover:cover_photo_id(storage_path)',
         )
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
@@ -51,12 +56,14 @@ export const useFeed = () => {
       type Raw = Trip & {
         author: FeedRow['author'];
         cover: { storage_path: string } | null;
+        love_count: number | null;
       };
       const raw = (data ?? []) as unknown as Raw[];
       const rows: FeedRow[] = raw.map((r) => ({
         ...r,
         author: r.author,
         cover_photo_path: r.cover?.storage_path ?? null,
+        love_count: r.love_count ?? 0,
       }));
       const last = rows[rows.length - 1];
       const nextCursor = rows.length === PAGE_SIZE && last ? last.created_at : null;

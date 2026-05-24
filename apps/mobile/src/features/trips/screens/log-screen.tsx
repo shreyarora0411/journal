@@ -7,6 +7,7 @@ import {
   VerdictPicker,
 } from '@/components';
 import { useCreateTripQuick } from '@/features/trips';
+import { useSetVerdict } from '@/features/verdicts';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { CATEGORIES, type Category } from '@/theme';
@@ -40,6 +41,7 @@ export function LogScreen() {
   const router = useRouter();
   const toast = useToast();
   const createTrip = useCreateTripQuick();
+  const verdictMutation = useSetVerdict();
 
   const [mode, setMode] = useState<Mode>('quick');
   const [category, setCategory] = useState<Category>('food');
@@ -55,7 +57,7 @@ export function LogScreen() {
     }
     try {
       const today = new Date().toISOString().slice(0, 10);
-      await createTrip.mutateAsync({
+      const result = await createTrip.mutateAsync({
         title: 'Pondicherry · Café Des Arts',
         place_name: 'Café Des Arts',
         start_date: today,
@@ -63,6 +65,17 @@ export function LogScreen() {
         note: trimmed + (tip.trim() ? `\n\nTip: ${tip.trim()}` : ''),
         visibility: 'friends_of_friends',
       });
+      // Persist the verdict on the new trip. Failure here doesn't fail
+      // the whole log save — the trip is already in the user's book.
+      try {
+        await verdictMutation.mutateAsync({
+          target_type: 'trip',
+          target_id: result.trip.id,
+          verdict,
+        });
+      } catch (vErr) {
+        log.warn('verdict upsert failed', { error: String(vErr) });
+      }
       log.event('log.saved', { mode, category, verdict });
       toast.show({ message: 'Added to your book.', variant: 'success' });
       router.replace('/(tabs)/book');

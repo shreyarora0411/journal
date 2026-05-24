@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMeStats } from '../api/use-me-stats';
 
 const CORAL = '#FF4D2E';
 const GOLD = '#FFB300';
@@ -27,10 +28,17 @@ const HAIR = '#EFEAE2';
 export function ProfileScreen() {
   const router = useRouter();
   const signOut = useSignOut();
+  const stats = useMeStats();
 
   useEffect(() => {
     log.event('profile.screen_entered');
   }, []);
+
+  // Loading or pre-migration: render `—` so we don't lie with zeros.
+  const fmt = (n: number | undefined | null): string => (typeof n === 'number' ? String(n) : '—');
+  const tripsLabel = fmt(stats.data?.trips_count);
+  const countriesLabel = fmt(stats.data?.countries_count);
+  const tipsLabel = fmt(stats.data?.tips_given_count);
 
   const onSignOut = () => {
     Alert.alert('Sign out?', 'You can sign back in with the same number.', [
@@ -73,18 +81,19 @@ export function ProfileScreen() {
         </PullQuote>
       </View>
 
-      {/* 3-stat row */}
+      {/* 3-stat row — real numbers via me_stats(); renders `—` while
+          loading or when migration 12 hasn't been deployed. */}
       <View style={styles.statRow}>
         <View style={[styles.stat, styles.statOutlined]}>
-          <Text style={[styles.statValue, { color: INK }]}>{ME.trips}</Text>
+          <Text style={[styles.statValue, { color: INK }]}>{tripsLabel}</Text>
           <Text style={[styles.statLabel, { color: MUTE }]}>Trips</Text>
         </View>
         <View style={[styles.stat, styles.statTinted]}>
-          <Text style={[styles.statValue, { color: INK }]}>{ME.countries}</Text>
+          <Text style={[styles.statValue, { color: INK }]}>{countriesLabel}</Text>
           <Text style={[styles.statLabel, { color: MUTE }]}>Countries</Text>
         </View>
         <View style={[styles.stat, styles.statFilled]}>
-          <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{ME.tipsGiven}</Text>
+          <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{tipsLabel}</Text>
           <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.85 }]}>Tips I gave</Text>
         </View>
       </View>
@@ -106,7 +115,7 @@ export function ProfileScreen() {
             <Text style={styles.wrappedEyebrow}>MY 2026, SO FAR</Text>
             <Text style={styles.wrappedHeadline}>I really{'\n'}moved this year.</Text>
             <Text style={styles.wrappedFooter}>
-              {ME.trips} trips · {ME.countries} countries · {ME.tipsGiven} tips
+              {tripsLabel} trips · {countriesLabel} countries · {tipsLabel} tips
             </Text>
           </View>
           <Text style={styles.wrappedChevron}>›</Text>

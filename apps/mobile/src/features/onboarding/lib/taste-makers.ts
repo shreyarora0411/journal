@@ -17,7 +17,15 @@ export type TasteMaker = {
   cue: string;
 };
 
-export const TASTE_MAKERS: ReadonlyArray<TasteMaker> = [
+/**
+ * Session 2 lock: ship the holding state, not stock-photo strangers.
+ * When real curated travelers are vouched-for (with permission), they'll
+ * replace this array. Until then the Taste-makers screen renders the
+ * empty "Coming soon" state below the eyebrow.
+ */
+export const TASTE_MAKERS: ReadonlyArray<TasteMaker> = [];
+
+const _DEFERRED_TASTE_MAKER_FIXTURES: ReadonlyArray<TasteMaker> = [
   {
     id: 'tm-1',
     name: 'Tara Chandra',

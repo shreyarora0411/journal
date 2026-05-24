@@ -47,11 +47,15 @@ export function ActivityScreen() {
         ) : (q.data ?? []).length === 0 ? (
           <Box marginTop="m">
             <Text variant="body" color="textMuted">
-              Your friends' moves will show up here.
+              Nothing yet. When friends add trips or follow people, it'll show up here.
             </Text>
-            <Text variant="caption" marginTop="s">
-              Follow a few people on Search → Discover to see this fill up.
-            </Text>
+            <Link href={'/(tabs)/friends' as never} asChild>
+              <Pressable>
+                <Text variant="caption" marginTop="m" style={{ color: '#FF4D2E' }}>
+                  Invite someone →
+                </Text>
+              </Pressable>
+            </Link>
           </Box>
         ) : (
           buckets.map((b) =>

@@ -101,7 +101,9 @@ export function DestinationScreen() {
           <Text style={styles.contextCue}>
             {dest.friends.length} friends · {dest.placeCount} places
           </Text>
-          <Text style={styles.contextLine}>{dest.cue}</Text>
+          {/* `dest.cue` (e.g. "Tara is here now") removed in Session 2
+              — no current_trip system to back it. Will return as a real
+              live-status surface later. */}
         </View>
       </View>
 

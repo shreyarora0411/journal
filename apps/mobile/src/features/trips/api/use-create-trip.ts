@@ -57,6 +57,20 @@ export const useCreateTripQuick = () => {
         .invoke('extract-entities', { body: { trip_id: (trip as Trip).id } })
         .catch((err) => log.warn('extract-entities invoke failed', { error: String(err) }));
 
+      // 4. Append to the activity stream so friends' Inbox/Activity tab
+      //    has something real to show (Session 2 task 5). Best-effort —
+      //    failure is non-blocking.
+      supabase
+        .from('activity')
+        .insert({
+          user_id: userId,
+          type: 'trip_added',
+          payload: { trip_id: (trip as Trip).id, trip_title: (trip as Trip).title },
+        })
+        .then(({ error: actErr }) => {
+          if (actErr) log.warn('activity insert failed', { error: actErr.message });
+        });
+
       log.event('trip.created', { mode: 'quick' });
       return { trip: trip as Trip, placeId: (place as { id: string }).id };
     },

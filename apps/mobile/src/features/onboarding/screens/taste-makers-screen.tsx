@@ -56,16 +56,26 @@ export function TasteMakersScreen() {
         </Text>
       </View>
 
-      <View style={{ gap: 12, marginTop: 24 }}>
-        {TASTE_MAKERS.map((m) => (
-          <TasteMakerCard
-            key={m.id}
-            person={m}
-            following={following.has(m.id)}
-            onToggle={() => toggle(m.id)}
-          />
-        ))}
-      </View>
+      {TASTE_MAKERS.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>Coming soon</Text>
+          <Text style={styles.emptyBody}>
+            We're curating a small group of travelers we vouch for. Once they're on lore, you'll be
+            able to follow them here. For now, skip ahead — your friends carry the feed.
+          </Text>
+        </View>
+      ) : (
+        <View style={{ gap: 12, marginTop: 24 }}>
+          {TASTE_MAKERS.map((m) => (
+            <TasteMakerCard
+              key={m.id}
+              person={m}
+              following={following.has(m.id)}
+              onToggle={() => toggle(m.id)}
+            />
+          ))}
+        </View>
+      )}
 
       <View style={{ flex: 1 }} />
 
@@ -76,9 +86,11 @@ export function TasteMakersScreen() {
         style={styles.cta}
       >
         <Text style={styles.ctaLabel}>
-          {following.size > 0
-            ? `Continue · following ${following.size}`
-            : 'Continue without following anyone'}
+          {TASTE_MAKERS.length === 0
+            ? 'Continue'
+            : following.size > 0
+              ? `Continue · following ${following.size}`
+              : 'Continue without following anyone'}
         </Text>
       </Pressable>
     </Page>
@@ -147,10 +159,13 @@ const styles = StyleSheet.create({
     color: INK,
   },
   bio: {
-    fontFamily: 'Geist_400Regular',
-    fontSize: 13,
+    // Italic serif per Session 2 task 8 — bios are the human voice,
+    // not a UI label.
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 14,
     color: MUTE,
-    marginTop: 2,
+    marginTop: 4,
+    letterSpacing: -0.2,
   },
   cue: {
     fontFamily: 'JetBrainsMono_400Regular',
@@ -166,11 +181,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CORAL,
   },
-  followPillOff: { backgroundColor: 'transparent' },
-  followPillOn: { backgroundColor: CORAL },
+  // Session 2 brief: outlined coral when not followed, INK filled when
+  // followed — matches the rest of the app's filled-CTA convention.
+  followPillOff: { backgroundColor: 'transparent', borderColor: CORAL },
+  followPillOn: { backgroundColor: INK, borderColor: INK },
   followLabel: {
     fontFamily: 'Geist_500Medium',
     fontSize: 13,
+  },
+  emptyCard: {
+    marginTop: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  emptyTitle: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 22,
+    color: INK,
+    letterSpacing: -0.4,
+  },
+  emptyBody: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: MUTE,
+    marginTop: 8,
   },
   cta: {
     backgroundColor: INK,

@@ -1,5 +1,5 @@
-import { Eyebrow, Face, FaceStack, Page, Photo, StatusSpace } from '@/components';
-import { DESTINATIONS, TARA } from '@/features/feed/lib/fixtures';
+import { Eyebrow, FaceStack, Page, Photo, StatusSpace } from '@/components';
+import { DESTINATIONS } from '@/features/feed/lib/fixtures';
 import { log } from '@/lib/log';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -29,9 +29,8 @@ export function SearchScreen() {
     log.event('search.screen_entered');
   }, []);
 
-  // The recommendation hero is the most recently-returned-from friend's
-  // current destination. Hardcoded to Tara → Tokyo per the design pack.
-  const hero = DESTINATIONS.find((d) => d.slug === 'tokyo');
+  // Hero card cut in Session 2 — no recency data backed the
+  // "Because X just got back" surface. Will return as a real signal.
 
   return (
     <Page>
@@ -52,25 +51,9 @@ export function SearchScreen() {
       </View>
 
       {/* Hero card */}
-      {hero ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Because ${TARA.name} just got back — Tokyo`}
-          onPress={() => router.push(`/destination/${hero.slug}` as never)}
-          style={{ marginTop: 20 }}
-        >
-          <Photo uri={hero.heroUri} aspectRatio={5 / 4} radius={18}>
-            <View style={styles.heroOverlay}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Face uri={TARA.avatarUri} size="sm" ring />
-                <Text style={styles.heroCue}>Because {TARA.name} just got back</Text>
-              </View>
-              <Text style={styles.heroDest}>{hero.name}</Text>
-              <Text style={styles.heroSub}>{hero.placeCount} places · 5 friends</Text>
-            </View>
-          </Photo>
-        </Pressable>
-      ) : null}
+      {/* Hero "Because X just got back" card cut in Session 2 — there's
+          no recency / current-trip data backing it. The Friends-I-trust
+          list below carries the screen until we ship real signal. */}
 
       <View style={{ marginTop: 24 }}>
         <Eyebrow>Friends I trust</Eyebrow>

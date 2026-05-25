@@ -1,12 +1,12 @@
-import { Box, Button, Text } from '@/components';
+import { Box, Button, PlacePicker, Text } from '@/components';
 import { useAuthStore, useProfile, useUpdateProfile, useUploadAvatar } from '@/features/auth';
 import { useToast } from '@/hooks/use-toast';
+import type { PlaceDetails } from '@/lib/google-places';
 import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
 import { DisplayNameSchema } from '@journal/shared';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -29,7 +29,13 @@ import { OnboardingStepHeader } from '../components/OnboardingStepHeader';
 export function FramingScreen() {
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
+  // Home city state. `homeCityPicked` is set when the user taps an
+  // autocomplete result (gives us full lat/lng + Place ID). `homeCity`
+  // is the user-visible text — populated from a pick or from the
+  // "Use 'X' anyway" free-text fallback.
   const [homeCity, setHomeCity] = useState('');
+  const [homeCityPicked, setHomeCityPicked] = useState<PlaceDetails | null>(null);
+  const [homePickerOpen, setHomePickerOpen] = useState(false);
   const update = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
   const profile = useProfile();
@@ -57,29 +63,15 @@ export function FramingScreen() {
       return;
     }
     try {
-      // Forward-geocode the home city to lat/lng + country code so the
-      // camera-roll import can classify clusters by distance-from-home
-      // (ADR 0009). Geocoder failure is non-blocking — we still save the
-      // typed city string.
-      let home_lat: number | undefined;
-      let home_lng: number | undefined;
-      let home_country_code: string | undefined;
-      try {
-        const geo = await Location.geocodeAsync(trimmedHome);
-        const hit = geo[0];
-        if (hit) {
-          home_lat = hit.latitude;
-          home_lng = hit.longitude;
-          const reverse = await Location.reverseGeocodeAsync({
-            latitude: hit.latitude,
-            longitude: hit.longitude,
-          });
-          const code = reverse[0]?.isoCountryCode;
-          if (code && /^[A-Z]{2}$/.test(code)) home_country_code = code;
-        }
-      } catch (err) {
-        log.warn('home city geocode failed', { error: String(err) });
-      }
+      // If the user picked an autocomplete result, we already have the
+      // resolved lat/lng from Google Places (Session 1). Free-text falls
+      // through to a name-only save.
+      const home_lat = homeCityPicked?.lat ?? undefined;
+      const home_lng = homeCityPicked?.lng ?? undefined;
+      // ISO country code lookup is deferred — the camera-roll classifier
+      // (ADR 0009) tolerates undefined; the foreign-country shortcut
+      // just won't fire (distance check still works).
+      const home_country_code = undefined;
 
       await update.mutateAsync({
         display_name: parsed.data,
@@ -279,34 +271,52 @@ export function FramingScreen() {
                 <Text variant="label" marginBottom="s">
                   WHERE DO YOU LIVE?
                 </Text>
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#1A1410',
-                    borderRadius: 14,
-                    paddingHorizontal: 12,
-                    paddingVertical: 12,
-                    backgroundColor: '#FFFFFF',
-                  }}
-                >
-                  <TextInput
-                    selectionColor="#FF4D2E"
-                    textContentType="addressCity"
-                    autoComplete="off"
-                    style={{
-                      fontFamily: 'Geist_400Regular',
-                      fontSize: 16,
-                      color: '#1A1410',
-                      paddingVertical: 2,
-                    }}
+                {homePickerOpen || homeCity.length === 0 ? (
+                  <PlacePicker
+                    mode="city"
                     placeholder="Mumbai, Bangalore, Delhi…"
-                    placeholderTextColor="#9A9A9A"
-                    value={homeCity}
-                    onChangeText={setHomeCity}
-                    autoCapitalize="words"
-                    maxLength={80}
+                    initialQuery={homeCity}
+                    onPick={(details) => {
+                      setHomeCity(details.name);
+                      setHomeCityPicked(details);
+                      setHomePickerOpen(false);
+                    }}
+                    onFreeText={(typed) => {
+                      setHomeCity(typed);
+                      setHomeCityPicked(null);
+                      setHomePickerOpen(false);
+                    }}
                   />
-                </View>
+                ) : (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Change home city"
+                    onPress={() => setHomePickerOpen(true)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      borderWidth: 1,
+                      borderColor: '#EFEAE2',
+                      borderRadius: 14,
+                      paddingHorizontal: 14,
+                      paddingVertical: 14,
+                      backgroundColor: '#FFFFFF',
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text variant="body" style={{ color: '#1A1410' }}>
+                        {homeCity}
+                      </Text>
+                      {homeCityPicked?.country ? (
+                        <Text variant="meta" marginTop="xs">
+                          {homeCityPicked.country}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Text style={{ color: '#FF4D2E', fontFamily: 'Geist_500Medium' }}>Change</Text>
+                  </Pressable>
+                )}
                 <Text variant="meta" marginTop="xs">
                   We use this to recognise which of your photos are trips. Stays private.
                 </Text>

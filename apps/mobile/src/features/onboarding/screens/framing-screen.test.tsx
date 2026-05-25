@@ -21,12 +21,52 @@ jest.mock('@/features/auth', () => ({
   useAuthStore: <T,>(selector: (s: { session: null }) => T) => selector({ session: null }),
 }));
 
-const mockGeocodeAsync = jest.fn();
-const mockReverseGeocodeAsync = jest.fn();
-jest.mock('expo-location', () => ({
-  geocodeAsync: (...args: unknown[]) => mockGeocodeAsync(...args),
-  reverseGeocodeAsync: (...args: unknown[]) => mockReverseGeocodeAsync(...args),
-}));
+// Stub the PlacePicker component directly so the test can drive its
+// callbacks without going through real Google Places API. Targeting
+// the component file (not the barrel) avoids pulling the whole
+// @/components surface through jest.requireActual.
+jest.mock('@/components/PlacePicker', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+  return {
+    PlacePicker: ({
+      onPick,
+      onFreeText,
+    }: {
+      onPick: (d: unknown) => void;
+      onFreeText: (s: string) => void;
+    }) =>
+      React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+          Pressable,
+          {
+            accessibilityLabel: 'stub-pick-mumbai',
+            onPress: () =>
+              onPick({
+                google_place_id: 'ChIJMumbai',
+                name: 'Mumbai',
+                country: 'India',
+                region: 'Maharashtra',
+                lat: 19.07,
+                lng: 72.87,
+                types: ['locality'],
+              }),
+          },
+          React.createElement(Text, null, 'Pick Mumbai'),
+        ),
+        React.createElement(
+          Pressable,
+          {
+            accessibilityLabel: 'stub-free-text',
+            onPress: () => onFreeText('Mars'),
+          },
+          React.createElement(Text, null, 'Free text Mars'),
+        ),
+      ),
+  };
+});
 
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => ({
@@ -39,22 +79,21 @@ beforeEach(() => {
   mockReplace.mockReset();
   mockShowToast.mockReset();
   mockUpdateMutateAsync.mockReset();
-  mockGeocodeAsync.mockReset();
-  mockReverseGeocodeAsync.mockReset();
 });
 
 describe('FramingScreen', () => {
-  it('renders the name, bio, and home-city fields', () => {
+  it('renders the name, bio, and the home-city PlacePicker', () => {
     renderWithProviders(<FramingScreen />);
     expect(screen.getByPlaceholderText('Shrey Arora')).toBeTruthy();
     expect(screen.getByPlaceholderText('Mostly cities, sometimes mountains.')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Mumbai, Bangalore, Delhi…')).toBeTruthy();
+    // PlacePicker stub renders two pressables — the picker is on screen
+    // because home city starts empty.
+    expect(screen.getByLabelText('stub-pick-mumbai')).toBeTruthy();
   });
 
   it('shows an error toast and skips the mutation when home city is empty', () => {
     renderWithProviders(<FramingScreen />);
     fireEvent.changeText(screen.getByPlaceholderText('Shrey Arora'), 'Shrey');
-    // home city left empty
     fireEvent.press(screen.getByText('Continue'));
     expect(mockShowToast).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Tell us where you live.', variant: 'error' }),
@@ -62,13 +101,13 @@ describe('FramingScreen', () => {
     expect(mockUpdateMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('geocodes the home city and forwards lat/lng/country to the mutation', async () => {
-    mockGeocodeAsync.mockResolvedValue([{ latitude: 19.07, longitude: 72.87 }]);
-    mockReverseGeocodeAsync.mockResolvedValue([{ isoCountryCode: 'IN' }]);
+  it('picking a place via the picker forwards name + lat/lng to the mutation', async () => {
     mockUpdateMutateAsync.mockResolvedValue({});
     renderWithProviders(<FramingScreen />);
     fireEvent.changeText(screen.getByPlaceholderText('Shrey Arora'), 'Shrey');
-    fireEvent.changeText(screen.getByPlaceholderText('Mumbai, Bangalore, Delhi…'), 'Mumbai');
+    // Tap the stubbed "Pick Mumbai" affordance — this calls the picker's
+    // onPick with a fixture PlaceDetails.
+    fireEvent.press(screen.getByLabelText('stub-pick-mumbai'));
     fireEvent.press(screen.getByText('Continue'));
     await waitFor(() => {
       expect(mockUpdateMutateAsync).toHaveBeenCalledWith(
@@ -77,19 +116,17 @@ describe('FramingScreen', () => {
           home_city: 'Mumbai',
           home_lat: 19.07,
           home_lng: 72.87,
-          home_country_code: 'IN',
         }),
       );
     });
     expect(mockReplace).toHaveBeenCalledWith('/(auth)/circle');
   });
 
-  it('still saves the home city when forward geocoding returns nothing', async () => {
-    mockGeocodeAsync.mockResolvedValue([]);
+  it('free-text fallback saves the typed city with no lat/lng', async () => {
     mockUpdateMutateAsync.mockResolvedValue({});
     renderWithProviders(<FramingScreen />);
     fireEvent.changeText(screen.getByPlaceholderText('Shrey Arora'), 'Shrey');
-    fireEvent.changeText(screen.getByPlaceholderText('Mumbai, Bangalore, Delhi…'), 'Mars');
+    fireEvent.press(screen.getByLabelText('stub-free-text'));
     fireEvent.press(screen.getByText('Continue'));
     await waitFor(() => {
       expect(mockUpdateMutateAsync).toHaveBeenCalledWith(

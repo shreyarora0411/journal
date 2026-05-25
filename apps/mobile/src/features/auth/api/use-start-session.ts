@@ -38,8 +38,11 @@ export const useStartSession = () =>
 
       // 2. Stamp the peppered phone_hash via the edge function. The pepper
       //    lives server-side only; the client never sees it.
+      // Stamp the peppered hash AND store the plaintext E.164 (mig 16
+      // — column is read-restricted; the Ping flow goes through
+      // get_phone_for_friend RPC).
       const { error: stampErr } = await supabase.functions.invoke('stamp-phone-hash', {
-        body: { client_hash: clientHashHex },
+        body: { client_hash: clientHashHex, phone_e164: normalized },
       });
       if (stampErr) {
         // Stamping failed → the auth user exists but is unfindable by

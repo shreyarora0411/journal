@@ -35,7 +35,7 @@ beforeEach(() => {
 describe('CircleScreen', () => {
   it('renders the step 1 eyebrow, headline, and three connector cards', () => {
     renderWithProviders(<CircleScreen />);
-    expect(screen.getByText('STEP 1 OF 4')).toBeTruthy();
+    expect(screen.getByText('STEP 2 OF 2')).toBeTruthy();
     expect(screen.getByText('Bring\nyour circle.')).toBeTruthy();
     expect(screen.getByLabelText('Instagram')).toBeTruthy();
     expect(screen.getByLabelText('Contacts')).toBeTruthy();
@@ -66,7 +66,7 @@ describe('CircleScreen', () => {
     expect(screen.getByLabelText('Add all 2')).toBeTruthy();
   });
 
-  it('Continue routes to /(auth)/import when matches exist', () => {
+  it('Continue routes to /(tabs)/book when matches exist', () => {
     mockMatched.mockReturnValue({
       data: [
         { id: 'a', display_name: 'Tara', handle: '@tara', avatar_url: null, badge: '', score: 1 },
@@ -75,7 +75,7 @@ describe('CircleScreen', () => {
     });
     renderWithProviders(<CircleScreen />);
     fireEvent.press(screen.getByLabelText('Continue'));
-    expect(mockReplace).toHaveBeenCalledWith('/(auth)/import');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
   });
 
   it('Skip always routes to taste-makers fallback', () => {

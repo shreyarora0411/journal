@@ -94,11 +94,12 @@ export function CircleScreen() {
       choice: hasMatches ? 'continue' : 'no-matches',
     });
     // If contacts didn't match anyone, fall through to the taste-makers
-    // cold-start fallback (#04). Otherwise jump straight to import.
+    // cold-start fallback. Otherwise we're done with onboarding — the
+    // user lands on the Feed and logs their first trip via the `+` tab.
     if (contactsTried && !hasMatches) {
       router.replace('/(auth)/taste-makers');
     } else {
-      router.replace('/(auth)/import');
+      router.replace('/(tabs)/book');
     }
   };
 
@@ -110,8 +111,17 @@ export function CircleScreen() {
   return (
     <Page>
       <StatusSpace />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+        onPress={() => router.back()}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={{ alignSelf: 'flex-start', marginBottom: 8 }}
+      >
+        <Text style={styles.backGlyph}>‹</Text>
+      </Pressable>
       <View style={{ paddingTop: 8, gap: 16 }}>
-        <Eyebrow>Step 1 of 4</Eyebrow>
+        <Eyebrow>Step 2 of 2</Eyebrow>
         <Text style={styles.headline}>Bring{'\n'}your circle.</Text>
         <Text style={styles.sub}>
           Lore only works when the people you trust are on it. Pick one source — we'll match the
@@ -251,6 +261,12 @@ function ConnectorCard({
 const _faceReserved = Face;
 
 const styles = StyleSheet.create({
+  backGlyph: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 26,
+    lineHeight: 26,
+    color: INK,
+  },
   headline: {
     fontFamily: 'InstrumentSerif_400Italic',
     fontSize: 44,

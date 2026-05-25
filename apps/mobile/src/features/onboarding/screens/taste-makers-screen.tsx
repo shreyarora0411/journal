@@ -41,14 +41,23 @@ export function TasteMakersScreen() {
       followed: following.size,
     });
     // TODO: wire real follow mutations once we backfill verified-traveler IDs.
-    router.replace('/(auth)/import');
+    router.replace('/(tabs)/book');
   };
 
   return (
     <Page>
       <StatusSpace />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+        onPress={() => router.back()}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={{ alignSelf: 'flex-start', marginBottom: 8 }}
+      >
+        <Text style={styles.backGlyph}>‹</Text>
+      </Pressable>
       <View style={{ paddingTop: 8, gap: 16 }}>
-        <Eyebrow>Step 2 of 4</Eyebrow>
+        <Eyebrow>Step 2 of 2</Eyebrow>
         <Eyebrow color={MUTE}>If you don't connect anything</Eyebrow>
         <Text style={styles.headline}>Follow a few{'\n'}taste-makers.</Text>
         <Text style={styles.sub}>
@@ -130,6 +139,12 @@ function TasteMakerCard({
 }
 
 const styles = StyleSheet.create({
+  backGlyph: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 26,
+    lineHeight: 26,
+    color: INK,
+  },
   headline: {
     fontFamily: 'InstrumentSerif_400Italic',
     fontSize: 40,

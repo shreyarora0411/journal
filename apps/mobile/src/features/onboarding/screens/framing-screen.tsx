@@ -141,7 +141,7 @@ export function FramingScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Box flex={1} padding="l">
-          <OnboardingStepHeader step={2} total={4} showBack />
+          <OnboardingStepHeader step={1} total={2} showBack />
 
           <ScrollView
             keyboardShouldPersistTaps="handled"

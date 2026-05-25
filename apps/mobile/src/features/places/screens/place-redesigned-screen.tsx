@@ -1,5 +1,7 @@
 import { CategoryPill, Eyebrow, Face, PullQuote } from '@/components';
 import { getPlace } from '@/features/feed/lib/fixtures';
+import { useToggleStash, useWishlistRows } from '@/features/wishlist';
+import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -24,14 +26,52 @@ const HAIR = '#EFEAE2';
 export function PlaceRedesignedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const place = useMemo(() => getPlace(id ?? ''), [id]);
   const screenW = Dimensions.get('window').width;
   const [page, setPage] = useState(0);
+  const toggleStash = useToggleStash();
+  const wishlist = useWishlistRows();
 
   useEffect(() => {
     log.event('place.screen_entered', { id });
   }, [id]);
+
+  // Stable identifier for the parent destination in the wishlist —
+  // fixtures don't carry Google Place IDs, so we key by the destination
+  // name as a stand-in. Real wiring uses Google Place IDs.
+  const parentExternalId = place?.destinationName.toLowerCase() ?? '';
+  const venueLabel = place?.name ?? '';
+  const isStashed = (wishlist.data ?? []).some(
+    (w) =>
+      w.target_label === venueLabel &&
+      w.parent_wishlist_item_id !== null &&
+      // Find the parent and confirm its external id matches.
+      (wishlist.data ?? []).find(
+        (p) => p.id === w.parent_wishlist_item_id && p.target_external_id === parentExternalId,
+      ) !== undefined,
+  );
+
+  const onToggleStash = async () => {
+    if (!place) return;
+    try {
+      const result = await toggleStash.mutateAsync({
+        parentExternalId,
+        parentLabel: place.destinationName,
+        venueLabel,
+      });
+      toast.show({
+        message: result.added
+          ? `Stashed ${place.name} under ${place.destinationName}`
+          : `Removed ${place.name} from stash`,
+        variant: 'success',
+      });
+    } catch (err) {
+      log.error('toggle stash failed', err);
+      toast.show({ message: 'Could not stash. Try again.', variant: 'error' });
+    }
+  };
 
   if (!place) {
     return (
@@ -130,10 +170,16 @@ export function PlaceRedesignedScreen() {
       <View style={styles.ctaRow}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Stash for my ${place.destinationName}`}
+          accessibilityLabel={
+            isStashed ? `Remove ${place.name} from stash` : `Stash for my ${place.destinationName}`
+          }
+          onPress={onToggleStash}
+          disabled={toggleStash.isPending}
           style={styles.ctaPrimary}
         >
-          <Text style={styles.ctaPrimaryLabel}>Stash for my {place.destinationName}</Text>
+          <Text style={styles.ctaPrimaryLabel}>
+            {isStashed ? 'Stashed ✓' : `Stash for my ${place.destinationName}`}
+          </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"

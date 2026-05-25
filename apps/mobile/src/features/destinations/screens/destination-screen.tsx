@@ -1,11 +1,15 @@
 import { CategoryPill, Face, FaceStack, Photo, PullQuote } from '@/components';
 import { type FriendRec, getDestination, recsForDestination } from '@/features/feed/lib/fixtures';
+import { useGetPhoneForFriend } from '@/features/follows';
+import { useWishlistRows } from '@/features/wishlist';
+import { useTogglePlan } from '@/features/wishlist';
+import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { CATEGORIES, type Category } from '@/theme';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CORAL = '#FF4D2E';
@@ -35,9 +39,13 @@ const CATEGORY_ORDER: ReadonlyArray<CategoryFilter> = [
 
 export function DestinationScreen() {
   const router = useRouter();
+  const toast = useToast();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<CategoryFilter>('all');
+  const togglePlan = useTogglePlan();
+  const getPhone = useGetPhoneForFriend();
+  const wishlist = useWishlistRows();
 
   const dest = useMemo(() => getDestination(slug ?? ''), [slug]);
   const allRecs = useMemo(() => recsForDestination(slug ?? ''), [slug]);
@@ -45,10 +53,55 @@ export function DestinationScreen() {
     () => (filter === 'all' ? allRecs : allRecs.filter((r) => r.category === filter)),
     [allRecs, filter],
   );
+  // Use the slug as the destination's stable external identifier for
+  // wishlist purposes — fixtures don't carry Google Place IDs yet.
+  const isPlanned = (wishlist.data ?? []).some(
+    (w) => w.parent_wishlist_item_id === null && w.target_external_id === (slug ?? ''),
+  );
 
   useEffect(() => {
     log.event('destination.screen_entered', { slug });
   }, [slug]);
+
+  const onPing = async () => {
+    const first = dest?.friends[0];
+    if (!first) return;
+    // Fixture friend IDs (`f-tara`) won't resolve to a real auth user,
+    // so the RPC returns null. Surface a useful toast in that case.
+    const phone = await getPhone.mutateAsync(first.id).catch(() => null);
+    if (!phone) {
+      toast.show({
+        message: `You'll need to follow each other before you can ping ${first.name}.`,
+        variant: 'info',
+      });
+      return;
+    }
+    const text = `hey, you were in ${dest?.name ?? 'there'} recently? planning a trip, anything I should know?`;
+    const url = `whatsapp://send?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}`;
+    const canOpen = await Linking.canOpenURL(url).catch(() => false);
+    if (!canOpen) {
+      toast.show({ message: 'WhatsApp not installed on this device.', variant: 'info' });
+      return;
+    }
+    await Linking.openURL(url);
+  };
+
+  const onTogglePlan = async () => {
+    if (!dest || !slug) return;
+    try {
+      const result = await togglePlan.mutateAsync({
+        externalId: slug,
+        label: dest.name,
+      });
+      toast.show({
+        message: result.added ? `Added ${dest.name} to your plan` : 'Removed from plan',
+        variant: 'success',
+      });
+    } catch (err) {
+      log.error('toggle plan failed', err);
+      toast.show({ message: 'Could not update plan. Try again.', variant: 'error' });
+    }
+  };
 
   if (!dest) {
     return (
@@ -112,16 +165,24 @@ export function DestinationScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Ping ${dest.friends[0]?.name}`}
+          onPress={onPing}
+          disabled={getPhone.isPending}
           style={styles.ctaPrimary}
         >
-          <Text style={styles.ctaPrimaryLabel}>Ping {dest.friends[0]?.name} →</Text>
+          <Text style={styles.ctaPrimaryLabel}>
+            {getPhone.isPending ? 'Opening…' : `Ping ${dest.friends[0]?.name} →`}
+          </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Add to plan"
-          style={styles.ctaGhost}
+          accessibilityLabel={isPlanned ? 'Remove from plan' : 'Add to plan'}
+          onPress={onTogglePlan}
+          disabled={togglePlan.isPending}
+          style={[styles.ctaGhost, isPlanned ? styles.ctaGhostOn : null]}
         >
-          <Text style={styles.ctaGhostLabel}>+ Plan</Text>
+          <Text style={[styles.ctaGhostLabel, isPlanned ? { color: '#FFFFFF' } : null]}>
+            {isPlanned ? 'Planned ✓' : '+ Plan'}
+          </Text>
         </Pressable>
       </View>
 
@@ -288,6 +349,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 999,
     backgroundColor: TINT,
+  },
+  ctaGhostOn: {
+    backgroundColor: CORAL,
   },
   ctaGhostLabel: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
   filterRow: {

@@ -17,7 +17,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.6';
 import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
 
-type Body = { client_hash: string };
+type Body = {
+  client_hash: string;
+  // Plaintext E.164 phone (migration 16). Stored alongside the peppered
+  // hash so the Ping flow can deep-link to WhatsApp for follows-graph
+  // members. Optional for backward compat — older clients may not send it.
+  phone_e164?: string;
+};
 
 const peppered = async (clientHashHex: string, pepper: string): Promise<Uint8Array> => {
   const encoder = new TextEncoder();
@@ -82,13 +88,19 @@ Deno.serve(async (req) => {
 
   const stored = hex(await peppered(clientHash, pepper));
 
+  // Validate the optional E.164 plaintext if provided.
+  const phoneE164 =
+    typeof body.phone_e164 === 'string' && /^\+[0-9]{8,15}$/.test(body.phone_e164)
+      ? body.phone_e164
+      : null;
+
   // Service-role write — column-level grants restrict authenticated users
-  // from updating phone_hash directly (fix 2). Service role bypasses RLS.
+  // from updating phone_hash / phone_e164 directly. Service role bypasses
+  // RLS but still respects DB constraints.
   const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
-  const { error: updateErr } = await admin
-    .from('users')
-    .update({ phone_hash: stored })
-    .eq('id', callerId);
+  const update: Record<string, unknown> = { phone_hash: stored };
+  if (phoneE164) update.phone_e164 = phoneE164;
+  const { error: updateErr } = await admin.from('users').update(update).eq('id', callerId);
 
   if (updateErr) {
     return new Response(JSON.stringify({ error: 'update_failed', detail: updateErr.message }), {

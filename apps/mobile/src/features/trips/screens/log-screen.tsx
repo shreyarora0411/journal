@@ -24,7 +24,6 @@ const TINT = '#FAF6F0';
 const HAIR = '#EFEAE2';
 const EMERALD = '#00A67E';
 
-type Mode = 'quick' | 'journal';
 const CATEGORIES_ORDER: ReadonlyArray<Category> = ['stay', 'food', 'drinks', 'wander', 'buy'];
 
 /**
@@ -45,10 +44,8 @@ export function LogScreen() {
   const createTrip = useCreateTripQuick();
   const verdictMutation = useSetVerdict();
 
-  const [mode, setMode] = useState<Mode>('quick');
-  const [category, setCategory] = useState<Category>('food');
+  const [category, setCategory] = useState<Category | null>(null);
   const [body, setBody] = useState('');
-  const [tip, setTip] = useState('');
   const [verdict, setVerdict] = useState<Verdict>('love');
 
   // Place state. `picked` is set when the user taps an autocomplete
@@ -72,6 +69,10 @@ export function LogScreen() {
       toast.show({ message: 'Pick a place first.', variant: 'error' });
       return;
     }
+    if (!category) {
+      toast.show({ message: 'Pick a category.', variant: 'error' });
+      return;
+    }
     try {
       const today = new Date().toISOString().slice(0, 10);
       const result = await createTrip.mutateAsync({
@@ -79,7 +80,7 @@ export function LogScreen() {
         place_name: placeName,
         start_date: today,
         end_date: today,
-        note: trimmed + (tip.trim() ? `\n\nTip: ${tip.trim()}` : ''),
+        note: trimmed,
         visibility: 'friends_of_friends',
         // Place identity — populated only when the user picked a Google
         // autocomplete result; free-text submissions leave these null.
@@ -101,7 +102,7 @@ export function LogScreen() {
       } catch (vErr) {
         log.warn('verdict upsert failed', { error: String(vErr) });
       }
-      log.event('log.saved', { mode, category, verdict });
+      log.event('log.saved', { category, verdict });
       toast.show({ message: 'Added to your book.', variant: 'success' });
       router.replace('/(tabs)/book');
     } catch (err) {
@@ -114,16 +115,9 @@ export function LogScreen() {
     <Page>
       <StatusSpace />
 
-      {/* Mode toggle */}
-      <View style={styles.toggle}>
-        <ToggleSeg active={mode === 'quick'} onPress={() => setMode('quick')} label="Quick tip" />
-        <ToggleSeg
-          active={mode === 'journal'}
-          onPress={() => setMode('journal')}
-          label="Journal entry"
-        />
-      </View>
-
+      {/* Pilot-fixes session: Quick / Journal toggle removed. One unified
+          prose input handles both short tips and long entries — length
+          is up to the user, schema enforces 20_000-char max. */}
       <Text style={styles.headline}>Pop something in the book.</Text>
 
       {/* Place picker — Google Places autocomplete (Session 1 revised).
@@ -180,7 +174,8 @@ export function LogScreen() {
         ))}
       </View>
 
-      {/* What I'd tell a friend */}
+      {/* What I'd tell a friend — single auto-growing input, no length
+          gate. Zod still enforces a max of 20_000 chars at save time. */}
       <View style={{ marginTop: 24 }}>
         <Eyebrow>What I'd tell a friend</Eyebrow>
         <View style={styles.inputCard}>
@@ -189,7 +184,7 @@ export function LogScreen() {
             placeholder="The clams are not optional. Skip lunch queue, go at 4."
             placeholderTextColor="#B7AEA5"
             value={body}
-            onChangeText={(v) => setBody(v.slice(0, 240))}
+            onChangeText={(v) => setBody(v.slice(0, 20_000))}
             multiline
             style={styles.input}
             selectionColor={CORAL}
@@ -197,21 +192,8 @@ export function LogScreen() {
         </View>
       </View>
 
-      {/* One tip */}
-      <View style={{ marginTop: 16 }}>
-        <Eyebrow color={MUTE}>One tip</Eyebrow>
-        <View style={styles.tipCard}>
-          <TextInput
-            accessibilityLabel="One tip"
-            placeholder="The single thing they need to know."
-            placeholderTextColor="#B7AEA5"
-            value={tip}
-            onChangeText={(v) => setTip(v.slice(0, 140))}
-            style={styles.tipInput}
-            selectionColor={CORAL}
-          />
-        </View>
-      </View>
+      {/* The standalone "One tip" input was removed in pilot-fixes;
+          a single prose field handles both short tips and longer notes. */}
 
       {/* Verdict */}
       <View style={{ marginTop: 22 }}>
@@ -248,40 +230,7 @@ export function LogScreen() {
   );
 }
 
-function ToggleSeg({
-  active,
-  onPress,
-  label,
-}: {
-  active: boolean;
-  onPress: () => void;
-  label: string;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ selected: active }}
-      onPress={onPress}
-      style={[styles.seg, active ? styles.segOn : styles.segOff]}
-    >
-      <Text style={[styles.segLabel, { color: active ? '#FFFFFF' : MUTE }]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  toggle: {
-    flexDirection: 'row',
-    backgroundColor: TINT,
-    borderRadius: 999,
-    padding: 4,
-    marginTop: 8,
-  },
-  seg: { flex: 1, paddingVertical: 10, borderRadius: 999, alignItems: 'center' },
-  segOn: { backgroundColor: INK },
-  segOff: { backgroundColor: 'transparent' },
-  segLabel: { fontFamily: 'Geist_500Medium', fontSize: 13 },
   headline: {
     fontFamily: 'InstrumentSerif_400Italic',
     fontSize: 32,
@@ -336,22 +285,6 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     color: INK,
     textAlignVertical: 'top',
-  },
-  tipCard: {
-    marginTop: 8,
-    backgroundColor: '#FFFFFF',
-    borderColor: HAIR,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: CORAL,
-  },
-  tipInput: {
-    fontFamily: 'Geist_400Regular',
-    fontSize: 15,
-    color: INK,
   },
   verdictHint: {
     fontFamily: 'Geist_400Regular',

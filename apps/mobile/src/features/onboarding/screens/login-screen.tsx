@@ -71,21 +71,6 @@ export function LoginScreen() {
     }
   };
 
-  const onFastPath = async () => {
-    try {
-      if (!session) {
-        // Anonymous sign-in without a phone — they'll add one later if
-        // needed. Camera roll is the actual import path (ADR 0005).
-        await start.mutateAsync({ phone: '' });
-      }
-      log.event('onboarding.screen_completed', { screen: 'login', choice: 'fast-path' });
-      router.replace('/(auth)/framing');
-    } catch (err) {
-      log.error('fast-path start failed', err);
-      toast.show({ message: 'Could not start. Try again.', variant: 'error' });
-    }
-  };
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <KeyboardAvoidingView
@@ -97,6 +82,16 @@ export function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.body}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              onPress={() => router.back()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={{ alignSelf: 'flex-start', marginBottom: 8 }}
+            >
+              <Text style={styles.backGlyph}>‹</Text>
+            </Pressable>
+
             <Text accessibilityLabel="lore." style={styles.wordmark}>
               lore<Text style={{ color: CORAL }}>.</Text>
             </Text>
@@ -142,28 +137,9 @@ export function LoginScreen() {
               </Text>
             </Pressable>
 
-            {/* OR divider — same hairline+mono pattern as elsewhere */}
-            <View style={styles.orRow}>
-              <View style={styles.orLine} />
-              <Text style={styles.orLabel}>OR FASTER</Text>
-              <View style={styles.orLine} />
-            </View>
-
-            {/* Fast-path: camera-roll. Coral with a camera-stack glyph
-                so users read it as "import" not "primary CTA again". */}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Continue with my camera roll — we'll find your trips"
-              onPress={onFastPath}
-              style={styles.fastPath}
-              disabled={start.isPending}
-            >
-              <CameraStackGlyph />
-              <Text style={styles.fastPathLabel}>
-                Continue with my camera roll{'\n'}
-                <Text style={styles.fastPathSub}>we'll find your trips</Text>
-              </Text>
-            </Pressable>
+            {/* Camera-roll fast-path removed in pilot-fixes session —
+                phone-number is the only sign-in path. The Instagram
+                preview lives on Circle for now (Coming soon). */}
 
             <View style={{ flex: 1 }} />
 
@@ -183,51 +159,18 @@ export function LoginScreen() {
   );
 }
 
-function CameraStackGlyph() {
-  return (
-    <View
-      style={{
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {/* Back */}
-      <View
-        style={{
-          position: 'absolute',
-          width: 26,
-          height: 30,
-          borderRadius: 4,
-          backgroundColor: 'rgba(255,255,255,0.3)',
-          transform: [{ rotate: '-10deg' }, { translateX: -4 }],
-        }}
-      />
-      {/* Front */}
-      <View
-        style={{
-          width: 26,
-          height: 30,
-          borderRadius: 4,
-          backgroundColor: '#FFFFFF',
-          transform: [{ rotate: '6deg' }, { translateX: 3 }],
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: CORAL }} />
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   body: {
     flex: 1,
     paddingHorizontal: 22,
     paddingTop: 12,
     gap: 16,
+  },
+  backGlyph: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 26,
+    lineHeight: 26,
+    color: INK,
   },
   wordmark: {
     fontFamily: 'InstrumentSerif_400Italic',
@@ -293,40 +236,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Geist_500Medium',
     fontSize: 16,
     color: '#FFFFFF',
-  },
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 4,
-  },
-  orLine: { flex: 1, height: 1, backgroundColor: HAIR },
-  orLabel: {
-    fontFamily: 'JetBrainsMono_400Regular',
-    fontSize: 10,
-    lineHeight: 10,
-    letterSpacing: 1.4,
-    color: MUTE,
-  },
-  fastPath: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: CORAL,
-    borderRadius: 16,
-    padding: 16,
-  },
-  fastPathLabel: {
-    flex: 1,
-    fontFamily: 'Geist_500Medium',
-    fontSize: 16,
-    color: '#FFFFFF',
-    lineHeight: 20,
-  },
-  fastPathSub: {
-    fontFamily: 'Geist_400Regular',
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
   },
   privacyRow: {
     flexDirection: 'row',

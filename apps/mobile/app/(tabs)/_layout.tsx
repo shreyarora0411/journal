@@ -72,6 +72,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="map" options={{ href: null }} />
       <Tabs.Screen name="year-in-travel" options={{ href: null }} />
       <Tabs.Screen name="house-rules" options={{ href: null }} />
+      <Tabs.Screen name="wishlist" options={{ href: null }} />
     </Tabs>
   );
 }

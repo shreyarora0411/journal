@@ -13,7 +13,7 @@ beforeEach(() => {
 describe('TasteMakersScreen', () => {
   it('renders the step 2 eyebrow, fallback eyebrow, and headline', () => {
     renderWithProviders(<TasteMakersScreen />);
-    expect(screen.getByText('STEP 2 OF 4')).toBeTruthy();
+    expect(screen.getByText('STEP 2 OF 2')).toBeTruthy();
     expect(screen.getByText("IF YOU DON'T CONNECT ANYTHING")).toBeTruthy();
     expect(screen.getByText('Follow a few\ntaste-makers.')).toBeTruthy();
   });
@@ -35,9 +35,9 @@ describe('TasteMakersScreen', () => {
     expect(screen.getByText('Continue')).toBeTruthy();
   });
 
-  it('Continue routes to /(auth)/import', () => {
+  it('Continue routes to /(tabs)/book', () => {
     renderWithProviders(<TasteMakersScreen />);
     fireEvent.press(screen.getByLabelText('Continue'));
-    expect(mockReplace).toHaveBeenCalledWith('/(auth)/import');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
   });
 });

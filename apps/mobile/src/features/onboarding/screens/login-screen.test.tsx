@@ -35,12 +35,14 @@ describe('LoginScreen', () => {
     expect(screen.getByText('Send me a code')).toBeTruthy();
   });
 
-  it('renders the OR FASTER divider and the camera-roll fast-path', () => {
+  it('does NOT render the OR FASTER divider or camera-roll fast-path', () => {
+    // Pilot-fixes session: phone-only sign-in. Anything that looked like
+    // an import shortcut has been cut.
     renderWithProviders(<LoginScreen />);
-    expect(screen.getByText('OR FASTER')).toBeTruthy();
+    expect(screen.queryByText('OR FASTER')).toBeNull();
     expect(
-      screen.getByLabelText("Continue with my camera roll — we'll find your trips"),
-    ).toBeTruthy();
+      screen.queryByLabelText("Continue with my camera roll — we'll find your trips"),
+    ).toBeNull();
   });
 
   it('renders the emerald privacy reassurance line', () => {
@@ -62,16 +64,6 @@ describe('LoginScreen', () => {
     fireEvent.press(screen.getByLabelText('Send me a code'));
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({ phone: '+919876543210' });
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/framing');
-    });
-  });
-
-  it('tapping the camera-roll fast-path signs in anonymously and advances', async () => {
-    mockMutateAsync.mockResolvedValueOnce(undefined);
-    renderWithProviders(<LoginScreen />);
-    fireEvent.press(screen.getByLabelText("Continue with my camera roll — we'll find your trips"));
-    await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({ phone: '' });
       expect(mockReplace).toHaveBeenCalledWith('/(auth)/framing');
     });
   });

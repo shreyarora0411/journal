@@ -1,11 +1,7 @@
+export { WelcomeScreen } from './screens/welcome-screen';
 export { LoginScreen } from './screens/login-screen';
+export { FramingScreen } from './screens/framing-screen';
 export { CircleScreen } from './screens/circle-screen';
 export { TasteMakersScreen } from './screens/taste-makers-screen';
-export { SeedScreen } from './screens/seed-screen';
-export { PhoneScreen } from './screens/phone-screen';
-export { FramingScreen } from './screens/framing-screen';
-export { InstagramScreen } from './screens/instagram-screen';
-export { ImportScreen } from './screens/import-screen';
 export { FriendsScreen } from './screens/friends-screen';
-export { WelcomeScreen } from './screens/welcome-screen';
 export { onboardingNextRoute } from './lib/onboarding-flow';

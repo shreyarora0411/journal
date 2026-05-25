@@ -4,7 +4,7 @@ import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-export type VerdictTarget = 'trip' | 'place' | 'venue';
+export type VerdictTarget = 'trip' | 'city' | 'venue';
 
 type Vars = {
   target_type: VerdictTarget;
@@ -13,7 +13,8 @@ type Vars = {
 };
 
 /**
- * Upserts a love/mid/skip verdict on a trip/place/venue (migration 13).
+ * Upserts a love/mid/skip verdict on a trip/city/venue (migration 13,
+ * renamed in the geographic-hierarchy refactor).
  * One verdict per (user, target_type, target_id) — re-picking updates,
  * doesn't insert. The verdicts.user_id is auth.uid(); the upsert relies
  * on the unique index verdicts_user_target_uq.

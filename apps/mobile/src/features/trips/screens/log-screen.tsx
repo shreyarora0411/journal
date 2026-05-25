@@ -10,6 +10,7 @@ import {
 import { useCreateTripQuick } from '@/features/trips';
 import { useSetVerdict } from '@/features/verdicts';
 import { useToast } from '@/hooks/use-toast';
+import { lookupCountryIdByIso } from '@/lib/country-lookup';
 import type { PlaceDetails } from '@/lib/google-places';
 import { log } from '@/lib/log';
 import { CATEGORIES, type Category } from '@/theme';
@@ -75,21 +76,24 @@ export function LogScreen() {
     }
     try {
       const today = new Date().toISOString().slice(0, 10);
+      // Resolve the picker's ISO country code (e.g. "JP") into our
+      // canonical country_id. Free-text submissions leave this null.
+      const countryId = await lookupCountryIdByIso(picked?.country_iso ?? null);
       const result = await createTrip.mutateAsync({
         title: placeName,
-        place_name: placeName,
+        city_name: placeName,
         start_date: today,
         end_date: today,
         note: trimmed,
         visibility: 'friends_of_friends',
-        // Place identity — populated only when the user picked a Google
+        // City identity — populated only when the user picked a Google
         // autocomplete result; free-text submissions leave these null.
-        place_country: picked?.country ?? null,
-        place_region: picked?.region ?? null,
-        place_lat: picked?.lat ?? null,
-        place_lng: picked?.lng ?? null,
-        place_google_place_id: picked?.google_place_id ?? null,
-        place_types: picked?.types ?? null,
+        city_country_id: countryId,
+        city_region: picked?.region ?? null,
+        city_lat: picked?.lat ?? null,
+        city_lng: picked?.lng ?? null,
+        city_google_place_id: picked?.google_place_id ?? null,
+        city_types: picked?.types ?? null,
       });
       // Persist the verdict on the new trip. Failure here doesn't fail
       // the whole log save — the trip is already in the user's book.

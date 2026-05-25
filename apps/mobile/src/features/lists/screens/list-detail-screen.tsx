@@ -102,7 +102,7 @@ export default function ListDetailScreen() {
                   {String(idx + 1).padStart(2, '0')}
                 </Text>
                 <Box flex={1}>
-                  <Text variant="placeName">{it.destination_name ?? it.place_name ?? '—'}</Text>
+                  <Text variant="placeName">{it.destination_name ?? it.city_name ?? '—'}</Text>
                   {it.destination_country ? (
                     <Text variant="meta">{it.destination_country}</Text>
                   ) : null}

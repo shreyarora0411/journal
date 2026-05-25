@@ -20,12 +20,12 @@ export const useMapData = () => {
       if (!userId) return [];
       const supabase = getSupabase();
 
-      // Visited: distinct (country, place name) across the user's own trips.
-      // For pilot, just group by place country if present, else use the trip
+      // Visited: distinct (country, city name) across the user's own trips.
+      // For pilot, just group by city country if present, else use the trip
       // title as the destination label.
       const { data: trips } = await supabase
         .from('trips')
-        .select('id, title, places(country, name)')
+        .select('id, title, cities(name, country:country_id(display_name))')
         .eq('user_id', userId)
         .is('deleted_at', null);
 
@@ -33,11 +33,11 @@ export const useMapData = () => {
       type T = {
         id: string;
         title: string;
-        places: { country: string | null; name: string }[] | null;
+        cities: { name: string; country: { display_name: string } | null }[] | null;
       };
       for (const t of (trips ?? []) as unknown as T[]) {
-        const places = t.places ?? [];
-        if (places.length === 0) {
+        const cities = t.cities ?? [];
+        if (cities.length === 0) {
           const key = t.title.toLowerCase();
           visited.set(key, {
             name: t.title,
@@ -47,22 +47,23 @@ export const useMapData = () => {
           });
           continue;
         }
-        for (const p of places) {
-          const key = `${p.name.toLowerCase()}|${(p.country ?? '').toLowerCase()}`;
+        for (const p of cities) {
+          const countryName = p.country?.display_name ?? null;
+          const key = `${p.name.toLowerCase()}|${(countryName ?? '').toLowerCase()}`;
           visited.set(key, {
             name: p.name,
-            country: p.country,
+            country: countryName,
             status: 'visited',
             trip_count: (visited.get(key)?.trip_count ?? 0) + 1,
           });
         }
       }
 
-      // Wishlist: destinations or places saved.
+      // Wishlist: destinations or cities saved.
       const { data: wishlist, error: wishErr } = await supabase
         .from('wishlist_items')
         .select(
-          'destination:destination_id(name, country), place:place_id(name, country), saved_from:saved_from_user_id(display_name, handle)',
+          'destination:destination_id(name, country), city:city_id(name, country:country_id(display_name)), saved_from:saved_from_user_id(display_name, handle)',
         )
         .eq('user_id', userId);
 
@@ -70,15 +71,16 @@ export const useMapData = () => {
       if (!wishErr) {
         type W = {
           destination: { name: string; country: string | null } | null;
-          place: { name: string; country: string | null } | null;
+          city: { name: string; country: { display_name: string } | null } | null;
           saved_from: { display_name: string | null; handle: string | null } | null;
         };
         for (const w of (wishlist ?? []) as unknown as W[]) {
-          const d = w.destination ?? w.place;
-          if (!d) continue;
+          const name = w.destination?.name ?? w.city?.name ?? null;
+          const country = w.destination?.country ?? w.city?.country?.display_name ?? null;
+          if (!name) continue;
           wishItems.push({
-            name: d.name,
-            country: d.country,
+            name,
+            country,
             status: 'wishlist',
             trip_count: 0,
             saved_from: w.saved_from?.display_name ?? w.saved_from?.handle ?? null,

@@ -4,7 +4,9 @@ import { UuidSchema, VisibilitySchema } from './index';
 export const VenueKindSchema = z.enum(['stay', 'restaurant', 'cafe', 'nightlife', 'other']);
 export type VenueKind = z.infer<typeof VenueKindSchema>;
 
-export const TipParentSchema = z.enum(['trip', 'place']);
+// Session: geographic hierarchy refactor — the polymorphic tip parent
+// flipped from 'place' to 'city' alongside the migration 21 enum rename.
+export const TipParentSchema = z.enum(['trip', 'city']);
 export type TipParent = z.infer<typeof TipParentSchema>;
 
 export const TipKindSchema = z.enum(['macro', 'atomic']);
@@ -22,6 +24,20 @@ const dateString = z
   .nullable();
 
 const trimmed = (max: number) => z.string().trim().max(max);
+
+// ---- Country -------------------------------------------------------------
+
+export const CountrySchema = z.object({
+  id: UuidSchema,
+  iso_alpha2: z.string().length(2),
+  iso_alpha3: z.string().length(3),
+  display_name: z.string(),
+  flag_emoji: z.string().nullable().optional(),
+  region: z.string().nullable().optional(),
+  hero_photo_url: z.string().url().nullable().optional(),
+  hero_photo_credit: z.string().nullable().optional(),
+});
+export type Country = z.infer<typeof CountrySchema>;
 
 // ---- Trip ----------------------------------------------------------------
 
@@ -45,12 +61,14 @@ export const TripSchema = TripInputSchema.extend({
 });
 export type Trip = z.infer<typeof TripSchema>;
 
-// ---- Place ---------------------------------------------------------------
+// ---- City (formerly Place) ----------------------------------------------
+// One per trip-row. country_id is the FK into public.countries (canonical
+// ISO-coded country). Legacy free-text country was dropped in migration 23.
 
-export const PlaceInputSchema = z.object({
-  name: trimmed(120).min(1, 'Place needs a name'),
+export const CityInputSchema = z.object({
+  name: trimmed(120).min(1, 'City needs a name'),
   region: trimmed(120).optional().nullable(),
-  country: trimmed(80).optional().nullable(),
+  country_id: UuidSchema.optional().nullable(),
   lat: z.number().min(-90).max(90).optional().nullable(),
   lng: z.number().min(-180).max(180).optional().nullable(),
   note: z.string().trim().max(10_000).optional().nullable(),
@@ -62,21 +80,21 @@ export const PlaceInputSchema = z.object({
   google_place_id: z.string().min(1).max(255).optional().nullable(),
   place_types: z.array(z.string()).optional().nullable(),
 });
-export type PlaceInput = z.infer<typeof PlaceInputSchema>;
+export type CityInput = z.infer<typeof CityInputSchema>;
 
-export const PlaceSchema = PlaceInputSchema.extend({
+export const CitySchema = CityInputSchema.extend({
   id: UuidSchema,
   trip_id: UuidSchema,
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable().optional(),
 });
-export type Place = z.infer<typeof PlaceSchema>;
+export type City = z.infer<typeof CitySchema>;
 
 // ---- Venue ---------------------------------------------------------------
 
 export const VenueInputSchema = z.object({
-  place_id: UuidSchema,
+  city_id: UuidSchema,
   area_id: UuidSchema.nullable().optional(),
   name: trimmed(120).min(1),
   kind: VenueKindSchema,
@@ -98,7 +116,7 @@ export type Venue = z.infer<typeof VenueSchema>;
 // ---- Area ----------------------------------------------------------------
 
 export const AreaInputSchema = z.object({
-  place_id: UuidSchema,
+  city_id: UuidSchema,
   name: trimmed(120).min(1),
   quote: z.string().trim().max(2_000).optional().nullable(),
   lat: z.number().min(-90).max(90).optional().nullable(),
@@ -146,7 +164,7 @@ export type Tip = z.infer<typeof TipSchema>;
 export const TripPhotoSchema = z.object({
   id: UuidSchema,
   trip_id: UuidSchema,
-  place_id: UuidSchema.nullable().optional(),
+  city_id: UuidSchema.nullable().optional(),
   storage_path: z.string(),
   width: z.number().int().nullable().optional(),
   height: z.number().int().nullable().optional(),
@@ -175,22 +193,23 @@ export const ExtractedEntitySchema = z.object({
 });
 export type ExtractedEntity = z.infer<typeof ExtractedEntitySchema>;
 
-// Quick-mode form is a single trip + a single place; Detailed adds more.
+// Quick-mode form is a single trip + a single city; Detailed adds more.
 export const QuickLogFormSchema = z.object({
   title: trimmed(120).min(1, 'Give it a title'),
   start_date: dateString,
   end_date: dateString,
-  place_name: trimmed(120).min(1, 'Where did you go?'),
+  city_name: trimmed(120).min(1, 'Where did you go?'),
   note: z.string().trim().max(20_000).optional(),
   visibility: VisibilitySchema.default('friends_of_friends'),
-  // Session 1 (revised): when the user picks a Google Places autocomplete
-  // result, these identify the place for the hero-photo resolver and for
-  // cross-trip aggregation. Free-text submissions leave them null.
-  place_country: trimmed(80).optional().nullable(),
-  place_region: trimmed(120).optional().nullable(),
-  place_lat: z.number().min(-90).max(90).optional().nullable(),
-  place_lng: z.number().min(-180).max(180).optional().nullable(),
-  place_google_place_id: z.string().min(1).max(255).optional().nullable(),
-  place_types: z.array(z.string()).optional().nullable(),
+  // Session 1 (revised) + geographic hierarchy: when the user picks a
+  // Google Places autocomplete result, these identify the city + its
+  // canonical country for the hero-photo resolver and aggregations.
+  // Free-text submissions leave them null.
+  city_country_id: UuidSchema.optional().nullable(),
+  city_region: trimmed(120).optional().nullable(),
+  city_lat: z.number().min(-90).max(90).optional().nullable(),
+  city_lng: z.number().min(-180).max(180).optional().nullable(),
+  city_google_place_id: z.string().min(1).max(255).optional().nullable(),
+  city_types: z.array(z.string()).optional().nullable(),
 });
 export type QuickLogForm = z.infer<typeof QuickLogFormSchema>;

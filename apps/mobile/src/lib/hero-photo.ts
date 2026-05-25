@@ -160,7 +160,7 @@ export const resolveHeroPhoto = async (place: PlaceRowForHero): Promise<HeroPhot
     credit: string | null;
   }) => {
     const { error } = await supabase
-      .from('places')
+      .from('cities')
       .update({
         hero_photo_url: next.url,
         hero_photo_source: next.source,

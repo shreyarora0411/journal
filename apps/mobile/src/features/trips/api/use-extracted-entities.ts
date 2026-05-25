@@ -36,8 +36,8 @@ export const useExtractedEntities = (tripId: string | null) =>
 type ConfirmVars = {
   entityId: string;
   tripId: string;
-  /** which place this entity belongs to. Defaults to the trip's first place. */
-  placeId: string;
+  /** which city this entity belongs to. Defaults to the trip's first city. */
+  cityId: string;
   /** allow editing the proposed values before confirming. */
   override?: { name?: string; quote?: string | null };
 };
@@ -49,7 +49,7 @@ type ConfirmVars = {
 export const useConfirmEntity = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ entityId, tripId, placeId, override }: ConfirmVars): Promise<void> => {
+    mutationFn: async ({ entityId, tripId, cityId, override }: ConfirmVars): Promise<void> => {
       const supabase = getSupabase();
 
       const { data: staged, error: fetchErr } = await supabase
@@ -75,7 +75,7 @@ export const useConfirmEntity = () => {
         const { data, error } = await supabase
           .from('venues')
           .insert({
-            place_id: placeId,
+            city_id: cityId,
             name: proposedName,
             kind,
             quote: proposedQuote,
@@ -88,7 +88,7 @@ export const useConfirmEntity = () => {
         const { data, error } = await supabase
           .from('areas')
           .insert({
-            place_id: placeId,
+            city_id: cityId,
             name: proposedName,
             quote: proposedQuote,
           })
@@ -98,8 +98,8 @@ export const useConfirmEntity = () => {
         newId = (data as { id: string }).id;
       } else if (staged.kind === 'tip') {
         const tipKind = ((meta.tip_kind as string | undefined) ?? 'atomic') as 'macro' | 'atomic';
-        const parentType = tipKind === 'macro' ? 'trip' : 'place';
-        const parentId = tipKind === 'macro' ? tripId : placeId;
+        const parentType = tipKind === 'macro' ? 'trip' : 'city';
+        const parentId = tipKind === 'macro' ? tripId : cityId;
         const { data, error } = await supabase
           .from('tips')
           .insert({

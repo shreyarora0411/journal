@@ -5,11 +5,11 @@ import { type QuickLogForm, QuickLogFormSchema, type Trip } from '@journal/share
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { tripKeys } from './keys';
 
-type Result = { trip: Trip; placeId: string };
+type Result = { trip: Trip; cityId: string };
 
 /**
- * Creates a trip + a single seed place from Quick mode form data.
- * Detailed mode uses a separate flow that creates additional places after.
+ * Creates a trip + a single seed city from Quick mode form data.
+ * Detailed mode uses a separate flow that creates additional cities after.
  *
  * After save, fires the extract-entities edge function (best-effort) to
  * stage entity proposals for the confirmation screen.
@@ -40,25 +40,26 @@ export const useCreateTripQuick = () => {
         .single();
       if (tripErr) throw tripErr;
 
-      // 2. Seed place from the trip's place_name. Persist Google-Place
-      //    identity (if picker returned one) so the hero-photo resolver
-      //    + cross-trip aggregation have what they need.
-      const { data: place, error: placeErr } = await supabase
-        .from('places')
+      // 2. Seed city from the trip's city_name. Persist Google-Place
+      //    identity + canonical country FK (if picker resolved one) so
+      //    the hero-photo resolver and cross-trip aggregation have what
+      //    they need.
+      const { data: city, error: cityErr } = await supabase
+        .from('cities')
         .insert({
           trip_id: (trip as Trip).id,
-          name: parsed.place_name,
-          country: parsed.place_country ?? null,
-          region: parsed.place_region ?? null,
-          lat: parsed.place_lat ?? null,
-          lng: parsed.place_lng ?? null,
-          google_place_id: parsed.place_google_place_id ?? null,
-          place_types: parsed.place_types ?? null,
+          name: parsed.city_name,
+          country_id: parsed.city_country_id ?? null,
+          region: parsed.city_region ?? null,
+          lat: parsed.city_lat ?? null,
+          lng: parsed.city_lng ?? null,
+          google_place_id: parsed.city_google_place_id ?? null,
+          place_types: parsed.city_types ?? null,
           position: 0,
         })
         .select('id')
         .single();
-      if (placeErr) throw placeErr;
+      if (cityErr) throw cityErr;
 
       // 3. Fire-and-forget extraction. We don't block save on this.
       supabase.functions
@@ -80,7 +81,7 @@ export const useCreateTripQuick = () => {
         });
 
       log.event('trip.created', { mode: 'quick' });
-      return { trip: trip as Trip, placeId: (place as { id: string }).id };
+      return { trip: trip as Trip, cityId: (city as { id: string }).id };
     },
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: tripKeys.list(userId) });

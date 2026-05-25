@@ -31,12 +31,12 @@ export default function ConfirmScreen() {
   if (!tripQ.data) return null;
 
   const trip = tripQ.data;
-  const placeId = trip.places[0]?.id;
+  const cityId = trip.cities[0]?.id;
   const pending = (entitiesQ.data ?? []).filter((e) => !e.confirmed && !e.rejected);
 
   const onConfirm = async (entityId: string) => {
-    if (!placeId) {
-      toast.show({ message: 'Add a place first.', variant: 'error' });
+    if (!cityId) {
+      toast.show({ message: 'Add a city first.', variant: 'error' });
       return;
     }
     const edit = edits[entityId];
@@ -44,7 +44,7 @@ export default function ConfirmScreen() {
       await confirm.mutateAsync({
         entityId,
         tripId: trip.id,
-        placeId,
+        cityId,
         override: edit ? { name: edit.name, quote: edit.quote || null } : undefined,
       });
       log.event('extraction.entity_confirmed');

@@ -111,39 +111,40 @@ export default function TripDetailScreen() {
           </Box>
         ) : null}
 
-        {trip.places.map((place) => {
-          const venueGroups: { kind: VenueKind; items: typeof place.venues }[] = [];
-          for (const v of place.venues) {
+        {trip.cities.map((city) => {
+          const venueGroups: { kind: VenueKind; items: typeof city.venues }[] = [];
+          for (const v of city.venues) {
             const existing = venueGroups.find((g) => g.kind === v.kind);
             if (existing) existing.items.push(v);
             else venueGroups.push({ kind: v.kind, items: [v] });
           }
+          const countryName = city.country?.display_name ?? null;
 
           return (
-            <Box key={place.id} marginBottom="xl">
+            <Box key={city.id} marginBottom="xl">
               <Text variant="title" marginBottom="xs">
-                {place.name}
+                {city.name}
               </Text>
-              {place.country ? (
+              {countryName ? (
                 <Text variant="caption" marginBottom="s">
-                  {place.region ? `${place.region}, ` : ''}
-                  {place.country}
+                  {city.region ? `${city.region}, ` : ''}
+                  {countryName}
                 </Text>
               ) : null}
-              {place.note ? (
+              {city.note ? (
                 <Text variant="body" marginBottom="m">
-                  {place.note}
+                  {city.note}
                 </Text>
               ) : null}
 
-              {place.areas.length > 0 ? (
+              {city.areas.length > 0 ? (
                 <Box marginBottom="m">
                   <Text variant="label" marginBottom="s">
                     AREAS
                   </Text>
                   <Box gap="s">
-                    {place.areas.map((a) => (
-                      <Link key={a.id} href={placeHref(a.name, place.country)} asChild>
+                    {city.areas.map((a) => (
+                      <Link key={a.id} href={placeHref(a.name, countryName)} asChild>
                         <Pressable>
                           <Card>
                             <Box
@@ -180,7 +181,7 @@ export default function TripDetailScreen() {
                   </Text>
                   <Box gap="s">
                     {group.items.map((v) => (
-                      <Link key={v.id} href={placeHref(v.name, place.country)} asChild>
+                      <Link key={v.id} href={placeHref(v.name, countryName)} asChild>
                         <Pressable>
                           <Card>
                             <Box

@@ -44,43 +44,43 @@ export const useUserStays = (userId: string | null | undefined) =>
       const supabase = getSupabase();
       const { data, error } = await supabase
         .from('venues')
-        .select('id, name, quote, kind, places!inner(trip_id, trips!inner(id, title, user_id))')
+        .select('id, name, quote, kind, cities!inner(trip_id, trips!inner(id, title, user_id))')
         .eq('kind', 'stay')
-        .eq('places.trips.user_id', userId);
+        .eq('cities.trips.user_id', userId);
       if (error) throw error;
       type Raw = {
         id: string;
         name: string;
         quote: string | null;
         kind: string;
-        places: { trip_id: string; trips: { id: string; title: string } } | null;
+        cities: { trip_id: string; trips: { id: string; title: string } } | null;
       };
       const out: DerivedRow[] = [];
       for (const r of data as unknown as Raw[]) {
-        if (!r.places?.trips) continue;
+        if (!r.cities?.trips) continue;
         out.push({
           id: r.id,
           name: r.name,
           quote: r.quote,
           kind: r.kind,
-          trip_id: r.places.trips.id,
-          trip_title: r.places.trips.title,
+          trip_id: r.cities.trips.id,
+          trip_title: r.cities.trips.title,
         });
       }
       return out;
     },
   });
 
-/** Places (cities/regions) this user has been to. */
+/** Cities this user has been to. */
 export const useUserPlaces = (userId: string | null | undefined) =>
   useQuery({
-    queryKey: ['profile', 'places', userId],
+    queryKey: ['profile', 'cities', userId],
     enabled: Boolean(userId),
     queryFn: async (): Promise<DerivedRow[]> => {
       if (!userId) return [];
       const supabase = getSupabase();
       const { data, error } = await supabase
-        .from('places')
+        .from('cities')
         .select('id, name, trip_id, trips!inner(id, title, user_id)')
         .eq('trips.user_id', userId);
       if (error) throw error;
@@ -121,28 +121,28 @@ export const useUserTips = (userId: string | null | undefined) =>
       const tripIds = trips.map((t) => t.id);
       const titleByTripId = new Map(trips.map((t) => [t.id as string, t.title as string]));
 
-      const { data: places, error: placesErr } = await supabase
-        .from('places')
+      const { data: cities, error: citiesErr } = await supabase
+        .from('cities')
         .select('id, trip_id')
         .in('trip_id', tripIds);
-      if (placesErr) throw placesErr;
-      const placeToTrip = new Map((places ?? []).map((p) => [p.id as string, p.trip_id as string]));
+      if (citiesErr) throw citiesErr;
+      const cityToTrip = new Map((cities ?? []).map((c) => [c.id as string, c.trip_id as string]));
 
       const tipParents = [
         ...tripIds.map((id) => ({ type: 'trip', id })),
-        ...(places ?? []).map((p) => ({ type: 'place', id: p.id as string })),
+        ...(cities ?? []).map((c) => ({ type: 'city', id: c.id as string })),
       ];
       if (tipParents.length === 0) return [];
 
-      // Two queries (trip-tips, place-tips) is simpler than an OR.
-      const [tripTipsRes, placeTipsRes] = await Promise.all([
+      // Two queries (trip-tips, city-tips) is simpler than an OR.
+      const [tripTipsRes, cityTipsRes] = await Promise.all([
         supabase
           .from('tips')
           .select('id, body, parent_id')
           .eq('parent_type', 'trip')
           .in('parent_id', tripIds)
           .is('deleted_at', null),
-        (places ?? []).length === 0
+        (cities ?? []).length === 0
           ? Promise.resolve({
               data: [] as { id: string; body: string; parent_id: string }[],
               error: null,
@@ -150,15 +150,15 @@ export const useUserTips = (userId: string | null | undefined) =>
           : supabase
               .from('tips')
               .select('id, body, parent_id')
-              .eq('parent_type', 'place')
+              .eq('parent_type', 'city')
               .in(
                 'parent_id',
-                (places ?? []).map((p) => p.id),
+                (cities ?? []).map((c) => c.id),
               )
               .is('deleted_at', null),
       ]);
       if (tripTipsRes.error) throw tripTipsRes.error;
-      if (placeTipsRes.error) throw placeTipsRes.error;
+      if (cityTipsRes.error) throw cityTipsRes.error;
 
       const rows: DerivedRow[] = [];
       for (const t of tripTipsRes.data ?? []) {
@@ -170,8 +170,8 @@ export const useUserTips = (userId: string | null | undefined) =>
           trip_title: titleByTripId.get(t.parent_id as string) ?? '',
         });
       }
-      for (const t of placeTipsRes.data ?? []) {
-        const tripId = placeToTrip.get(t.parent_id as string);
+      for (const t of cityTipsRes.data ?? []) {
+        const tripId = cityToTrip.get(t.parent_id as string);
         if (!tripId) continue;
         rows.push({
           id: t.id as string,

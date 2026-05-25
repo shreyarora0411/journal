@@ -1,10 +1,15 @@
 import { getSupabase } from '@/lib/supabase';
-import type { Area, Place, Tip, Trip, TripPhoto, Venue } from '@journal/shared';
+import type { Area, City, Country, Tip, Trip, TripPhoto, Venue } from '@journal/shared';
 import { useQuery } from '@tanstack/react-query';
 import { tripKeys } from './keys';
 
+/** A city joined with its canonical country (nullable for legacy / un-picked entries). */
+export type CityWithCountry = City & {
+  country: Pick<Country, 'id' | 'display_name' | 'iso_alpha2' | 'flag_emoji'> | null;
+};
+
 export type TripWithChildren = Trip & {
-  places: (Place & { venues: Venue[]; areas: Area[] })[];
+  cities: (CityWithCountry & { venues: Venue[]; areas: Area[] })[];
   trip_tips: Tip[];
   photos: TripPhoto[];
 };
@@ -17,11 +22,13 @@ export const useTrip = (tripId: string | null | undefined) =>
       if (!tripId) return null;
       const supabase = getSupabase();
 
-      const [tripRes, placesRes, photosRes, tripTipsRes] = await Promise.all([
+      const [tripRes, citiesRes, photosRes, tripTipsRes] = await Promise.all([
         supabase.from('trips').select('*').eq('id', tripId).is('deleted_at', null).maybeSingle(),
         supabase
-          .from('places')
-          .select('*, venues(*), areas(*)')
+          .from('cities')
+          .select(
+            '*, country:country_id(id, display_name, iso_alpha2, flag_emoji), venues(*), areas(*)',
+          )
           .eq('trip_id', tripId)
           .is('deleted_at', null)
           .order('position', { ascending: true }),
@@ -40,21 +47,21 @@ export const useTrip = (tripId: string | null | undefined) =>
       ]);
 
       if (tripRes.error) throw tripRes.error;
-      if (placesRes.error) throw placesRes.error;
+      if (citiesRes.error) throw citiesRes.error;
       if (photosRes.error) throw photosRes.error;
       if (tripTipsRes.error) throw tripTipsRes.error;
       if (!tripRes.data) return null;
 
-      type RawPlace = Place & { venues: Venue[] | null; areas: Area[] | null };
-      const places = ((placesRes.data ?? []) as unknown as RawPlace[]).map((p) => ({
-        ...p,
-        venues: (p.venues ?? []).filter((v) => v.deleted_at == null),
-        areas: (p.areas ?? []).filter((a) => a.deleted_at == null),
+      type RawCity = CityWithCountry & { venues: Venue[] | null; areas: Area[] | null };
+      const cities = ((citiesRes.data ?? []) as unknown as RawCity[]).map((c) => ({
+        ...c,
+        venues: (c.venues ?? []).filter((v: Venue) => v.deleted_at == null),
+        areas: (c.areas ?? []).filter((a: Area) => a.deleted_at == null),
       }));
 
       return {
         ...(tripRes.data as Trip),
-        places,
+        cities,
         photos: (photosRes.data ?? []) as TripPhoto[],
         trip_tips: (tripTipsRes.data ?? []) as Tip[],
       };

@@ -45,22 +45,22 @@ const useYearRecap = () => {
 
       const { data: myTrips } = await supabase
         .from('trips')
-        .select('id, places(name, country)')
+        .select('id, cities(name, country_id)')
         .eq('user_id', userId)
         .is('deleted_at', null)
         .gte('start_date', yearStart)
         .lte('start_date', yearEnd);
 
-      type Trow = { id: string; places: { name: string; country: string | null }[] | null };
+      type Trow = { id: string; cities: { name: string; country_id: string | null }[] | null };
       const myPlaceNames = new Set<string>();
       const cities = new Set<string>();
       let topName: string | null = null;
       const placeFreq = new Map<string, number>();
       for (const t of (myTrips ?? []) as unknown as Trow[]) {
-        for (const p of t.places ?? []) {
+        for (const p of t.cities ?? []) {
           const key = p.name.toLowerCase();
           myPlaceNames.add(key);
-          cities.add(`${key}|${(p.country ?? '').toLowerCase()}`);
+          cities.add(`${key}|${(p.country_id ?? '').toLowerCase()}`);
           const next = (placeFreq.get(key) ?? 0) + 1;
           placeFreq.set(key, next);
           if (!topName || next > (placeFreq.get(topName) ?? 0)) topName = p.name;
@@ -71,7 +71,7 @@ const useYearRecap = () => {
       let topSavedBy = 0;
       if (topName) {
         const { data: others } = await supabase
-          .from('places')
+          .from('cities')
           .select('trip:trip_id(user_id)')
           .ilike('name', topName)
           .is('deleted_at', null);
@@ -85,7 +85,7 @@ const useYearRecap = () => {
 
       // Taste twin: friend with the most overlapping place names.
       const { data: peerPlaces } = await supabase
-        .from('places')
+        .from('cities')
         .select('name, trip:trip_id(user_id, author:user_id(display_name, handle, avatar_url))')
         .is('deleted_at', null);
       type Author = {

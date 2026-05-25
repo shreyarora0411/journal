@@ -28,7 +28,11 @@ export type PlaceAutocompleteHit = {
 export type PlaceDetails = {
   google_place_id: string;
   name: string;
+  /** Country long name e.g. "Japan". UI display only. */
   country: string | null;
+  /** ISO 3166-1 alpha-2 code from Google's addressComponents (e.g. "JP").
+   *  Used to look up the canonical country_id in public.countries. */
+  country_iso: string | null;
   region: string | null;
   lat: number | null;
   lng: number | null;
@@ -186,7 +190,9 @@ export const placeDetails = async (
     if (!json.id) return null;
 
     const components = json.addressComponents ?? [];
-    const country = components.find((c) => c.types?.includes('country'))?.longText ?? null;
+    const countryComponent = components.find((c) => c.types?.includes('country'));
+    const country = countryComponent?.longText ?? null;
+    const country_iso = countryComponent?.shortText?.toUpperCase() ?? null;
     const region =
       components.find((c) => c.types?.includes('administrative_area_level_1'))?.longText ?? null;
 
@@ -194,6 +200,7 @@ export const placeDetails = async (
       google_place_id: json.id,
       name: json.displayName?.text ?? '',
       country,
+      country_iso,
       region,
       lat: json.location?.latitude ?? null,
       lng: json.location?.longitude ?? null,

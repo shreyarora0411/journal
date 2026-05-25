@@ -3,15 +3,20 @@ import { getSupabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-export type SearchKind = 'place' | 'venue' | 'area' | 'tip';
+export type SearchKind = 'city' | 'country' | 'venue' | 'area' | 'tip';
 
 export type SearchResult = {
   kind: SearchKind;
+  /** UUID of the matched row. Country results have null trip_id. */
   id: string;
-  trip_id: string;
-  trip_title: string;
-  trip_user_id: string;
+  /** Null for country results (no parent trip). */
+  trip_id: string | null;
+  trip_title: string | null;
+  trip_user_id: string | null;
   name: string;
+  /** Country display name from the cities→countries join, or for the
+   *  country result itself the country's own display_name. */
+  country_name: string | null;
   quote: string | null;
   rank: number;
   created_at: string;

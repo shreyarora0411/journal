@@ -2,23 +2,29 @@ import { getSupabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 
 /**
- * One canonical place groups all per-trip place rows with the same lowercased
- * name and (optionally) country. Backed by the `canonical_places` view from
- * migration 0005.
+ * One canonical city groups all per-trip city rows with the same lowercased
+ * name and (optionally) country. Backed by the `canonical_cities` view from
+ * migration 24 (formerly `canonical_places`, renamed in the geographic-
+ * hierarchy refactor).
+ *
+ * The hook name keeps "Place" / "canonicalPlace" linguistically — UI calls
+ * these "places" — but the underlying entity is the city table.
  */
 export type CanonicalPlace = {
   canonical_key: string;
   canonical_name: string;
   display_name: string;
-  country: string | null;
-  place_ids: string[];
+  country_id: string | null;
+  country_name: string | null;
+  country_iso: string | null;
+  city_ids: string[];
   trip_ids: string[];
   user_ids: string[];
   saved_by_count: number;
 };
 
 export type PlaceSighting = {
-  place_id: string;
+  city_id: string;
   trip_id: string;
   trip_title: string;
   user_id: string;
@@ -36,15 +42,16 @@ export type PlaceSighting = {
 };
 
 /**
- * Fetch a canonical place by name+country, plus all sightings (one row per
- * friend who has saved/named this place across their trips).
+ * Fetch a canonical city by name + (optional) country iso, plus all
+ * sightings — one row per friend who has saved/named this city across
+ * their trips.
  *
- * RLS on the underlying places/venues/trips tables filters automatically —
- * we only ever see places attached to trips visible to us.
+ * RLS on the underlying cities/venues/trips tables filters automatically —
+ * we only ever see cities attached to trips visible to us.
  */
 export const useCanonicalPlace = (name: string | null, country: string | null) =>
   useQuery({
-    queryKey: ['canonical-place', name, country],
+    queryKey: ['canonical-city', name, country],
     enabled: Boolean(name && name.length > 0),
     queryFn: async (): Promise<{
       canonical: CanonicalPlace | null;
@@ -53,32 +60,45 @@ export const useCanonicalPlace = (name: string | null, country: string | null) =
       if (!name) return { canonical: null, sightings: [] };
       const supabase = getSupabase();
 
+      // Resolve country text (long name or ISO) → country_id if we can.
+      // The caller is presently passing either the display name (legacy)
+      // or null; we accept either and look up by display_name.
+      let countryId: string | null = null;
+      if (country) {
+        const upper = country.toUpperCase();
+        const lookup = supabase.from('countries').select('id');
+        const { data: cRow } = await (upper.length === 2
+          ? lookup.eq('iso_alpha2', upper).maybeSingle()
+          : lookup.ilike('display_name', country).maybeSingle());
+        countryId = (cRow as { id: string } | null)?.id ?? null;
+      }
+
       let canonicalQ = supabase
-        .from('canonical_places')
+        .from('canonical_cities')
         .select('*')
         .eq('canonical_name', name.toLowerCase());
-      if (country) canonicalQ = canonicalQ.eq('country', country);
+      if (countryId) canonicalQ = canonicalQ.eq('country_id', countryId);
       const { data: canonicalRows, error: canonicalErr } = await canonicalQ.limit(1);
       if (canonicalErr && canonicalErr.code !== '42P01') throw canonicalErr;
       const canonical = (canonicalRows?.[0] ?? null) as CanonicalPlace | null;
 
       // Pull the actual per-trip rows so we can show each friend's voice.
       // Match by lowercased name and (optionally) country.
-      let placesQ = supabase
-        .from('places')
+      let citiesQ = supabase
+        .from('cities')
         .select(
-          'id, name, country, note, created_at, trip:trip_id(id, title, user_id, author:user_id(id, display_name, handle, avatar_url))',
+          'id, name, country_id, note, created_at, trip:trip_id(id, title, user_id, author:user_id(id, display_name, handle, avatar_url))',
         )
         .ilike('name', name.trim())
         .is('deleted_at', null);
-      if (country) placesQ = placesQ.eq('country', country);
-      const { data: placeRows, error: placesErr } = await placesQ;
-      if (placesErr) throw placesErr;
+      if (countryId) citiesQ = citiesQ.eq('country_id', countryId);
+      const { data: cityRows, error: citiesErr } = await citiesQ;
+      if (citiesErr) throw citiesErr;
 
       type Raw = {
         id: string;
         name: string;
-        country: string | null;
+        country_id: string | null;
         note: string | null;
         created_at: string;
         trip: {
@@ -89,11 +109,11 @@ export const useCanonicalPlace = (name: string | null, country: string | null) =
         } | null;
       };
       const sightings: PlaceSighting[] = [];
-      for (const r of (placeRows ?? []) as unknown as Raw[]) {
+      for (const r of (cityRows ?? []) as unknown as Raw[]) {
         const trip = r.trip;
         if (!trip) continue;
         sightings.push({
-          place_id: r.id,
+          city_id: r.id,
           trip_id: trip.id,
           trip_title: trip.title,
           user_id: trip.user_id,

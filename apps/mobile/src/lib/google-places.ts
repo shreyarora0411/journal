@@ -92,7 +92,17 @@ export const placeAutocomplete = async (
       signal: opts.signal,
     });
     if (!res.ok) {
-      log.warn('google-places autocomplete non-200', { status: res.status });
+      // Surface the real error body so misconfigurations (referrer
+      // restrictions, missing API enable, billing not set up) don't
+      // present as a silent empty dropdown.
+      let detail = '';
+      try {
+        const errBody = (await res.json()) as { error?: { status?: string; message?: string } };
+        detail = `${errBody.error?.status ?? ''} ${errBody.error?.message ?? ''}`.trim();
+      } catch {
+        // ignore — fall back to status code only
+      }
+      log.warn('google-places autocomplete non-200', { status: res.status, detail });
       return [];
     }
     const json = (await res.json()) as {
@@ -156,7 +166,14 @@ export const placeDetails = async (
       },
     });
     if (!res.ok) {
-      log.warn('google-places details non-200', { status: res.status });
+      let detail = '';
+      try {
+        const errBody = (await res.json()) as { error?: { status?: string; message?: string } };
+        detail = `${errBody.error?.status ?? ''} ${errBody.error?.message ?? ''}`.trim();
+      } catch {
+        // ignore
+      }
+      log.warn('google-places details non-200', { status: res.status, detail });
       return null;
     }
     const json = (await res.json()) as {

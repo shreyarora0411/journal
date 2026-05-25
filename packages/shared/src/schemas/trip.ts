@@ -56,6 +56,11 @@ export const PlaceInputSchema = z.object({
   note: z.string().trim().max(10_000).optional().nullable(),
   arrival_date: dateString,
   position: z.number().int().min(0).default(0),
+  // Session 1 (revised) — place identity. Populated when the user picks
+  // a result from the Google Places autocomplete; null for free-text
+  // submissions that don't match.
+  google_place_id: z.string().min(1).max(255).optional().nullable(),
+  place_types: z.array(z.string()).optional().nullable(),
 });
 export type PlaceInput = z.infer<typeof PlaceInputSchema>;
 
@@ -178,5 +183,14 @@ export const QuickLogFormSchema = z.object({
   place_name: trimmed(120).min(1, 'Where did you go?'),
   note: z.string().trim().max(20_000).optional(),
   visibility: VisibilitySchema.default('friends_of_friends'),
+  // Session 1 (revised): when the user picks a Google Places autocomplete
+  // result, these identify the place for the hero-photo resolver and for
+  // cross-trip aggregation. Free-text submissions leave them null.
+  place_country: trimmed(80).optional().nullable(),
+  place_region: trimmed(120).optional().nullable(),
+  place_lat: z.number().min(-90).max(90).optional().nullable(),
+  place_lng: z.number().min(-180).max(180).optional().nullable(),
+  place_google_place_id: z.string().min(1).max(255).optional().nullable(),
+  place_types: z.array(z.string()).optional().nullable(),
 });
 export type QuickLogForm = z.infer<typeof QuickLogFormSchema>;

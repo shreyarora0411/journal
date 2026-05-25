@@ -18,19 +18,26 @@ jest.mock('@/features/trips', () => ({
   useCreateTripQuick: () => ({ mutateAsync: mockCreateTrip, isPending: false }),
 }));
 
+const mockSetVerdict = jest.fn();
+jest.mock('@/features/verdicts', () => ({
+  useSetVerdict: () => ({ mutateAsync: mockSetVerdict, isPending: false }),
+}));
+
 beforeEach(() => {
   mockReplace.mockReset();
   mockShowToast.mockReset();
   mockCreateTrip.mockReset();
+  mockSetVerdict.mockReset();
 });
 
 describe('LogScreen', () => {
-  it('renders both mode toggles, headline, place card, category chips, and verdict', () => {
+  it('renders both mode toggles, headline, the live place picker, category chips, and verdict', () => {
     renderWithProviders(<LogScreen />);
     expect(screen.getByLabelText('Quick tip')).toBeTruthy();
     expect(screen.getByLabelText('Journal entry')).toBeTruthy();
     expect(screen.getByText('Pop something in the book.')).toBeTruthy();
-    expect(screen.getByText('Café Des Arts')).toBeTruthy();
+    // PlacePicker open by default until the user picks something.
+    expect(screen.getByLabelText('Search place')).toBeTruthy();
     expect(screen.getByText("WHAT I'D TELL A FRIEND")).toBeTruthy();
     expect(screen.getByTestId('verdict-picker')).toBeTruthy();
   });

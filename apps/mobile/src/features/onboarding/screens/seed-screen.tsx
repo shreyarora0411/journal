@@ -3,7 +3,6 @@ import { useUpdateProfile } from '@/features/auth';
 import { useMyTrips, useUpdateTrip } from '@/features/trips';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -17,9 +16,9 @@ const MAX_LEN = 220;
 // Template chips shown at the bottom of the input — tap to insert prefix.
 const TEMPLATES = ['Skip the…', 'Stay in the…', 'Go before…'] as const;
 
-// Placeholder cover when a trip has no photo yet.
-const FALLBACK_COVER =
-  'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1200&auto=format';
+// The old "every trip looks like Eiffel Tower" fallback was deleted in
+// Session 1 (revised). Trips without a resolved hero photo render
+// photo-less — strong title, clean background, no broken image.
 
 /**
  * Seed (#06 of the redesign — Batch A). Step 4 of 4.
@@ -122,17 +121,15 @@ export function SeedScreen() {
         </Text>
       </View>
 
-      <View style={styles.cover}>
-        <Image
-          source={{ uri: FALLBACK_COVER }}
-          style={{ width: '100%', height: 160 }}
-          contentFit="cover"
-          accessibilityIgnoresInvertColors
-        />
-        <View style={styles.coverOverlay}>
-          <Text style={styles.coverDest}>{current?.title ?? ''}</Text>
+      {/* Photo-less destination card. The previous fixed Unsplash image
+          (the "every trip is Eiffel Tower" pattern) was deleted in
+          Session 1 (revised). A future iteration can resolve a real
+          hero per trip via useHeroPhoto; for now, clean typography. */}
+      <View style={[styles.cover, styles.coverPhotoless]}>
+        <View style={styles.coverPhotolessInner}>
+          <Text style={styles.coverDestInk}>{current?.title ?? ''}</Text>
           {current ? (
-            <Text style={styles.coverDates}>
+            <Text style={styles.coverDatesInk}>
               {current.start_date} → {current.end_date}
             </Text>
           ) : null}
@@ -227,26 +224,28 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: HAIR,
   },
-  coverOverlay: {
-    position: 'absolute',
-    left: 14,
-    bottom: 14,
-    right: 14,
+  coverPhotoless: {
+    backgroundColor: '#FAF6F0',
+    borderWidth: 1,
+    borderColor: HAIR,
+    height: 120,
+    justifyContent: 'flex-end',
   },
-  coverDest: {
+  coverPhotolessInner: {
+    padding: 16,
+  },
+  coverDestInk: {
     fontFamily: 'InstrumentSerif_400Italic',
     fontSize: 26,
-    color: '#FFFFFF',
+    color: INK,
     letterSpacing: -0.6,
   },
-  coverDates: {
+  coverDatesInk: {
     fontFamily: 'JetBrainsMono_400Regular',
     fontSize: 9,
     letterSpacing: 1.2,
-    color: '#FFFFFF',
-    opacity: 0.92,
+    color: '#7A716A',
     marginTop: 4,
   },
   inputCard: {

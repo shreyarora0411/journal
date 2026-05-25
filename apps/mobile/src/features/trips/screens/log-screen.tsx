@@ -2,6 +2,7 @@ import {
   CategoryPill,
   Eyebrow,
   Page,
+  PlacePicker,
   StatusSpace,
   type Verdict,
   VerdictPicker,
@@ -9,6 +10,7 @@ import {
 import { useCreateTripQuick } from '@/features/trips';
 import { useSetVerdict } from '@/features/verdicts';
 import { useToast } from '@/hooks/use-toast';
+import type { PlaceDetails } from '@/lib/google-places';
 import { log } from '@/lib/log';
 import { CATEGORIES, type Category } from '@/theme';
 import { useRouter } from 'expo-router';
@@ -49,21 +51,44 @@ export function LogScreen() {
   const [tip, setTip] = useState('');
   const [verdict, setVerdict] = useState<Verdict>('love');
 
+  // Place state. `picked` is set when the user taps an autocomplete
+  // result (full PlaceDetails). `freeText` is set when they bail and
+  // type their own. Mutually exclusive — picking clears free text and
+  // vice-versa.
+  const [picked, setPicked] = useState<PlaceDetails | null>(null);
+  const [freeText, setFreeText] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const placeName = picked?.name ?? freeText ?? null;
+  const placeArea = picked ? [picked.region, picked.country].filter(Boolean).join(' · ') : null;
+
   const onSubmit = async () => {
     const trimmed = body.trim();
     if (trimmed.length === 0) {
       toast.show({ message: 'Write a sentence first.', variant: 'error' });
       return;
     }
+    if (!placeName) {
+      toast.show({ message: 'Pick a place first.', variant: 'error' });
+      return;
+    }
     try {
       const today = new Date().toISOString().slice(0, 10);
       const result = await createTrip.mutateAsync({
-        title: 'Pondicherry · Café Des Arts',
-        place_name: 'Café Des Arts',
+        title: placeName,
+        place_name: placeName,
         start_date: today,
         end_date: today,
         note: trimmed + (tip.trim() ? `\n\nTip: ${tip.trim()}` : ''),
         visibility: 'friends_of_friends',
+        // Place identity — populated only when the user picked a Google
+        // autocomplete result; free-text submissions leave these null.
+        place_country: picked?.country ?? null,
+        place_region: picked?.region ?? null,
+        place_lat: picked?.lat ?? null,
+        place_lng: picked?.lng ?? null,
+        place_google_place_id: picked?.google_place_id ?? null,
+        place_types: picked?.types ?? null,
       });
       // Persist the verdict on the new trip. Failure here doesn't fail
       // the whole log save — the trip is already in the user's book.
@@ -101,24 +126,44 @@ export function LogScreen() {
 
       <Text style={styles.headline}>Pop something in the book.</Text>
 
-      {/* Place picker card (mock — full picker is post-pilot) */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Change place"
-        style={styles.placeCard}
-        onPress={() =>
-          toast.show({ message: 'Place picker is coming. Mock for now.', variant: 'info' })
-        }
-      >
-        <View style={styles.placeThumb}>
-          <Text style={{ fontSize: 22, color: MUTE }}>◔</Text>
+      {/* Place picker — Google Places autocomplete (Session 1 revised).
+          Open state shows the live PlacePicker dropdown; closed state
+          shows the chosen place summary card with a "Change" link. */}
+      {pickerOpen || !placeName ? (
+        <View style={{ marginTop: 16 }}>
+          <PlacePicker
+            mode="broad"
+            placeholder="Where did you go?"
+            initialQuery={freeText ?? placeName ?? ''}
+            onPick={(details) => {
+              setPicked(details);
+              setFreeText(null);
+              setPickerOpen(false);
+            }}
+            onFreeText={(name) => {
+              setPicked(null);
+              setFreeText(name);
+              setPickerOpen(false);
+            }}
+          />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.placeName}>Café Des Arts</Text>
-          <Text style={styles.placeArea}>Pondicherry · French Quarter</Text>
-        </View>
-        <Text style={styles.changeLink}>Change</Text>
-      </Pressable>
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Change place"
+          style={styles.placeCard}
+          onPress={() => setPickerOpen(true)}
+        >
+          <View style={styles.placeThumb}>
+            <Text style={{ fontSize: 22, color: MUTE }}>◔</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.placeName}>{placeName}</Text>
+            {placeArea ? <Text style={styles.placeArea}>{placeArea}</Text> : null}
+          </View>
+          <Text style={styles.changeLink}>Change</Text>
+        </Pressable>
+      )}
 
       {/* Category chips */}
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 18, flexWrap: 'wrap' }}>

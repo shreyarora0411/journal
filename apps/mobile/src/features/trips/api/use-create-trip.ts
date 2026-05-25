@@ -40,12 +40,20 @@ export const useCreateTripQuick = () => {
         .single();
       if (tripErr) throw tripErr;
 
-      // 2. Seed place from the trip's place_name.
+      // 2. Seed place from the trip's place_name. Persist Google-Place
+      //    identity (if picker returned one) so the hero-photo resolver
+      //    + cross-trip aggregation have what they need.
       const { data: place, error: placeErr } = await supabase
         .from('places')
         .insert({
           trip_id: (trip as Trip).id,
           name: parsed.place_name,
+          country: parsed.place_country ?? null,
+          region: parsed.place_region ?? null,
+          lat: parsed.place_lat ?? null,
+          lng: parsed.place_lng ?? null,
+          google_place_id: parsed.place_google_place_id ?? null,
+          place_types: parsed.place_types ?? null,
           position: 0,
         })
         .select('id')

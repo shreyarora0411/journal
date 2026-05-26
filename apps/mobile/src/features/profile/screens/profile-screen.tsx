@@ -1,12 +1,12 @@
-import { Eyebrow, Face, Page, Photo, PullQuote, StatusSpace } from '@/components';
-import { useSignOut } from '@/features/auth';
-import { ME } from '@/features/feed/lib/fixtures';
+import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { useAuthStore, useProfile, useSignOut } from '@/features/auth';
 import { log } from '@/lib/log';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMeStats } from '../api/use-me-stats';
+import { useUserTrips } from '../api/use-user-trips';
 
 const CORAL = '#FF4D2E';
 const GOLD = '#FFB300';
@@ -16,29 +16,43 @@ const TINT = '#FAF6F0';
 const HAIR = '#EFEAE2';
 
 /**
- * Profile · Travel book (#12 of the redesign — Batch C).
+ * Profile · Travel book.
  *
- * Layout per the brief:
- *   - 68pt face + name + handle + settings cog
- *   - Italic-serif tagline pull quote
- *   - 3-stat row (white outlined / tinted / coral-filled)
- *   - Coral→gold gradient "My 2026, so far" Wrapped teaser
- *   - 2-column photo grid of trip cards
+ * Real data only:
+ *   - Name + handle + avatar from useProfile()
+ *   - Trips/countries/tips stats from me_stats()
+ *   - Trip grid from useUserTrips(self)
+ *
+ * Wrapped teaser only renders when the user has at least one trip;
+ * a brand-new pilot user sees a clean profile with `0` stats and a
+ * quiet empty state below — no theatrical "0 trips · 0 countries"
+ * gradient banner.
  */
 export function ProfileScreen() {
   const router = useRouter();
   const signOut = useSignOut();
   const stats = useMeStats();
+  const profile = useProfile();
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  const tripsQ = useUserTrips(userId);
 
   useEffect(() => {
     log.event('profile.screen_entered');
   }, []);
 
-  // Loading or pre-migration: render `—` so we don't lie with zeros.
   const fmt = (n: number | undefined | null): string => (typeof n === 'number' ? String(n) : '—');
-  const tripsLabel = fmt(stats.data?.trips_count);
-  const countriesLabel = fmt(stats.data?.countries_count);
-  const tipsLabel = fmt(stats.data?.tips_given_count);
+  const trips = stats.data?.trips_count ?? null;
+  const countries = stats.data?.countries_count ?? null;
+  const tips = stats.data?.tips_given_count ?? null;
+  const tripsLabel = fmt(trips);
+  const countriesLabel = fmt(countries);
+  const tipsLabel = fmt(tips);
+  const hasAnyContent = (trips ?? 0) > 0 || (countries ?? 0) > 0 || (tips ?? 0) > 0;
+
+  const displayName = profile.data?.display_name ?? '—';
+  const handle = profile.data?.handle ? `@${profile.data.handle}` : '';
+  const avatarUrl = profile.data?.avatar_url ?? null;
+  const myTrips = tripsQ.data ?? [];
 
   const onSignOut = () => {
     Alert.alert('Sign out?', 'You can sign back in with the same number.', [
@@ -64,25 +78,18 @@ export function ProfileScreen() {
 
       {/* Header — face + name + cog */}
       <View style={styles.header}>
-        <Face uri={ME.avatarUri} size="lg" />
+        <Face uri={avatarUrl} initials={displayName.slice(0, 2).toUpperCase()} size="lg" />
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{ME.name}</Text>
-          <Text style={styles.handle}>{ME.handle}</Text>
+          <Text style={styles.name}>{displayName}</Text>
+          {handle ? <Text style={styles.handle}>{handle}</Text> : null}
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut}>
           <Text style={styles.cog}>⎋</Text>
         </Pressable>
       </View>
 
-      {/* Tagline */}
-      <View style={{ marginTop: 16 }}>
-        <PullQuote size="sm" color={MUTE}>
-          {ME.tagline}
-        </PullQuote>
-      </View>
-
-      {/* 3-stat row — real numbers via me_stats(); renders `—` while
-          loading or when migration 12 hasn't been deployed. */}
+      {/* 3-stat row — real numbers via me_stats(); `—` while loading,
+          0 when zero (honest). */}
       <View style={styles.statRow}>
         <View style={[styles.stat, styles.statOutlined]}>
           <Text style={[styles.statValue, { color: INK }]}>{tripsLabel}</Text>
@@ -98,53 +105,66 @@ export function ProfileScreen() {
         </View>
       </View>
 
-      {/* Wrapped teaser — the ONE allowed gradient (see brief rule 4) */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Open my 2026 Wrapped"
-        onPress={() => router.push('/wrapped' as never)}
-        style={{ marginTop: 20 }}
-      >
-        <LinearGradient
-          colors={[CORAL, GOLD]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.wrappedCard}
+      {/* Wrapped teaser only when there's something to wrap. */}
+      {hasAnyContent ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open my Wrapped"
+          onPress={() => router.push('/wrapped' as never)}
+          style={{ marginTop: 20 }}
         >
-          <View>
-            <Text style={styles.wrappedEyebrow}>MY 2026, SO FAR</Text>
-            <Text style={styles.wrappedHeadline}>I really{'\n'}moved this year.</Text>
-            <Text style={styles.wrappedFooter}>
-              {tripsLabel} trips · {countriesLabel} countries · {tipsLabel} tips
-            </Text>
-          </View>
-          <Text style={styles.wrappedChevron}>›</Text>
-        </LinearGradient>
-      </Pressable>
+          <LinearGradient
+            colors={[CORAL, GOLD]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.wrappedCard}
+          >
+            <View>
+              <Text style={styles.wrappedEyebrow}>MY YEAR, SO FAR</Text>
+              <Text style={styles.wrappedHeadline}>I really{'\n'}moved this year.</Text>
+              <Text style={styles.wrappedFooter}>
+                {tripsLabel} trips · {countriesLabel} countries · {tipsLabel} tips
+              </Text>
+            </View>
+            <Text style={styles.wrappedChevron}>›</Text>
+          </LinearGradient>
+        </Pressable>
+      ) : null}
 
-      {/* My book — 2-col grid */}
+      {/* My book — real trips. */}
       <View style={{ marginTop: 28 }}>
         <Eyebrow>My book</Eyebrow>
-        <View style={styles.grid}>
-          {ME.myTrips.map((t) => (
-            <Pressable
-              key={t.id}
-              accessibilityRole="button"
-              accessibilityLabel={t.destination}
-              onPress={() => router.push(`/(tabs)/trip-notebook/${t.id}` as never)}
-              style={styles.tripCard}
-            >
-              <Photo uri={t.coverUri} aspectRatio={4 / 5} radius={14}>
-                <View style={styles.tripOverlay}>
-                  <Text style={styles.tripDest}>{t.destination}</Text>
-                  <Text style={styles.tripMeta}>
-                    {t.monthLabel} · {t.placesCount} places
-                  </Text>
+        {tripsQ.isLoading ? (
+          <Text style={styles.empty}>Loading…</Text>
+        ) : myTrips.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Nothing in the book yet.</Text>
+            <Text style={styles.emptyBody}>
+              Tap the Add tab. One honest line is enough to start.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {myTrips.map((t) => (
+              <Pressable
+                key={t.id}
+                accessibilityRole="button"
+                accessibilityLabel={t.title}
+                onPress={() => router.push(`/trip/${t.id}` as never)}
+                style={styles.tripCard}
+              >
+                <View style={styles.tripCardInner}>
+                  <Text style={styles.tripDest}>{t.title}</Text>
+                  {t.start_date ? (
+                    <Text style={styles.tripMeta}>
+                      {new Date(t.start_date).toDateString().toUpperCase()}
+                    </Text>
+                  ) : null}
                 </View>
-              </Photo>
-            </Pressable>
-          ))}
-        </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </View>
     </Page>
   );
@@ -235,33 +255,55 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 12,
   },
+  empty: { fontFamily: 'Geist_400Regular', fontSize: 13, color: MUTE, marginTop: 16 },
+  emptyCard: {
+    marginTop: 14,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: '#FFFFFF',
+  },
+  emptyTitle: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 22,
+    color: INK,
+    letterSpacing: -0.4,
+  },
+  emptyBody: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: MUTE,
+    marginTop: 8,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     marginTop: 14,
   },
-  tripCard: {
-    width: '48%',
-  },
-  tripOverlay: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: 12,
+  tripCard: { width: '48%' },
+  tripCardInner: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: '#FFFFFF',
+    minHeight: 100,
+    justifyContent: 'flex-end',
   },
   tripDest: {
     fontFamily: 'InstrumentSerif_400Italic',
-    fontSize: 24,
-    color: '#FFFFFF',
+    fontSize: 22,
+    color: INK,
     letterSpacing: -0.4,
   },
   tripMeta: {
     fontFamily: 'JetBrainsMono_400Regular',
     fontSize: 9,
     letterSpacing: 1.2,
-    color: '#FFFFFF',
-    opacity: 0.92,
+    color: MUTE,
     marginTop: 4,
   },
 });

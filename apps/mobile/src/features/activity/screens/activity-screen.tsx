@@ -1,9 +1,23 @@
 import { Avatar, Box, Text } from '@/components';
 import { Link } from 'expo-router';
 import { useMemo } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Linking, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { type ActivityEvent, useActivity } from '../api/use-activity';
+
+const INVITE_TEXT =
+  "i'm on lore — friends-only travel notes, no reviews, no strangers. try it: https://lore.app";
+
+const inviteViaWhatsApp = async () => {
+  const url = `whatsapp://send?text=${encodeURIComponent(INVITE_TEXT)}`;
+  const can = await Linking.canOpenURL(url).catch(() => false);
+  if (can) {
+    await Linking.openURL(url);
+    return;
+  }
+  // Fallback to the share-only universal URL when WhatsApp isn't installed.
+  await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(INVITE_TEXT)}`).catch(() => null);
+};
 
 const bucketLabel = (b: ActivityEvent['bucket']): string => {
   if (b === 'today') return 'TODAY';
@@ -49,13 +63,15 @@ export function ActivityScreen() {
             <Text variant="body" color="textMuted">
               Nothing yet. When friends add trips or follow people, it'll show up here.
             </Text>
-            <Link href={'/(tabs)/friends' as never} asChild>
-              <Pressable>
-                <Text variant="caption" marginTop="m" style={{ color: '#FF4D2E' }}>
-                  Invite someone →
-                </Text>
-              </Pressable>
-            </Link>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Invite a friend via WhatsApp"
+              onPress={inviteViaWhatsApp}
+            >
+              <Text variant="caption" marginTop="m" style={{ color: '#FF4D2E' }}>
+                Invite a friend →
+              </Text>
+            </Pressable>
           </Box>
         ) : (
           buckets.map((b) =>

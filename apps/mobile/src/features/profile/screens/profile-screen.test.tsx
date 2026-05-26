@@ -1,4 +1,4 @@
-import { fireEvent, renderWithProviders, screen } from '@/test/render';
+import { renderWithProviders, screen } from '@/test/render';
 import { ProfileScreen } from './profile-screen';
 
 const mockPush = jest.fn();
@@ -8,12 +8,12 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockSignOut = jest.fn();
+const mockProfile = jest.fn();
 jest.mock('@/features/auth', () => ({
   useSignOut: () => ({ mutateAsync: mockSignOut, isPending: false }),
-  // `useMeStats` (default) returns `{ data: undefined, isLoading: true }`
-  // via the real implementation under the test render — which means the
-  // Profile screen renders `—` for the three stat values. That's the
-  // honest loading state per the brief.
+  useProfile: () => mockProfile(),
+  useAuthStore: <T,>(selector: (s: { session: { user: { id: string } } | null }) => T) =>
+    selector({ session: { user: { id: 'user-self' } } }),
 }));
 
 const mockStats = jest.fn();
@@ -21,20 +21,30 @@ jest.mock('../api/use-me-stats', () => ({
   useMeStats: () => mockStats(),
 }));
 
+const mockTrips = jest.fn();
+jest.mock('../api/use-user-trips', () => ({
+  useUserTrips: () => mockTrips(),
+}));
+
 beforeEach(() => {
   mockPush.mockReset();
   mockSignOut.mockReset();
   mockStats.mockReset();
+  mockProfile.mockReset();
+  mockTrips.mockReset();
   mockStats.mockReturnValue({ data: null, isLoading: true });
+  mockProfile.mockReturnValue({
+    data: { display_name: 'Shrey', handle: 'shrey', avatar_url: null },
+    isLoading: false,
+  });
+  mockTrips.mockReturnValue({ data: [], isLoading: false });
 });
 
 describe('ProfileScreen', () => {
   it('renders em-dashes for stats while me_stats is loading', () => {
     renderWithProviders(<ProfileScreen />);
-    expect(screen.getByText('Shrey Arora')).toBeTruthy();
+    expect(screen.getByText('Shrey')).toBeTruthy();
     expect(screen.getByText('@shrey')).toBeTruthy();
-    expect(screen.getByText(/Cities mostly/)).toBeTruthy();
-    // 3 em-dashes (Trips / Countries / Tips I gave) while data is null.
     expect(screen.getAllByText('—').length).toBe(3);
   });
 
@@ -49,21 +59,50 @@ describe('ProfileScreen', () => {
     expect(screen.getByText('19')).toBeTruthy();
   });
 
-  it('renders the Wrapped teaser with the right CTA copy', () => {
+  it('hides the Wrapped teaser when the user has no trips/countries/tips', () => {
+    mockStats.mockReturnValue({
+      data: { trips_count: 0, countries_count: 0, tips_given_count: 0 },
+      isLoading: false,
+    });
     renderWithProviders(<ProfileScreen />);
-    expect(screen.getByText('MY 2026, SO FAR')).toBeTruthy();
-    expect(screen.getByText('I really\nmoved this year.')).toBeTruthy();
+    expect(screen.queryByLabelText('Open my Wrapped')).toBeNull();
   });
 
-  it('tapping the Wrapped teaser routes to /wrapped', () => {
+  it('renders the Wrapped teaser when stats are non-zero', () => {
+    mockStats.mockReturnValue({
+      data: { trips_count: 2, countries_count: 1, tips_given_count: 0 },
+      isLoading: false,
+    });
     renderWithProviders(<ProfileScreen />);
-    fireEvent.press(screen.getByLabelText('Open my 2026 Wrapped'));
-    expect(mockPush).toHaveBeenCalledWith('/wrapped');
+    expect(screen.getByLabelText('Open my Wrapped')).toBeTruthy();
   });
 
-  it('tapping a trip card routes to its trip-notebook route', () => {
+  it('shows the empty book message when the user has no trips yet', () => {
     renderWithProviders(<ProfileScreen />);
-    fireEvent.press(screen.getByLabelText('Tokyo'));
-    expect(mockPush).toHaveBeenCalledWith('/(tabs)/trip-notebook/kabir-tokyo');
+    expect(screen.getByText('Nothing in the book yet.')).toBeTruthy();
+  });
+
+  it('renders trip cards when useUserTrips returns rows', () => {
+    mockTrips.mockReturnValue({
+      data: [
+        {
+          id: 'trip-1',
+          user_id: 'user-self',
+          title: 'Tokyo, October',
+          start_date: null,
+          end_date: null,
+          note: null,
+          cover_photo_id: null,
+          visibility: 'friends_of_friends',
+          imported_from: null,
+          created_at: '2026-01-15T10:00:00Z',
+          updated_at: '2026-01-15T10:00:00Z',
+          deleted_at: null,
+        },
+      ],
+      isLoading: false,
+    });
+    renderWithProviders(<ProfileScreen />);
+    expect(screen.getByText('Tokyo, October')).toBeTruthy();
   });
 });

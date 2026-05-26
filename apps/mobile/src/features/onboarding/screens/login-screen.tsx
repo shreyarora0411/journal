@@ -64,7 +64,11 @@ export function LoginScreen() {
         await start.mutateAsync({ phone: e164 });
       }
       log.event('onboarding.screen_completed', { screen: 'login', choice: 'phone' });
-      router.replace('/(auth)/framing');
+      // Pilot anti-drop-off: skip framing + circle + taste-makers and
+      // land directly on Log. Display name + home city stay blank until
+      // the user edits them from the You tab. The AuthGate's onboarding
+      // routing is short-circuited via onboardingNextRoute.
+      router.replace('/(tabs)/add');
     } catch (err) {
       log.error('startSession failed', err);
       toast.show({ message: 'Could not start. Try again.', variant: 'error' });

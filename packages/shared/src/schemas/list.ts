@@ -23,12 +23,29 @@ export const ListSchema = ListInputSchema.extend({
 });
 export type List = z.infer<typeof ListSchema>;
 
-export const ListItemInputSchema = z.object({
-  destination_id: UuidSchema.optional().nullable(),
-  place_id: UuidSchema.optional().nullable(),
-  note: z.string().trim().max(500).optional().nullable(),
-  order_index: z.number().int().nonnegative().default(0),
-});
+/** Polymorphic target — `list_item_target` enum on the server side. */
+export const ListItemTargetSchema = z.enum(['trip', 'city', 'venue']);
+export type ListItemTarget = z.infer<typeof ListItemTargetSchema>;
+
+export const ListItemInputSchema = z
+  .object({
+    list_id: UuidSchema,
+    // Polymorphic target — the canonical path for new writes.
+    target_type: ListItemTargetSchema.optional(),
+    target_id: UuidSchema.optional(),
+    // Legacy direct-FK targets (kept for backward compat with existing
+    // list rows; new code should pass target_type + target_id instead).
+    destination_id: UuidSchema.optional().nullable(),
+    city_id: UuidSchema.optional().nullable(),
+    note: z.string().trim().max(500).optional().nullable(),
+  })
+  .refine(
+    (v) => Boolean(v.target_type && v.target_id) || Boolean(v.destination_id) || Boolean(v.city_id),
+    { message: 'Pick a target: trip / city / venue or destination_id / city_id.' },
+  )
+  .refine((v) => Boolean(v.target_type) === Boolean(v.target_id), {
+    message: 'target_type and target_id must be set together.',
+  });
 export type ListItemInput = z.infer<typeof ListItemInputSchema>;
 
 export const WishlistInputSchema = z.object({

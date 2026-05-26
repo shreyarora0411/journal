@@ -1,8 +1,10 @@
 import { Box, Button, Card, DetailHeader, Pill, Text } from '@/components';
 import { useAuthStore } from '@/features/auth';
+import { ListPickerSheet, useListsContaining } from '@/features/lists';
 import { useTrip } from '@/features/trips';
 import type { VenueKind } from '@journal/shared';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PhotoUploader } from '../components/PhotoUploader';
@@ -32,6 +34,8 @@ export default function TripDetailScreen() {
   const tripQ = useTrip(id ?? null);
   const router = useRouter();
   const myUserId = useAuthStore((s) => s.session?.user.id ?? null);
+  const [listPickerOpen, setListPickerOpen] = useState(false);
+  const containingQ = useListsContaining('trip', id ?? null);
 
   if (tripQ.isLoading) {
     return (
@@ -100,9 +104,23 @@ export default function TripDetailScreen() {
           </Text>
         ) : null}
 
-        <Box flexDirection="row" gap="s" marginBottom="l">
+        <Box flexDirection="row" gap="s" marginBottom="m">
           <Pill label={trip.visibility.replace(/_/g, ' ')} variant="accent" />
           {trip.imported_from ? <Pill label={`from ${trip.imported_from}`} /> : null}
+        </Box>
+
+        <Box marginBottom="l">
+          <Button
+            label={
+              (containingQ.data?.length ?? 0) > 0
+                ? `Saved to ${containingQ.data?.length} list${
+                    (containingQ.data?.length ?? 0) === 1 ? '' : 's'
+                  }`
+                : '+ Add to list'
+            }
+            variant="ghost"
+            onPress={() => setListPickerOpen(true)}
+          />
         </Box>
 
         {trip.note ? (
@@ -238,6 +256,14 @@ export default function TripDetailScreen() {
           </Box>
         ) : null}
       </ScrollView>
+      {id ? (
+        <ListPickerSheet
+          targetType="trip"
+          targetId={id}
+          isOpen={listPickerOpen}
+          onClose={() => setListPickerOpen(false)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

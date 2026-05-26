@@ -7,6 +7,7 @@ import {
   type Verdict,
   VerdictPicker,
 } from '@/components';
+import { ListPickerSheet } from '@/features/lists';
 import { useCreateTripQuick } from '@/features/trips';
 import { useSetVerdict } from '@/features/verdicts';
 import { useToast } from '@/hooks/use-toast';
@@ -48,6 +49,10 @@ export function LogScreen() {
   const [category, setCategory] = useState<Category | null>(null);
   const [body, setBody] = useState('');
   const [verdict, setVerdict] = useState<Verdict>('love');
+  /** After save: the new trip's id, used to open the list picker
+   *  pointing at the freshly created row. Cleared when the picker
+   *  closes; the router.replace fires from the close handler. */
+  const [savedTripId, setSavedTripId] = useState<string | null>(null);
 
   // Place state. `picked` is set when the user taps an autocomplete
   // result (full PlaceDetails). `freeText` is set when they bail and
@@ -108,7 +113,10 @@ export function LogScreen() {
       }
       log.event('log.saved', { category, verdict });
       toast.show({ message: 'Added to your book.', variant: 'success' });
-      router.replace('/(tabs)/book');
+      // Open the list picker on the new trip; the close handler then
+      // routes to /book. If the user has no lists yet they can dismiss
+      // and the flow is unchanged.
+      setSavedTripId(result.trip.id);
     } catch (err) {
       log.error('log save failed', err);
       toast.show({ message: 'Could not save. Try again.', variant: 'error' });
@@ -230,6 +238,20 @@ export function LogScreen() {
       >
         <Text style={styles.ctaLabel}>{createTrip.isPending ? 'Saving…' : 'Add to my book ✦'}</Text>
       </Pressable>
+
+      {/* Post-save: pick lists to save this trip into. Dismissing the
+          sheet routes through to /book either way. */}
+      {savedTripId ? (
+        <ListPickerSheet
+          targetType="trip"
+          targetId={savedTripId}
+          isOpen={true}
+          onClose={() => {
+            setSavedTripId(null);
+            router.replace('/(tabs)/book');
+          }}
+        />
+      ) : null}
     </Page>
   );
 }

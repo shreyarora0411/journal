@@ -11,12 +11,20 @@ beforeEach(() => {
 });
 
 describe('WelcomeScreen', () => {
-  it('renders the wordmark, eyebrow, headline and sub-copy', () => {
+  it('renders the wordmark, sample card deck, eyebrow, and headline', () => {
     renderWithProviders(<WelcomeScreen />);
     expect(screen.getByLabelText('lore.')).toBeTruthy();
-    expect(screen.getByText('JUST MY CIRCLE. NO ONE ELSE.')).toBeTruthy();
-    expect(screen.getByText('A travel book\nmy friends\nwrite with me.')).toBeTruthy();
-    expect(screen.getByText(/No more WhatsApp scavenger hunts/)).toBeTruthy();
+    expect(screen.getByLabelText('Sample friend quotes')).toBeTruthy();
+    expect(screen.getByText('THIS IS THE WHOLE APP')).toBeTruthy();
+    expect(screen.getByText(/One honest line/)).toBeTruthy();
+    expect(screen.getByText(/Search any city/)).toBeTruthy();
+  });
+
+  it('renders the three sample friend cards', () => {
+    renderWithProviders(<WelcomeScreen />);
+    expect(screen.getByText('Arjun')).toBeTruthy();
+    expect(screen.getByText('Mira')).toBeTruthy();
+    expect(screen.getByText('Tara')).toBeTruthy();
   });
 
   it('tapping Get started routes to /(auth)/login', () => {
@@ -29,10 +37,5 @@ describe('WelcomeScreen', () => {
     renderWithProviders(<WelcomeScreen />);
     fireEvent.press(screen.getByLabelText('Sign in'));
     expect(mockPush).toHaveBeenCalledWith('/(auth)/login');
-  });
-
-  it('renders a full-bleed hero image', () => {
-    renderWithProviders(<WelcomeScreen />);
-    expect(screen.getByTestId('welcome-hero')).toBeTruthy();
   });
 });

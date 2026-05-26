@@ -64,7 +64,7 @@ describe('LoginScreen', () => {
     fireEvent.press(screen.getByLabelText('Send me a code'));
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({ phone: '+919876543210' });
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/framing');
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/add');
     });
   });
 });

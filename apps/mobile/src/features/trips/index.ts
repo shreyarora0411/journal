@@ -9,3 +9,10 @@ export {
 } from './api/use-extracted-entities';
 export { tripKeys } from './api/keys';
 export { TripNotebookScreen } from './screens/trip-notebook-screen';
+export {
+  useResolvePlace,
+  useCreateAtomicLog,
+  type ResolvedPlace,
+  type CreateAtomicLogVars,
+  type ResolvePlaceVars,
+} from './api/use-atomic-log';

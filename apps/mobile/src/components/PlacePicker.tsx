@@ -1,6 +1,7 @@
 import {
   type PlaceAutocompleteHit,
   type PlaceDetails,
+  type PlacePickerCategory,
   type PlacePickerMode,
   newSessionToken,
   placeAutocomplete,
@@ -20,6 +21,9 @@ const DEBOUNCE_MS = 250;
 type Props = {
   /** "city" narrows to localities; "broad" allows POIs and establishments. */
   mode?: PlacePickerMode;
+  /** Atomic-log category — when present, biases autocomplete types
+   *  toward the user's intent (Food → restaurants, Stay → hotels…). */
+  category?: PlacePickerCategory;
   placeholder?: string;
   /** Pre-filled text on first render. */
   initialQuery?: string;
@@ -51,6 +55,7 @@ type Props = {
  */
 export function PlacePicker({
   mode = 'broad',
+  category,
   placeholder = 'Search a place',
   initialQuery = '',
   onPick,
@@ -78,6 +83,7 @@ export function PlacePicker({
       abortRef.current = controller;
       const next = await placeAutocomplete(trimmed, {
         mode,
+        category,
         sessionToken,
         signal: controller.signal,
       });
@@ -87,7 +93,7 @@ export function PlacePicker({
       }
     }, DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [query, mode, sessionToken]);
+  }, [query, mode, category, sessionToken]);
 
   const onTapHit = async (hit: PlaceAutocompleteHit) => {
     setResolving(hit.placeId);

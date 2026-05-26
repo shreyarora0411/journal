@@ -54,7 +54,24 @@ export const getGooglePlacesKey = (): string | null => {
  */
 export type PlacePickerMode = 'city' | 'broad';
 
-const includedPrimaryTypes = (mode: PlacePickerMode): string[] => {
+/**
+ * Atomic-log category buckets — when present, the autocomplete biases
+ * toward the place types that match the user's intent. Stay → hotels,
+ * Food → restaurants, etc. Keeps the dropdown relevant to what the
+ * user is actually logging.
+ */
+export type PlacePickerCategory = 'stay' | 'food' | 'drinks' | 'wander' | 'buy';
+
+const typesByCategory: Record<PlacePickerCategory, string[]> = {
+  stay: ['lodging'],
+  food: ['restaurant', 'cafe', 'bakery'],
+  drinks: ['bar', 'night_club', 'cafe'],
+  wander: ['tourist_attraction', 'park', 'sublocality', 'neighborhood'],
+  buy: ['shopping_mall', 'store', 'clothing_store', 'book_store'],
+};
+
+const includedPrimaryTypes = (mode: PlacePickerMode, category?: PlacePickerCategory): string[] => {
+  if (category) return typesByCategory[category];
   if (mode === 'city') {
     return ['locality', 'administrative_area_level_1', 'administrative_area_level_2'];
   }
@@ -69,7 +86,13 @@ const includedPrimaryTypes = (mode: PlacePickerMode): string[] => {
  */
 export const placeAutocomplete = async (
   input: string,
-  opts: { mode?: PlacePickerMode; sessionToken?: string; signal?: AbortSignal } = {},
+  opts: {
+    mode?: PlacePickerMode;
+    /** Optional atomic-log category — biases types toward the user's intent. */
+    category?: PlacePickerCategory;
+    sessionToken?: string;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<PlaceAutocompleteHit[]> => {
   const key = getGooglePlacesKey();
   if (!key) return [];
@@ -82,7 +105,7 @@ export const placeAutocomplete = async (
     languageCode: 'en',
   };
   if (opts.sessionToken) body.sessionToken = opts.sessionToken;
-  const primaries = includedPrimaryTypes(mode);
+  const primaries = includedPrimaryTypes(mode, opts.category);
   if (primaries.length > 0) body.includedPrimaryTypes = primaries;
 
   try {

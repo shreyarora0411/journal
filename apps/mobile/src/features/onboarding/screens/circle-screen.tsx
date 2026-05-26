@@ -127,15 +127,6 @@ export function CircleScreen() {
 
       <View style={{ gap: 12, marginTop: 24 }}>
         <ConnectorCard
-          title="Instagram"
-          subtitle="Tap to detect trips from your last 6 months."
-          badge="Best"
-          coralBorder
-          onPress={() =>
-            toast.show({ message: 'Instagram is coming soon. Try Contacts.', variant: 'info' })
-          }
-        />
-        <ConnectorCard
           title="Contacts"
           subtitle={
             matchContacts.isPending
@@ -144,12 +135,23 @@ export function CircleScreen() {
                 ? `${friends.length} friend${friends.length === 1 ? '' : 's'} already on lore.`
                 : 'Find people you already know who are on lore.'
           }
+          badge="Best"
+          coralBorder
           onPress={onContacts}
           loading={matchContacts.isPending}
         />
         <ConnectorCard
+          title="Instagram"
+          subtitle="Detect trips from your last 6 months."
+          badge="Coming soon"
+          onPress={() =>
+            toast.show({ message: 'Instagram is coming soon. Try Contacts.', variant: 'info' })
+          }
+        />
+        <ConnectorCard
           title="WhatsApp chat"
           subtitle="Forward a chat to find friends inside it."
+          badge="Coming soon"
           onPress={() =>
             toast.show({ message: 'WhatsApp forward is coming soon.', variant: 'info' })
           }

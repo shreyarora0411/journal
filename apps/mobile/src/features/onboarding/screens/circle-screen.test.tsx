@@ -25,11 +25,18 @@ jest.mock('@/features/follows', () => ({
   useFollow: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
 
+const mockUpdateProfile = jest.fn();
+jest.mock('@/features/auth', () => ({
+  useUpdateProfile: () => ({ mutateAsync: mockUpdateProfile, isPending: false }),
+}));
+
 beforeEach(() => {
   mockReplace.mockReset();
   mockShow.mockReset();
   mockMatched.mockReset();
   mockMatched.mockReturnValue({ data: [], refetch: jest.fn() });
+  mockUpdateProfile.mockReset();
+  mockUpdateProfile.mockResolvedValue({});
 });
 
 describe('CircleScreen', () => {
@@ -66,7 +73,7 @@ describe('CircleScreen', () => {
     expect(screen.getByLabelText('Add all 2')).toBeTruthy();
   });
 
-  it('Continue routes to /(tabs)/book when matches exist', () => {
+  it('Continue stamps onboarding_completed and routes to /(tabs)/book', async () => {
     mockMatched.mockReturnValue({
       data: [
         { id: 'a', display_name: 'Tara', handle: '@tara', avatar_url: null, badge: '', score: 1 },
@@ -75,12 +82,21 @@ describe('CircleScreen', () => {
     });
     renderWithProviders(<CircleScreen />);
     fireEvent.press(screen.getByLabelText('Continue'));
+    // Wait for the async finish() handler to complete.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ onboarding_completed: true }),
+    );
     expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
   });
 
-  it('Skip always routes to taste-makers fallback', () => {
+  it('Skip also stamps onboarding_completed and routes to /(tabs)/book', async () => {
     renderWithProviders(<CircleScreen />);
     fireEvent.press(screen.getByLabelText('Skip'));
-    expect(mockReplace).toHaveBeenCalledWith('/(auth)/taste-makers');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ onboarding_completed: true }),
+    );
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
   });
 });

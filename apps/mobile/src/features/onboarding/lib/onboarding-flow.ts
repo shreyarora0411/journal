@@ -1,15 +1,21 @@
 import type { Profile } from '@/features/auth';
 
 /**
- * Step ordering for the auth gate.
+ * Auth-gate routing for the pilot onboarding flow:
  *
- * Pilot anti-drop-off variant: once a user has a session, we send them
- * straight to the Log screen. Display name + home city are filled in
- * later from the You tab — not as a gating step. The full onboarding
- * chain (Framing → Circle → Taste-makers) is no longer reachable from
- * the gate; those screens remain only as referenceable edit surfaces.
+ *   Welcome → Login → Framing (name) → Circle (contacts) → Feed
+ *
+ * Once a session exists we infer the next step from the profile shape:
+ *   - no display_name        → /(auth)/framing
+ *   - has name, not completed → /(auth)/circle
+ *   - onboarding_completed_at → /(tabs)/book
+ *
+ * The taste-makers fallback and the home-city / bio fields from the
+ * earlier multi-step flow are deferred to a post-onboarding "edit
+ * profile" surface — they bleed the funnel without raising activation.
  */
 export const onboardingNextRoute = (profile: Profile | null): string => {
   if (profile?.onboarding_completed_at) return '/(tabs)/book';
-  return '/(tabs)/add';
+  if (!profile?.display_name) return '/(auth)/framing';
+  return '/(auth)/circle';
 };

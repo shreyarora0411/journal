@@ -1,4 +1,5 @@
 import { Eyebrow, Face, FaceStack, Page, StatusSpace } from '@/components';
+import { useUpdateProfile } from '@/features/auth';
 import { useFollow } from '@/features/follows';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
@@ -31,7 +32,7 @@ export function CircleScreen() {
   const matchContacts = useMatchContacts();
   const matched = useMatchedFriends();
   const follow = useFollow();
-  const [contactsTried, setContactsTried] = useState(false);
+  const updateProfile = useUpdateProfile();
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -42,7 +43,6 @@ export function CircleScreen() {
   const hasMatches = friends.length > 0;
 
   const onContacts = async () => {
-    setContactsTried(true);
     if (isWeb) {
       toast.show({ message: 'Contacts only works on the iOS / Android app.', variant: 'info' });
       return;
@@ -88,25 +88,21 @@ export function CircleScreen() {
     }
   };
 
-  const onContinue = () => {
-    log.event('onboarding.screen_completed', {
-      screen: 'circle',
-      choice: hasMatches ? 'continue' : 'no-matches',
-    });
-    // If contacts didn't match anyone, fall through to the taste-makers
-    // cold-start fallback. Otherwise we're done with onboarding — the
-    // user lands on the Feed and logs their first trip via the `+` tab.
-    if (contactsTried && !hasMatches) {
-      router.replace('/(auth)/taste-makers');
-    } else {
-      router.replace('/(tabs)/book');
+  /** Mark onboarding complete and route to the feed. Used by both
+   *  Continue and Skip — Circle is the last gated step in the pilot
+   *  flow regardless of match outcome. */
+  const finish = async (choice: 'continue' | 'skip' | 'no-matches') => {
+    log.event('onboarding.screen_completed', { screen: 'circle', choice });
+    try {
+      await updateProfile.mutateAsync({ onboarding_completed: true });
+    } catch (err) {
+      log.warn('onboarding completion stamp failed', { error: String(err) });
     }
+    router.replace('/(tabs)/book');
   };
 
-  const onSkip = () => {
-    log.event('onboarding.screen_completed', { screen: 'circle', choice: 'skip' });
-    router.replace('/(auth)/taste-makers');
-  };
+  const onContinue = () => finish(hasMatches ? 'continue' : 'no-matches');
+  const onSkip = () => finish('skip');
 
   return (
     <Page>

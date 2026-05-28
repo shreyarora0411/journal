@@ -16,3 +16,4 @@ export {
   type CreateAtomicLogVars,
   type ResolvePlaceVars,
 } from './api/use-atomic-log';
+export { useUploadVenuePhoto } from './api/use-upload-venue-photo';

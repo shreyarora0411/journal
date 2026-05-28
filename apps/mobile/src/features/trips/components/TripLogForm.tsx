@@ -15,7 +15,6 @@ const INK = '#1A1410';
 const MUTE = '#7A716A';
 const TINT = '#FAF6F0';
 const HAIR = '#EFEAE2';
-const EMERALD = '#00A67E';
 const PAPER = '#FFFFFF';
 
 /**
@@ -40,6 +39,9 @@ export function TripLogForm() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [note, setNote] = useState('');
   const [savedTripId, setSavedTripId] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<'followers' | 'friends_of_friends' | 'everyone'>(
+    'friends_of_friends',
+  );
 
   const placeName = picked?.name ?? null;
   const placeArea = picked ? [picked.region, picked.country].filter(Boolean).join(' · ') : null;
@@ -61,7 +63,7 @@ export function TripLogForm() {
         start_date: startDate || null,
         end_date: endDate || null,
         note: note.trim() || undefined,
-        visibility: 'friends_of_friends',
+        visibility,
         city_country_id: countryId,
         city_region: picked.region,
         city_lat: picked.lat,
@@ -158,14 +160,33 @@ export function TripLogForm() {
         </View>
       </View>
 
-      {/* Visibility. */}
-      <View style={styles.visibilityCard}>
-        <View style={styles.checkBubble}>
-          <Text style={styles.checkGlyph}>✓</Text>
+      {/* Visibility picker — three options. Default: my circle. */}
+      <View style={{ marginTop: 18 }}>
+        <Eyebrow>Who sees this</Eyebrow>
+        <View style={styles.visRow}>
+          {(
+            [
+              { value: 'followers', label: 'Followers', sub: 'Only people who follow me' },
+              { value: 'friends_of_friends', label: 'My circle', sub: 'Friends + their friends' },
+              { value: 'everyone', label: 'Everyone', sub: 'Anyone on lore' },
+            ] as const
+          ).map((opt) => {
+            const isOn = visibility === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                accessibilityRole="button"
+                accessibilityLabel={`Set visibility ${opt.label}`}
+                accessibilityState={{ selected: isOn }}
+                onPress={() => setVisibility(opt.value)}
+                style={[styles.visSeg, isOn && styles.visSegOn]}
+              >
+                <Text style={[styles.visSegLabel, isOn && styles.visSegLabelOn]}>{opt.label}</Text>
+                <Text style={[styles.visSegSub, isOn && styles.visSegSubOn]}>{opt.sub}</Text>
+              </Pressable>
+            );
+          })}
         </View>
-        <Text style={styles.visibilityLabel}>
-          <Text style={{ color: INK }}>Just my circle</Text> · friends only.
-        </Text>
       </View>
 
       <Pressable
@@ -253,36 +274,37 @@ const styles = StyleSheet.create({
     color: INK,
     textAlignVertical: 'top',
   },
-  visibilityCard: {
+  visRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: TINT,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: 18,
+    gap: 8,
+    marginTop: 10,
   },
-  checkBubble: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: EMERALD,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkGlyph: {
-    color: PAPER,
-    fontFamily: 'Geist_500Medium',
-    fontSize: 10,
-    lineHeight: 10,
-  },
-  visibilityLabel: {
+  visSeg: {
     flex: 1,
-    fontFamily: 'Geist_400Regular',
-    fontSize: 13,
-    color: MUTE,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: PAPER,
   },
+  visSegOn: {
+    borderColor: INK,
+    backgroundColor: INK,
+  },
+  visSegLabel: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 13,
+    color: INK,
+  },
+  visSegLabelOn: { color: PAPER },
+  visSegSub: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 10,
+    color: MUTE,
+    marginTop: 2,
+  },
+  visSegSubOn: { color: 'rgba(255,255,255,0.7)' },
   cta: {
     marginTop: 18,
     backgroundColor: CORAL,

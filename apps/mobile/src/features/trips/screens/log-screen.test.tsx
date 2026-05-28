@@ -16,10 +16,12 @@ jest.mock('@/hooks/use-toast', () => ({
 const mockCreateTrip = jest.fn();
 const mockResolvePlace = jest.fn();
 const mockCreateAtomicLog = jest.fn();
+const mockUploadVenuePhoto = jest.fn();
 jest.mock('@/features/trips', () => ({
   useCreateTripQuick: () => ({ mutateAsync: mockCreateTrip, isPending: false }),
   useResolvePlace: () => ({ mutateAsync: mockResolvePlace, isPending: false }),
   useCreateAtomicLog: () => ({ mutateAsync: mockCreateAtomicLog, isPending: false }),
+  useUploadVenuePhoto: () => ({ mutateAsync: mockUploadVenuePhoto, isPending: false }),
   useMyTrips: () => ({ data: [], isLoading: false }),
 }));
 
@@ -64,8 +66,10 @@ describe('LogScreen', () => {
     expect(screen.getByLabelText('Save trip')).toBeTruthy();
   });
 
-  it('renders the emerald visibility reassurance line', () => {
+  it('renders the visibility picker with the My-circle segment', () => {
     renderWithProviders(<LogScreen />);
-    expect(screen.getByText(/Just my circle/)).toBeTruthy();
+    expect(screen.getByLabelText('Set visibility My circle')).toBeTruthy();
+    expect(screen.getByLabelText('Set visibility Followers')).toBeTruthy();
+    expect(screen.getByLabelText('Set visibility Everyone')).toBeTruthy();
   });
 });

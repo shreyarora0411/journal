@@ -1,15 +1,33 @@
 import { CategoryPill, Eyebrow, PlacePicker, type Verdict, VerdictPicker } from '@/components';
 import { ListPickerSheet } from '@/features/lists';
-import { useCreateAtomicLog, useMyTrips, useResolvePlace } from '@/features/trips';
+import {
+  useCreateAtomicLog,
+  useMyTrips,
+  useResolvePlace,
+  useUploadVenuePhoto,
+} from '@/features/trips';
 import { useSetVerdict } from '@/features/verdicts';
 import { useToast } from '@/hooks/use-toast';
 import type { PlaceDetails } from '@/lib/google-places';
 import { log } from '@/lib/log';
 import { CATEGORIES, type Category } from '@/theme';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+type Visibility = 'followers' | 'friends_of_friends' | 'everyone';
 
 const CORAL = '#FF4D2E';
 const INK = '#1A1410';
@@ -31,6 +49,49 @@ const ONE_LINE_PLACEHOLDERS: Record<Category, string> = {
 };
 
 /**
+ * Tappable "Try:" suggestions. Three per category. Tapping fills the
+ * one-line input — the user can keep typing from there or save as-is.
+ * Lowers the activation barrier of a blank field.
+ */
+const ONE_LINE_SUGGESTIONS: Record<Category, ReadonlyArray<string>> = {
+  stay: [
+    'Ask for a room facing the courtyard.',
+    'Worth it for the breakfast alone.',
+    'Skip the suite. The standard room is the move.',
+  ],
+  food: [
+    'Order the off-menu special — just ask.',
+    'Go at 4pm. No queue, full kitchen.',
+    'Three rounds of the small plates is the right call.',
+  ],
+  drinks: [
+    "Sit at the bar, talk to whoever's pouring.",
+    'Their house cocktail beats anything on the menu.',
+    'Late, not early. The room lifts after 10.',
+  ],
+  wander: [
+    'Walk it at sunset, not midday.',
+    'Enter from the back gate — most miss it.',
+    'Go on a weekday morning before the buses arrive.',
+  ],
+  buy: [
+    'Bargain. They expect it.',
+    "Ask for the back room — that's where the real stuff is.",
+    'Better than anything in the main market.',
+  ],
+};
+
+const VISIBILITY_OPTIONS: ReadonlyArray<{
+  value: Visibility;
+  label: string;
+  sub: string;
+}> = [
+  { value: 'followers', label: 'Followers', sub: 'Only people who follow me' },
+  { value: 'friends_of_friends', label: 'My circle', sub: 'Friends + their friends' },
+  { value: 'everyone', label: 'Everyone', sub: 'Anyone on lore' },
+];
+
+/**
  * Atomic (Tip) log form. Category-required, single-line distilled
  * sentence + optional prose. The picker is category-scoped so Food
  * surfaces restaurants/cafés, Stay surfaces hotels, etc.
@@ -49,6 +110,7 @@ export function AtomicLogForm() {
   const resolveMutation = useResolvePlace();
   const createMutation = useCreateAtomicLog();
   const verdictMutation = useSetVerdict();
+  const uploadPhoto = useUploadVenuePhoto();
   const tripsQ = useMyTrips();
 
   const [category, setCategory] = useState<Category | null>(null);
@@ -60,6 +122,10 @@ export function AtomicLogForm() {
   const [tripId, setTripId] = useState<string | null>(null);
   const [tripSheetOpen, setTripSheetOpen] = useState(false);
   const [savedVenueId, setSavedVenueId] = useState<string | null>(null);
+  /** Local URI of the photo the user picked. Uploaded after the
+   *  venue insert resolves so we have a venue_id to attach to. */
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<Visibility>('friends_of_friends');
 
   const placeName = picked?.name ?? null;
   const placeArea = picked ? [picked.region, picked.country].filter(Boolean).join(' · ') : null;
@@ -113,7 +179,7 @@ export function AtomicLogForm() {
         one_line: oneLine.trim(),
         prose: prose.trim() || null,
         trip_id: tripId,
-        visibility: 'friends_of_friends',
+        visibility,
         city_id: resolved.city_id,
         area_id: resolved.area_id,
       });
@@ -128,17 +194,54 @@ export function AtomicLogForm() {
         log.warn('verdict upsert failed', { error: String(vErr) });
       }
 
+      if (photoUri) {
+        try {
+          await uploadPhoto.mutateAsync({ venueId, uri: photoUri });
+        } catch (pErr) {
+          log.warn('venue photo upload failed', { error: String(pErr) });
+          toast.show({ message: 'Saved, but the photo failed to upload.', variant: 'info' });
+        }
+      }
+
       log.event('log.saved', { mode: 'tip', category, verdict });
       toast.show({ message: 'Added to your book.', variant: 'success' });
       setSavedVenueId(venueId);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      log.error('atomic log save failed', err);
-      toast.show({ message: `Could not save: ${msg}`, variant: 'error' });
+      // Surface the most actionable error possible. PostgREST errors
+      // carry a `.code` and `.message`; we want the operator to see
+      // both. The most common cause of a save failure today is the
+      // atomic-log RPCs not being deployed (migrations 31 + 32).
+      const e = err as { code?: string; message?: string };
+      const code = e?.code;
+      let message = e?.message ?? String(err);
+      if (code === 'PGRST202' || /could not find the function/i.test(message)) {
+        message =
+          'insert_atomic_log RPC missing on the server — apply migrations 31 and 32 in Supabase.';
+      }
+      log.error('atomic log save failed', { code, message });
+      toast.show({ message: `Could not save: ${message}`, variant: 'error' });
     }
   };
 
-  const isSaving = resolveMutation.isPending || createMutation.isPending;
+  const isSaving = resolveMutation.isPending || createMutation.isPending || uploadPhoto.isPending;
+
+  const onPickPhoto = async () => {
+    if (Platform.OS !== 'web') {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        toast.show({ message: 'No photo permission.', variant: 'error' });
+        return;
+      }
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+      exif: false,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (asset?.uri) setPhotoUri(asset.uri);
+  };
 
   return (
     <>
@@ -207,6 +310,29 @@ export function AtomicLogForm() {
       {/* The line — italic serif, single-line. */}
       <View style={{ marginTop: 22 }}>
         <Eyebrow>The line</Eyebrow>
+
+        {/* Try-suggestions — tappable chips above the input. Only
+            render once a category is picked (the suggestions are per-
+            category) and the user hasn't typed anything yet. */}
+        {category && oneLine.length === 0 ? (
+          <View style={styles.suggestRow}>
+            {ONE_LINE_SUGGESTIONS[category].map((s) => (
+              <Pressable
+                key={s}
+                accessibilityRole="button"
+                accessibilityLabel={`Use suggestion: ${s}`}
+                onPress={() => setOneLine(s)}
+                style={styles.suggestChip}
+              >
+                <Text style={styles.suggestPrefix}>Try</Text>
+                <Text style={styles.suggestText} numberOfLines={1}>
+                  {s}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         <View style={styles.oneLineCard}>
           <TextInput
             accessibilityLabel="The line"
@@ -221,6 +347,44 @@ export function AtomicLogForm() {
             maxLength={280}
           />
         </View>
+      </View>
+
+      {/* Photo. One cover photo per atomic log; carousel deferred. */}
+      <View style={{ marginTop: 22 }}>
+        <Eyebrow>Photo</Eyebrow>
+        {photoUri ? (
+          <View style={styles.photoCard}>
+            <Image source={{ uri: photoUri }} style={styles.photoPreview} contentFit="cover" />
+            <View style={styles.photoActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Replace photo"
+                onPress={onPickPhoto}
+                style={styles.photoActionPill}
+              >
+                <Text style={styles.photoActionLabel}>Replace</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Remove photo"
+                onPress={() => setPhotoUri(null)}
+                style={styles.photoActionPill}
+              >
+                <Text style={styles.photoActionLabel}>Remove</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add a photo"
+            onPress={onPickPhoto}
+            style={styles.photoEmpty}
+          >
+            <Text style={styles.photoEmptyGlyph}>＋</Text>
+            <Text style={styles.photoEmptyLabel}>Add a photo (optional)</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Optional prose. */}
@@ -266,14 +430,27 @@ export function AtomicLogForm() {
         <Text style={styles.attachCaret}>›</Text>
       </Pressable>
 
-      {/* Visibility reassurance. */}
-      <View style={styles.visibilityCard}>
-        <View style={styles.checkBubble}>
-          <Text style={styles.checkGlyph}>✓</Text>
+      {/* Visibility picker — three options. Default: my circle. */}
+      <View style={{ marginTop: 18 }}>
+        <Eyebrow>Who sees this</Eyebrow>
+        <View style={styles.visRow}>
+          {VISIBILITY_OPTIONS.map((opt) => {
+            const isOn = visibility === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                accessibilityRole="button"
+                accessibilityLabel={`Set visibility ${opt.label}`}
+                accessibilityState={{ selected: isOn }}
+                onPress={() => setVisibility(opt.value)}
+                style={[styles.visSeg, isOn && styles.visSegOn]}
+              >
+                <Text style={[styles.visSegLabel, isOn && styles.visSegLabelOn]}>{opt.label}</Text>
+                <Text style={[styles.visSegSub, isOn && styles.visSegSubOn]}>{opt.sub}</Text>
+              </Pressable>
+            );
+          })}
         </View>
-        <Text style={styles.visibilityLabel}>
-          <Text style={{ color: INK }}>Just my circle</Text> · friends only.
-        </Text>
       </View>
 
       {/* CTA. */}
@@ -381,6 +558,120 @@ const styles = StyleSheet.create({
   placeName: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
   placeArea: { fontFamily: 'Geist_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
   changeLink: { fontFamily: 'Geist_500Medium', fontSize: 13, color: CORAL },
+  suggestRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  suggestChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: TINT,
+    borderWidth: 1,
+    borderColor: HAIR,
+    maxWidth: '100%',
+  },
+  suggestPrefix: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: CORAL,
+  },
+  suggestText: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 13,
+    color: INK,
+    flexShrink: 1,
+  },
+  photoCard: {
+    marginTop: 8,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: TINT,
+    borderWidth: 1,
+    borderColor: HAIR,
+  },
+  photoPreview: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+  },
+  photoActions: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 10,
+    backgroundColor: PAPER,
+  },
+  photoActionPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: HAIR,
+  },
+  photoActionLabel: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 12,
+    color: INK,
+  },
+  photoEmpty: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 22,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: HAIR,
+    backgroundColor: PAPER,
+  },
+  photoEmptyGlyph: {
+    fontSize: 18,
+    color: MUTE,
+  },
+  photoEmptyLabel: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 13,
+    color: MUTE,
+  },
+  visRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  visSeg: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: PAPER,
+  },
+  visSegOn: {
+    borderColor: INK,
+    backgroundColor: INK,
+  },
+  visSegLabel: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 13,
+    color: INK,
+  },
+  visSegLabelOn: { color: PAPER },
+  visSegSub: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 10,
+    color: MUTE,
+    marginTop: 2,
+  },
+  visSegSubOn: { color: 'rgba(255,255,255,0.7)' },
   oneLineCard: {
     marginTop: 8,
     backgroundColor: PAPER,

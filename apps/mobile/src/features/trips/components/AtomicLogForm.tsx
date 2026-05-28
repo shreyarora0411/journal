@@ -207,19 +207,42 @@ export function AtomicLogForm() {
       toast.show({ message: 'Added to your book.', variant: 'success' });
       setSavedVenueId(venueId);
     } catch (err) {
-      // Surface the most actionable error possible. PostgREST errors
-      // carry a `.code` and `.message`; we want the operator to see
-      // both. The most common cause of a save failure today is the
-      // atomic-log RPCs not being deployed (migrations 31 + 32).
-      const e = err as { code?: string; message?: string };
-      const code = e?.code;
-      let message = e?.message ?? String(err);
-      if (code === 'PGRST202' || /could not find the function/i.test(message)) {
+      // Pull every field a PostgrestError might carry so we know
+      // exactly what went wrong server-side. Plain objects passed as
+      // the `log.error` error-arg stringify to "[object Object]", so
+      // we also dump the raw shape to the dev console via
+      // console.error.
+      const e = err as {
+        code?: string;
+        message?: string;
+        details?: string;
+        hint?: string;
+      };
+      const code = e?.code ?? null;
+      const details = e?.details ?? null;
+      const hint = e?.hint ?? null;
+      let message: string | null = e?.message ?? (err instanceof Error ? err.message : null);
+      if (!message) {
+        try {
+          message = JSON.stringify(err);
+        } catch {
+          message = String(err);
+        }
+      }
+      if (code === 'PGRST202' || /could not find the function/i.test(message ?? '')) {
         message =
           'insert_atomic_log RPC missing on the server — apply migrations 31 and 32 in Supabase.';
       }
-      log.error('atomic log save failed', { code, message });
-      toast.show({ message: `Could not save: ${message}`, variant: 'error' });
+      // Raw error to the dev console — Postgres error fields included.
+      console.error('atomic log save failed', { code, message, details, hint, raw: err });
+      log.error('atomic log save failed', err instanceof Error ? err : undefined, {
+        code: code ?? '(none)',
+        message: message ?? '(none)',
+      });
+      toast.show({
+        message: `Could not save: ${message ?? 'unknown error'}`,
+        variant: 'error',
+      });
     }
   };
 

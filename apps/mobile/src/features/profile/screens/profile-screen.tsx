@@ -1,6 +1,9 @@
-import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { CategoryPill, Eyebrow, Face, Page, StatusSpace } from '@/components';
 import { useAuthStore, useProfile, useSignOut } from '@/features/auth';
+import { useMyLists } from '@/features/lists';
+import { useMyAtomicLogs } from '@/features/trips';
 import { log } from '@/lib/log';
+import type { Category } from '@/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
@@ -35,6 +38,8 @@ export function ProfileScreen() {
   const profile = useProfile();
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
   const tripsQ = useUserTrips(userId);
+  const tipsQ = useMyAtomicLogs(12);
+  const listsQ = useMyLists();
 
   useEffect(() => {
     log.event('profile.screen_entered');
@@ -166,6 +171,85 @@ export function ProfileScreen() {
           </View>
         )}
       </View>
+
+      {/* My tips — atomic logs authored by this user. */}
+      <View style={{ marginTop: 28 }}>
+        <Eyebrow>My tips</Eyebrow>
+        {tipsQ.isLoading ? (
+          <Text style={styles.empty}>Loading…</Text>
+        ) : (tipsQ.data ?? []).length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No tips yet.</Text>
+            <Text style={styles.emptyBody}>
+              Atomic recommendations you log via the Add tab show up here.
+            </Text>
+          </View>
+        ) : (
+          <View style={{ gap: 10, marginTop: 12 }}>
+            {(tipsQ.data ?? []).map((t) => (
+              <Pressable
+                key={t.id}
+                accessibilityRole="button"
+                accessibilityLabel={t.name}
+                onPress={() => router.push('/(tabs)/book' as never)}
+                style={styles.tipCard}
+              >
+                <View style={styles.tipHeader}>
+                  <Text style={styles.tipName}>{t.name}</Text>
+                  {t.category ? (
+                    <CategoryPill category={t.category as Category} variant="soft" />
+                  ) : null}
+                </View>
+                {t.city ? (
+                  <Text style={styles.tipMeta}>
+                    {t.city.name}
+                    {t.city.country ? ` · ${t.city.country.display_name}` : ''}
+                  </Text>
+                ) : null}
+                {t.one_line ? (
+                  <Text style={styles.tipQuote} numberOfLines={2}>
+                    "{t.one_line}"
+                  </Text>
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* My lists. */}
+      <View style={{ marginTop: 28, marginBottom: 80 }}>
+        <Eyebrow>My lists</Eyebrow>
+        {listsQ.isLoading ? (
+          <Text style={styles.empty}>Loading…</Text>
+        ) : (listsQ.data ?? []).length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No lists yet.</Text>
+            <Text style={styles.emptyBody}>
+              Group your favorite places — make a Tokyo list, a Goa list, a Mira list.
+            </Text>
+          </View>
+        ) : (
+          <View style={{ gap: 8, marginTop: 12 }}>
+            {(listsQ.data ?? []).map((l) => (
+              <Pressable
+                key={l.id}
+                accessibilityRole="button"
+                accessibilityLabel={l.title}
+                onPress={() => router.push(`/(tabs)/list/${l.id}` as never)}
+                style={styles.listCard}
+              >
+                <Text style={styles.listTitle}>{l.title}</Text>
+                {l.description ? (
+                  <Text style={styles.listSub} numberOfLines={1}>
+                    {l.description}
+                  </Text>
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
     </Page>
   );
 }
@@ -254,6 +338,58 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#FFFFFF',
     marginLeft: 12,
+  },
+  tipCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: '#FFFFFF',
+  },
+  tipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  tipName: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 20,
+    color: INK,
+    letterSpacing: -0.4,
+    flex: 1,
+  },
+  tipMeta: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: MUTE,
+    marginTop: 4,
+  },
+  tipQuote: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 15,
+    lineHeight: 22,
+    color: INK,
+    marginTop: 8,
+  },
+  listCard: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: '#FFFFFF',
+  },
+  listTitle: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 15,
+    color: INK,
+  },
+  listSub: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 12,
+    color: MUTE,
+    marginTop: 4,
   },
   empty: { fontFamily: 'Geist_400Regular', fontSize: 13, color: MUTE, marginTop: 16 },
   emptyCard: {

@@ -1,8 +1,10 @@
-import { Eyebrow, Face, Page, StatusSpace, Wordmark } from '@/components';
+import { CategoryPill, Eyebrow, Face, Page, StatusSpace, Wordmark } from '@/components';
 import { useFeed } from '@/features/feed';
+import { useAtomicLogFeed, useMyAtomicLogs } from '@/features/trips';
 import { log } from '@/lib/log';
+import type { Category } from '@/theme';
 import { Link, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 const CORAL = '#FF4D2E';
@@ -27,12 +29,23 @@ const HAIR = '#EFEAE2';
 export function FeedScreen() {
   const router = useRouter();
   const q = useFeed();
+  const friendTipsQ = useAtomicLogFeed(30);
+  const myTipsQ = useMyAtomicLogs(30);
 
   useEffect(() => {
     log.event('feed.screen_entered');
   }, []);
 
   const rows = (q.data?.pages ?? []).flatMap((p) => p.rows);
+  /** Merge friend tips + my own tips, reverse-chronological. Own tips
+   *  are included so the user sees their own work immediately after
+   *  saving — closes the "nothing happened" feeling on a fresh DB. */
+  const tips = useMemo(() => {
+    const merged = [...(friendTipsQ.data ?? []), ...(myTipsQ.data ?? [])];
+    merged.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    return merged.slice(0, 50);
+  }, [friendTipsQ.data, myTipsQ.data]);
+  const hasAnyContent = rows.length > 0 || tips.length > 0;
 
   return (
     <Page>
@@ -55,9 +68,9 @@ export function FeedScreen() {
         </View>
       </View>
 
-      {q.isLoading ? (
+      {q.isLoading || friendTipsQ.isLoading ? (
         <Text style={styles.empty}>Loading…</Text>
-      ) : rows.length === 0 ? (
+      ) : !hasAnyContent ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>Quiet here.</Text>
           <Text style={styles.emptyBody}>
@@ -74,41 +87,88 @@ export function FeedScreen() {
           </Pressable>
         </View>
       ) : (
-        <View style={{ marginTop: 18, gap: 14 }}>
-          <Eyebrow>Fresh from my circle</Eyebrow>
-          {rows.map((t) => (
-            <Pressable
-              key={t.id}
-              accessibilityRole="button"
-              accessibilityLabel={`${t.author?.display_name ?? 'Someone'}'s trip: ${t.title}`}
-              onPress={() => router.push(`/trip/${t.id}` as never)}
-              style={styles.card}
-            >
-              <View style={styles.friendRow}>
-                <Face
-                  uri={t.author?.avatar_url ?? null}
-                  initials={(t.author?.display_name ?? t.author?.handle ?? '?')
-                    .slice(0, 2)
-                    .toUpperCase()}
-                  size="sm"
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.friendName}>
-                    {t.author?.display_name ?? t.author?.handle ?? 'Someone'}
-                  </Text>
-                  <Text style={styles.friendWhen}>
-                    {new Date(t.created_at).toDateString().toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.tripTitle}>{t.title}</Text>
-              {t.note ? (
-                <Text style={styles.note} numberOfLines={3}>
-                  {t.note}
-                </Text>
-              ) : null}
-            </Pressable>
-          ))}
+        <View style={{ marginTop: 18, gap: 22 }}>
+          {tips.length > 0 ? (
+            <View style={{ gap: 12 }}>
+              <Eyebrow>Tips from my circle</Eyebrow>
+              {tips.map((t) => (
+                <Pressable
+                  key={`tip-${t.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.author?.display_name ?? 'Someone'}'s tip: ${t.name}`}
+                  onPress={() => router.push('/(tabs)/book' as never)}
+                  style={styles.card}
+                >
+                  <View style={styles.friendRow}>
+                    <Face
+                      uri={t.author?.avatar_url ?? null}
+                      initials={(t.author?.display_name ?? t.author?.handle ?? '?')
+                        .slice(0, 2)
+                        .toUpperCase()}
+                      size="sm"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.friendName}>
+                        {t.author?.display_name ?? t.author?.handle ?? 'Someone'}
+                      </Text>
+                      <Text style={styles.friendWhen}>
+                        {new Date(t.created_at).toDateString().toUpperCase()}
+                        {t.city ? ` · ${t.city.name.toUpperCase()}` : ''}
+                      </Text>
+                    </View>
+                    {t.category ? (
+                      <CategoryPill category={t.category as Category} variant="soft" />
+                    ) : null}
+                  </View>
+                  <Text style={styles.tipName}>{t.name}</Text>
+                  {t.one_line ? (
+                    <Text style={styles.tipQuote} numberOfLines={3}>
+                      "{t.one_line}"
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
+          {rows.length > 0 ? (
+            <View style={{ gap: 12 }}>
+              <Eyebrow>Trips from my circle</Eyebrow>
+              {rows.map((t) => (
+                <Pressable
+                  key={`trip-${t.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.author?.display_name ?? 'Someone'}'s trip: ${t.title}`}
+                  onPress={() => router.push(`/trip/${t.id}` as never)}
+                  style={styles.card}
+                >
+                  <View style={styles.friendRow}>
+                    <Face
+                      uri={t.author?.avatar_url ?? null}
+                      initials={(t.author?.display_name ?? t.author?.handle ?? '?')
+                        .slice(0, 2)
+                        .toUpperCase()}
+                      size="sm"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.friendName}>
+                        {t.author?.display_name ?? t.author?.handle ?? 'Someone'}
+                      </Text>
+                      <Text style={styles.friendWhen}>
+                        {new Date(t.created_at).toDateString().toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.tripTitle}>{t.title}</Text>
+                  {t.note ? (
+                    <Text style={styles.note} numberOfLines={3}>
+                      {t.note}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
       )}
     </Page>
@@ -189,6 +249,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: INK,
     letterSpacing: -0.4,
+  },
+  tipName: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 20,
+    color: INK,
+    letterSpacing: -0.4,
+  },
+  tipQuote: {
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 16,
+    lineHeight: 24,
+    color: INK,
+    marginTop: 8,
   },
   note: {
     fontFamily: 'Geist_400Regular',

@@ -17,6 +17,13 @@ jest.mock('@/features/feed', () => {
   };
 });
 
+const mockAtomicLogFeed = jest.fn();
+const mockMyAtomicLogs = jest.fn();
+jest.mock('@/features/trips', () => ({
+  useAtomicLogFeed: () => mockAtomicLogFeed(),
+  useMyAtomicLogs: () => mockMyAtomicLogs(),
+}));
+
 beforeEach(() => {
   mockPush.mockReset();
   mockUseFeed.mockReset();
@@ -24,6 +31,10 @@ beforeEach(() => {
     data: { pages: [{ rows: [], nextCursor: null }] },
     isLoading: false,
   });
+  mockAtomicLogFeed.mockReset();
+  mockMyAtomicLogs.mockReset();
+  mockAtomicLogFeed.mockReturnValue({ data: [], isLoading: false });
+  mockMyAtomicLogs.mockReturnValue({ data: [], isLoading: false });
 });
 
 describe('FeedScreen', () => {
@@ -81,6 +92,6 @@ describe('FeedScreen', () => {
     expect(screen.getByText('Tokyo, October')).toBeTruthy();
     expect(screen.getByText('Tara')).toBeTruthy();
     expect(screen.getByText('Walked the river at sunset.')).toBeTruthy();
-    expect(screen.getByText('FRESH FROM MY CIRCLE')).toBeTruthy();
+    expect(screen.getByText('TRIPS FROM MY CIRCLE')).toBeTruthy();
   });
 });

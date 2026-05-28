@@ -55,23 +55,19 @@ export const getGooglePlacesKey = (): string | null => {
 export type PlacePickerMode = 'city' | 'broad';
 
 /**
- * Atomic-log category buckets — when present, the autocomplete biases
- * toward the place types that match the user's intent. Stay → hotels,
- * Food → restaurants, etc. Keeps the dropdown relevant to what the
- * user is actually logging.
+ * Atomic-log category buckets — kept as a type alias for callers
+ * (AtomicLogForm still uses it to drive the placeholder copy). The
+ * autocomplete itself is NOT scoped by category any more.
+ *
+ * Why: Google's primary-type filter excludes legitimate matches.
+ * Smoky Joe's Udaipur is tagged `restaurant` upstream, so picking
+ * "Drinks" would hide it even though that's how the user wants to
+ * remember the place. The category remains a required tag at save
+ * time — it just doesn't gate what the picker surfaces.
  */
 export type PlacePickerCategory = 'stay' | 'food' | 'drinks' | 'wander' | 'buy';
 
-const typesByCategory: Record<PlacePickerCategory, string[]> = {
-  stay: ['lodging'],
-  food: ['restaurant', 'cafe', 'bakery'],
-  drinks: ['bar', 'night_club', 'cafe'],
-  wander: ['tourist_attraction', 'park', 'sublocality', 'neighborhood'],
-  buy: ['shopping_mall', 'store', 'clothing_store', 'book_store'],
-};
-
-const includedPrimaryTypes = (mode: PlacePickerMode, category?: PlacePickerCategory): string[] => {
-  if (category) return typesByCategory[category];
+const includedPrimaryTypes = (mode: PlacePickerMode): string[] => {
   if (mode === 'city') {
     return ['locality', 'administrative_area_level_1', 'administrative_area_level_2'];
   }
@@ -88,8 +84,6 @@ export const placeAutocomplete = async (
   input: string,
   opts: {
     mode?: PlacePickerMode;
-    /** Optional atomic-log category — biases types toward the user's intent. */
-    category?: PlacePickerCategory;
     sessionToken?: string;
     signal?: AbortSignal;
   } = {},
@@ -105,7 +99,7 @@ export const placeAutocomplete = async (
     languageCode: 'en',
   };
   if (opts.sessionToken) body.sessionToken = opts.sessionToken;
-  const primaries = includedPrimaryTypes(mode, opts.category);
+  const primaries = includedPrimaryTypes(mode);
   if (primaries.length > 0) body.includedPrimaryTypes = primaries;
 
   try {

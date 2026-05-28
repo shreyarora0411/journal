@@ -165,7 +165,6 @@ export function AtomicLogForm() {
           <View style={{ marginTop: 8 }}>
             <PlacePicker
               mode="broad"
-              category={category ?? undefined}
               placeholder={
                 category === 'stay'
                   ? 'Search a hotel…'

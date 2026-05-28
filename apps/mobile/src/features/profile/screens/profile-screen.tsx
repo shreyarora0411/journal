@@ -1,7 +1,8 @@
 import { CategoryPill, Eyebrow, Face, Page, StatusSpace } from '@/components';
 import { useAuthStore, useProfile, useSignOut } from '@/features/auth';
-import { useMyLists } from '@/features/lists';
-import { useMyAtomicLogs } from '@/features/trips';
+import { useDeleteList, useMyLists } from '@/features/lists';
+import { useDeleteAtomicLog, useMyAtomicLogs } from '@/features/trips';
+import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import type { Category } from '@/theme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,6 +41,35 @@ export function ProfileScreen() {
   const tripsQ = useUserTrips(userId);
   const tipsQ = useMyAtomicLogs(12);
   const listsQ = useMyLists();
+  const deleteTip = useDeleteAtomicLog();
+  const deleteList = useDeleteList();
+  const toast = useToast();
+
+  /** Long-press confirmation pattern. Used for both tips and lists. */
+  const confirmDelete = (kind: 'tip' | 'list', name: string, onDelete: () => Promise<void>) => {
+    Alert.alert(
+      kind === 'tip' ? 'Delete this tip?' : 'Delete this list?',
+      kind === 'tip'
+        ? `"${name}" will be removed from your book.`
+        : `"${name}" will be removed. Items inside are not deleted.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await onDelete();
+              toast.show({ message: `Deleted ${name}.`, variant: 'success' });
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : 'Could not delete.';
+              toast.show({ message: msg, variant: 'error' });
+            }
+          },
+        },
+      ],
+    );
+  };
 
   useEffect(() => {
     log.event('profile.screen_entered');
@@ -192,6 +222,8 @@ export function ProfileScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t.name}
                 onPress={() => router.push('/(tabs)/book' as never)}
+                onLongPress={() => confirmDelete('tip', t.name, () => deleteTip.mutateAsync(t.id))}
+                delayLongPress={400}
                 style={styles.tipCard}
               >
                 <View style={styles.tipHeader}>
@@ -237,6 +269,10 @@ export function ProfileScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={l.title}
                 onPress={() => router.push(`/(tabs)/list/${l.id}` as never)}
+                onLongPress={() =>
+                  confirmDelete('list', l.title, () => deleteList.mutateAsync(l.id))
+                }
+                delayLongPress={400}
                 style={styles.listCard}
               >
                 <Text style={styles.listTitle}>{l.title}</Text>

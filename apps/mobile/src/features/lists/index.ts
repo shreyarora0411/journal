@@ -9,3 +9,4 @@ export {
 } from './api/use-add-polymorphic-item';
 export { useListsContaining } from './api/use-lists-containing';
 export { ListPickerSheet } from './components/ListPickerSheet';
+export { useDeleteList } from './api/use-delete-list';

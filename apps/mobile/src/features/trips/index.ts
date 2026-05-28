@@ -18,3 +18,4 @@ export {
 } from './api/use-atomic-log';
 export { useUploadVenuePhoto } from './api/use-upload-venue-photo';
 export { useMyAtomicLogs, useAtomicLogFeed, type AtomicLogRow } from './api/use-atomic-logs';
+export { useDeleteAtomicLog } from './api/use-delete-atomic-log';

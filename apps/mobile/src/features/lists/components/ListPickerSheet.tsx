@@ -1,15 +1,14 @@
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import type { ListItemTarget } from '@journal/shared';
-import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   useAddPolymorphicListItem,
   useRemovePolymorphicListItem,
 } from '../api/use-add-polymorphic-item';
-import { useMyLists } from '../api/use-lists';
+import { useCreateList, useMyLists } from '../api/use-lists';
 import { useListsContaining } from '../api/use-lists-containing';
 
 const INK = '#1A1410';
@@ -48,12 +47,15 @@ export function ListPickerSheet({
   onClose,
   onItemAdded,
 }: ListPickerSheetProps) {
-  const router = useRouter();
   const toast = useToast();
   const listsQ = useMyLists();
   const containingQ = useListsContaining(targetType, targetId);
   const addMutation = useAddPolymorphicListItem();
   const removeMutation = useRemovePolymorphicListItem();
+  const createList = useCreateList();
+
+  const [createMode, setCreateMode] = useState(false);
+  const [newListName, setNewListName] = useState('');
 
   const containingSet = useMemo(() => new Set(containingQ.data ?? []), [containingQ.data]);
 
@@ -82,11 +84,46 @@ export function ListPickerSheet({
     }
   };
 
-  const onCreateNew = () => {
-    onClose();
-    // The new-list screen returns to wherever the picker was opened
-    // from. The caller can re-open the picker after returning.
-    router.push('/(tabs)/list/new');
+  /** Switch the "+ Create new list" row into an inline input. */
+  const onStartCreate = () => {
+    setCreateMode(true);
+    setNewListName('');
+  };
+
+  const onCancelCreate = () => {
+    setCreateMode(false);
+    setNewListName('');
+  };
+
+  /**
+   * Inline create: post the list + auto-add the current target to it,
+   * then exit create mode. Stays in the same sheet — no route push,
+   * no second screen. The new list animates into the list-of-lists
+   * with a ✓ on the next render because containingQ refetches via the
+   * mutation's onSuccess invalidation.
+   */
+  const onSubmitCreate = async () => {
+    const name = newListName.trim();
+    if (name.length === 0) {
+      toast.show({ message: 'Give the list a name.', variant: 'error' });
+      return;
+    }
+    try {
+      const newList = await createList.mutateAsync({ title: name });
+      await addMutation.mutateAsync({
+        list_id: newList.id,
+        target_type: targetType,
+        target_id: targetId,
+      });
+      toast.show({ message: `Saved to ${newList.title}.`, variant: 'success' });
+      onItemAdded?.(newList.id);
+      setCreateMode(false);
+      setNewListName('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not create the list.';
+      toast.show({ message: msg, variant: 'error' });
+      log.warn('list inline-create failed', { error: msg });
+    }
   };
 
   const lists = listsQ.data ?? [];
@@ -148,17 +185,58 @@ export function ListPickerSheet({
             )}
           </ScrollView>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Create a new list"
-            onPress={onCreateNew}
-            style={styles.newRow}
-          >
-            <View style={styles.newGlyph}>
-              <Text style={styles.newGlyphText}>+</Text>
+          {createMode ? (
+            // Inline create — input + Add. No route push, no extra screen.
+            <View style={styles.createRow}>
+              <View style={styles.newGlyph}>
+                <Text style={styles.newGlyphText}>＋</Text>
+              </View>
+              <TextInput
+                accessibilityLabel="New list name"
+                placeholder="Name your list"
+                placeholderTextColor="#B7AEA5"
+                value={newListName}
+                onChangeText={(v) => setNewListName(v.slice(0, 80))}
+                style={styles.createInput}
+                selectionColor={CORAL}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={onSubmitCreate}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel new list"
+                onPress={onCancelCreate}
+                style={styles.createCancel}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.createCancelLabel}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add new list"
+                onPress={onSubmitCreate}
+                disabled={createList.isPending || addMutation.isPending}
+                style={styles.createSubmit}
+              >
+                <Text style={styles.createSubmitLabel}>
+                  {createList.isPending || addMutation.isPending ? '…' : 'Add'}
+                </Text>
+              </Pressable>
             </View>
-            <Text style={styles.newLabel}>Create a new list</Text>
-          </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Create a new list"
+              onPress={onStartCreate}
+              style={styles.newRow}
+            >
+              <View style={styles.newGlyph}>
+                <Text style={styles.newGlyphText}>+</Text>
+              </View>
+              <Text style={styles.newLabel}>Create a new list</Text>
+            </Pressable>
+          )}
 
           <Pressable
             accessibilityRole="button"
@@ -282,6 +360,43 @@ const styles = StyleSheet.create({
     fontFamily: 'Geist_500Medium',
     fontSize: 18,
     lineHeight: 18,
+  },
+  createRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: HAIR,
+  },
+  createInput: {
+    flex: 1,
+    fontFamily: 'InstrumentSerif_400Italic',
+    fontSize: 18,
+    color: INK,
+    paddingVertical: 6,
+  },
+  createCancel: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  createCancelLabel: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 13,
+    color: MUTE,
+  },
+  createSubmit: {
+    backgroundColor: INK,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  createSubmitLabel: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 13,
+    color: PAPER,
   },
   newLabel: {
     fontFamily: 'Geist_500Medium',

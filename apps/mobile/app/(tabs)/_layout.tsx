@@ -1,64 +1,24 @@
-import { theme } from '@/theme';
+import { FloatingTabBar } from '@/components';
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
 
 /**
- * Five-tab IA per the lore brief §6 (Information architecture):
+ * Five-tab IA per the lore brief §6:
  *   Book / Search / Add / Friends / You
  *
- * Detail routes (trip, place, list, friend, map, year-in-travel) live inside
- * (tabs) so the bottom tab bar persists on them. Each is hidden from the tab
- * bar with `href: null`.
+ * The Add tab in the middle is rendered as a raised coral disc by
+ * FloatingTabBar — the rest of the pill stays flat. Detail routes
+ * (trip / place / list / friend / map / year-in-travel / etc.) live
+ * inside (tabs) so the pill persists on them; each is hidden from the
+ * bar via `href: null`.
  */
 export default function TabsLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: theme.colors.ink,
-        tabBarInactiveTintColor: theme.colors.inkTertiary,
-        tabBarStyle: {
-          backgroundColor: theme.colors.paper,
-          borderTopColor: theme.colors.divider,
-        },
-        tabBarLabelStyle: { fontFamily: 'Inter_400Regular', fontSize: 11 },
-      }}
-    >
-      <Tabs.Screen
-        name="book"
-        options={{
-          title: 'Book',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 16 }}>□</Text>,
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: 'Search',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 16 }}>○</Text>,
-        }}
-      />
-      <Tabs.Screen
-        name="add"
-        options={{
-          title: 'Add',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 16 }}>＋</Text>,
-        }}
-      />
-      <Tabs.Screen
-        name="friends"
-        options={{
-          title: 'Friends',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 16 }}>◇</Text>,
-        }}
-      />
-      <Tabs.Screen
-        name="you"
-        options={{
-          title: 'You',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 16 }}>●</Text>,
-        }}
-      />
+    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <FloatingTabBar {...props} />}>
+      <Tabs.Screen name="book" options={{ title: 'Book' }} />
+      <Tabs.Screen name="search" options={{ title: 'Search' }} />
+      <Tabs.Screen name="add" options={{ title: 'Add' }} />
+      <Tabs.Screen name="friends" options={{ title: 'Friends' }} />
+      <Tabs.Screen name="you" options={{ title: 'You' }} />
 
       {/* Hidden routes — kept inside (tabs) so the bar persists. */}
       <Tabs.Screen name="trip/[id]/index" options={{ href: null }} />
@@ -73,6 +33,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="year-in-travel" options={{ href: null }} />
       <Tabs.Screen name="house-rules" options={{ href: null }} />
       <Tabs.Screen name="wishlist" options={{ href: null }} />
+      <Tabs.Screen name="trip-notebook/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

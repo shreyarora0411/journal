@@ -11,6 +11,7 @@ export { VerdictPicker, type Verdict } from './VerdictPicker';
 export { PullQuote } from './PullQuote';
 export { Nav, type NavSlot } from './Nav';
 export { PlacePicker } from './PlacePicker';
+export { FloatingTabBar } from './FloatingTabBar';
 
 // Pre-existing primitives (kept; rebuilt or extended in place)
 export { Box } from './Box';

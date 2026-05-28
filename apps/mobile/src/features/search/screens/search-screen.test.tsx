@@ -7,40 +7,62 @@ jest.mock('expo-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+const mockUseSearch = jest.fn();
+jest.mock('@/features/search', () => ({
+  useSearch: () => mockUseSearch(),
+}));
+
 beforeEach(() => {
   mockPush.mockReset();
+  mockUseSearch.mockReset();
+  mockUseSearch.mockReturnValue({ data: [], isLoading: false });
 });
 
 describe('SearchScreen', () => {
-  it('renders the headline, search input, and Friends I trust list', () => {
+  it('renders the headline + empty hint when the query is short', () => {
     renderWithProviders(<SearchScreen />);
     expect(screen.getByText('Where are you going?')).toBeTruthy();
     expect(screen.getByLabelText('Search destinations')).toBeTruthy();
-    expect(screen.getByText('FRIENDS I TRUST')).toBeTruthy();
+    expect(screen.getByText(/Search a city or a venue/)).toBeTruthy();
   });
 
-  it('does NOT render the "Because X just got back" hero (Session 2 — cut)', () => {
-    // No recency data backs it; the surface was a hardcoded fake.
+  it('does NOT render the old fixture destinations or HOT badges', () => {
     renderWithProviders(<SearchScreen />);
-    expect(screen.queryByLabelText(/just got back/i)).toBeNull();
+    expect(screen.queryByText('FRIENDS I TRUST')).toBeNull();
+    expect(screen.queryByText('Tokyo')).toBeNull();
+    expect(screen.queryByText('Lisbon')).toBeNull();
+    expect(screen.queryByText('Pondicherry')).toBeNull();
+    expect(screen.queryByText('Pokhara')).toBeNull();
+    expect(screen.queryAllByText('HOT').length).toBe(0);
   });
 
-  it('shows the four destinations from the fixture', () => {
+  it('shows a no-results empty card after a real query returns nothing', () => {
     renderWithProviders(<SearchScreen />);
-    expect(screen.getByLabelText('Tokyo')).toBeTruthy();
-    expect(screen.getByLabelText('Lisbon')).toBeTruthy();
-    expect(screen.getByLabelText('Pondicherry')).toBeTruthy();
-    expect(screen.getByLabelText('Pokhara')).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText('Search destinations'), 'tokyo');
+    expect(screen.getByText('Nothing in your circle yet.')).toBeTruthy();
   });
 
-  it('renders a HOT badge on hot destinations', () => {
+  it('renders rows when useSearch returns results', () => {
+    mockUseSearch.mockReturnValue({
+      data: [
+        {
+          kind: 'city',
+          id: 'city-1',
+          trip_id: 'trip-1',
+          trip_title: "Tara's October trip",
+          trip_user_id: 'user-tara',
+          name: 'Tokyo',
+          country_name: 'Japan',
+          quote: null,
+          rank: 1,
+          created_at: '2026-01-01',
+        },
+      ],
+      isLoading: false,
+    });
     renderWithProviders(<SearchScreen />);
-    expect(screen.getAllByText('HOT').length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('tapping a destination row routes to /destination/<slug>', () => {
-    renderWithProviders(<SearchScreen />);
-    fireEvent.press(screen.getByLabelText('Lisbon'));
-    expect(mockPush).toHaveBeenCalledWith('/destination/lisbon');
+    fireEvent.changeText(screen.getByLabelText('Search destinations'), 'tokyo');
+    expect(screen.getByText('Tokyo')).toBeTruthy();
+    expect(screen.getByText(/CITY · Japan/)).toBeTruthy();
   });
 });

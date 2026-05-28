@@ -34,6 +34,12 @@ export function CircleScreen() {
   const follow = useFollow();
   const updateProfile = useUpdateProfile();
   const [adding, setAdding] = useState(false);
+  /** Once the user has actually run a contacts match in this session,
+   *  we render an inline result line — "5 friends found" or "No one
+   *  yet" — so the screen doesn't silently swallow the action. */
+  const [matchOutcome, setMatchOutcome] = useState<null | { count: number; uploaded: number }>(
+    null,
+  );
 
   useEffect(() => {
     log.event('onboarding.screen_entered', { screen: 'circle' });
@@ -63,8 +69,10 @@ export function CircleScreen() {
       .map((p) => p.number ?? '')
       .filter((p): p is string => p.length > 0);
     try {
-      await matchContacts.mutateAsync({ phoneNumbers: phones });
-      await matched.refetch();
+      const result = await matchContacts.mutateAsync({ phoneNumbers: phones });
+      const refreshed = await matched.refetch();
+      const count = refreshed.data?.length ?? result.matchedUserIds.length;
+      setMatchOutcome({ count, uploaded: phones.length });
     } catch (err) {
       log.error('match-contacts failed', err);
       toast.show({ message: 'Could not match contacts right now.', variant: 'error' });
@@ -185,6 +193,17 @@ export function CircleScreen() {
               {adding ? 'Adding…' : `Add all ${friends.length}`}
             </Text>
           </Pressable>
+        </View>
+      ) : matchOutcome && matchOutcome.count === 0 ? (
+        // Honest empty state after a real match attempt — don't leave
+        // the user wondering whether anything happened.
+        <View style={styles.matchedCard}>
+          <Text style={styles.matchedTitle}>No one yet.</Text>
+          <Text style={styles.matchedSub}>
+            We checked {matchOutcome.uploaded} number{matchOutcome.uploaded === 1 ? '' : 's'} — no
+            one in your contacts is on lore yet. Invite a friend, or come back when more of your
+            circle joins.
+          </Text>
         </View>
       ) : null}
 

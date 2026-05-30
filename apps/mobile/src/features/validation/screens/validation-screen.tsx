@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headline: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 32,
     lineHeight: 36,
     color: INK,
@@ -107,9 +107,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 8,
   },
-  friendName: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
+  friendName: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: INK },
   friendMeta: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 9,
     letterSpacing: 1.2,
     color: MUTE,
@@ -127,13 +127,13 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   statValue: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 28,
     color: CORAL,
     letterSpacing: -0.6,
   },
   statLabel: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 12,
     color: MUTE,
     marginTop: 4,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: '#FFFFFF',
   },
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ghostLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: MUTE,
   },

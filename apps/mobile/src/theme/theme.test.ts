@@ -17,21 +17,21 @@ describe('theme tokens (lore redesign)', () => {
   });
 
   it('uses InstrumentSerif italic for display, title, heading, and quote variants', () => {
-    expect(theme.textVariants.display.fontFamily).toBe('InstrumentSerif_400Italic');
-    expect(theme.textVariants.title.fontFamily).toBe('InstrumentSerif_400Italic');
-    expect(theme.textVariants.heading.fontFamily).toBe('InstrumentSerif_400Italic');
-    expect(theme.textVariants.quote.fontFamily).toBe('InstrumentSerif_400Italic');
+    expect(theme.textVariants.display.fontFamily).toBe('PlayfairDisplay_500Medium');
+    expect(theme.textVariants.title.fontFamily).toBe('PlayfairDisplay_500Medium');
+    expect(theme.textVariants.heading.fontFamily).toBe('PlayfairDisplay_500Medium');
+    expect(theme.textVariants.quote.fontFamily).toBe('PlayfairDisplay_500Medium');
   });
 
   it('uses Geist for body and caption', () => {
-    expect(theme.textVariants.body.fontFamily).toBe('Geist_400Regular');
-    expect(theme.textVariants.caption.fontFamily).toBe('Geist_400Regular');
-    expect(theme.textVariants.headline.fontFamily).toBe('Geist_500Medium');
+    expect(theme.textVariants.body.fontFamily).toBe('DMSans_400Regular');
+    expect(theme.textVariants.caption.fontFamily).toBe('DMSans_400Regular');
+    expect(theme.textVariants.headline.fontFamily).toBe('DMSans_600SemiBold');
   });
 
   it('uses JetBrainsMono for the eyebrow + label variants', () => {
-    expect(theme.textVariants.eyebrow.fontFamily).toBe('JetBrainsMono_400Regular');
-    expect(theme.textVariants.label.fontFamily).toBe('JetBrainsMono_400Regular');
+    expect(theme.textVariants.eyebrow.fontFamily).toBe('DMSans_700Bold');
+    expect(theme.textVariants.label.fontFamily).toBe('DMSans_700Bold');
     expect(theme.textVariants.eyebrow.letterSpacing).toBe(1.4);
   });
 

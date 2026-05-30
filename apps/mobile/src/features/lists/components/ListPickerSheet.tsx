@@ -278,14 +278,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 24,
     color: INK,
     letterSpacing: -0.4,
     marginBottom: 12,
   },
   muted: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     color: MUTE,
     paddingVertical: 24,
@@ -305,12 +305,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 166, 126, 0.08)',
   },
   rowTitle: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 15,
     color: INK,
   },
   rowSub: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 12,
     color: MUTE,
     marginTop: 2,
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     borderColor: EMERALD,
   },
   checkGlyph: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: MUTE,
   },
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   },
   newGlyphText: {
     color: PAPER,
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 18,
     lineHeight: 18,
   },
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   },
   createInput: {
     flex: 1,
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 18,
     color: INK,
     paddingVertical: 6,
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   createCancelLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: MUTE,
   },
@@ -394,12 +394,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   createSubmitLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: PAPER,
   },
   newLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 15,
     color: INK,
   },
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   doneLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 14,
     color: MUTE,
   },

@@ -34,6 +34,12 @@ export type PlaceDetails = {
    *  Used to look up the canonical country_id in public.countries. */
   country_iso: string | null;
   region: string | null;
+  /** True locality — the city/town the place sits in. From Google's
+   *  `locality` address component, falling back to
+   *  `administrative_area_level_2` (district) or `postal_town`. This is
+   *  what we want for the venue's parent city, NOT `region` which is the
+   *  state/admin_level_1 ("Haryana"). */
+  locality: string | null;
   lat: number | null;
   lng: number | null;
   types: string[];
@@ -212,6 +218,14 @@ export const placeDetails = async (
     const country_iso = countryComponent?.shortText?.toUpperCase() ?? null;
     const region =
       components.find((c) => c.types?.includes('administrative_area_level_1'))?.longText ?? null;
+    // True city: prefer `locality`, fall back to `postal_town` (UK/IE),
+    // then `administrative_area_level_2` (district). Never fall back to
+    // admin_level_1 — that's the state (e.g. "Haryana"), not the city.
+    const locality =
+      components.find((c) => c.types?.includes('locality'))?.longText
+      ?? components.find((c) => c.types?.includes('postal_town'))?.longText
+      ?? components.find((c) => c.types?.includes('administrative_area_level_2'))?.longText
+      ?? null;
 
     return {
       google_place_id: json.id,
@@ -219,6 +233,7 @@ export const placeDetails = async (
       country,
       country_iso,
       region,
+      locality,
       lat: json.location?.latitude ?? null,
       lng: json.location?.longitude ?? null,
       types: json.types ?? [],

@@ -10,10 +10,21 @@ import {
   Fraunces_400Regular_Italic,
   Fraunces_500Medium,
 } from '@expo-google-fonts/fraunces';
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+} from '@expo-google-fonts/dm-sans';
 import { Geist_400Regular, Geist_500Medium } from '@expo-google-fonts/geist';
 import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
+import {
+  PlayfairDisplay_500Medium,
+  PlayfairDisplay_500Medium_Italic,
+  PlayfairDisplay_600SemiBold,
+} from '@expo-google-fonts/playfair-display';
 import { ThemeProvider } from '@shopify/restyle';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Font from 'expo-font';
@@ -85,6 +96,15 @@ export default function RootLayout() {
           Geist_400Regular,
           Geist_500Medium,
           JetBrainsMono_400Regular,
+          // Feed redesign — Playfair Display (titles, wordmark) + DM Sans
+          // (UI, labels). Used by feed-screen.tsx and FloatingTabBar.
+          PlayfairDisplay_500Medium,
+          PlayfairDisplay_500Medium_Italic,
+          PlayfairDisplay_600SemiBold,
+          DMSans_400Regular,
+          DMSans_500Medium,
+          DMSans_600SemiBold,
+          DMSans_700Bold,
           // Legacy — still referenced by slice-1/2/3 screens until they're
           // rebuilt in Batch A. Will be dropped once nothing imports them.
           Fraunces_400: Fraunces_400Regular,

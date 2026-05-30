@@ -291,20 +291,20 @@ const _faceReserved = Face;
 
 const styles = StyleSheet.create({
   backGlyph: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 26,
     lineHeight: 26,
     color: INK,
   },
   headline: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 44,
     lineHeight: 46,
     color: INK,
     letterSpacing: -1.2,
   },
   sub: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 14,
     lineHeight: 22,
     color: MUTE,
@@ -319,18 +319,18 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   connectorTitle: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: INK,
   },
   connectorSub: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     color: MUTE,
     marginTop: 4,
   },
   connectorChevron: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 24,
     color: MUTE,
   },
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 10,
     letterSpacing: 0.8,
     color: '#FFFFFF',
@@ -363,12 +363,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   matchedTitle: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 15,
     color: INK,
   },
   matchedSub: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 12,
     color: MUTE,
     marginTop: 2,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   addAllLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: '#FFFFFF',
   },
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: '#FFFFFF',
   },
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   skipLabel: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     color: MUTE,
   },

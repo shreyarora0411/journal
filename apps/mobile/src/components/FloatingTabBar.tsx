@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 22 },
   label: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 12,
   },
   addWrap: {
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   addPlus: {
     color: PAPER,
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 26,
     lineHeight: 28,
   },

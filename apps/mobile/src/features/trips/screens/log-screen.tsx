@@ -70,7 +70,7 @@ export function LogScreen() {
 
 const styles = StyleSheet.create({
   headline: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 32,
     lineHeight: 36,
     color: INK,
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: INK,
   },
   toggleLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: MUTE,
   },

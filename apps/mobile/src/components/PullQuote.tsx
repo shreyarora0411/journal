@@ -26,7 +26,7 @@ export function PullQuote({ children, size = 'md', color = '#1A1410', style }: P
     <Text
       style={[
         {
-          fontFamily: 'InstrumentSerif_400Italic',
+          fontFamily: 'PlayfairDisplay_500Medium',
           fontSize,
           lineHeight,
           color,

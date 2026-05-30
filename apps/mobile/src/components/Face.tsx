@@ -52,7 +52,7 @@ export function Face({ uri, initials, size = 'md', ring = false, testID }: Props
       ) : (
         <Text
           style={{
-            fontFamily: 'Geist_500Medium',
+            fontFamily: 'DMSans_600SemiBold',
             fontSize: Math.round(dim * 0.36),
             color: '#1A1410',
           }}

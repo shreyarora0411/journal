@@ -119,16 +119,16 @@ const styles = StyleSheet.create({
   closeGlyph: {
     color: '#FFFFFF',
     fontSize: 22,
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
   },
   eyebrow: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 11,
     letterSpacing: 1.4,
     color: '#FFFFFF',
   },
   headline: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 52,
     lineHeight: 56,
     color: '#FFFFFF',
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statValue: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 56,
     lineHeight: 56,
     color: '#FFFFFF',
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     minWidth: 88,
   },
   statLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: '#FFFFFF',
     opacity: 0.95,
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     paddingTop: 28,
   },
   tipsEyebrow: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 10,
     letterSpacing: 1.4,
     color: MUTE,
@@ -185,12 +185,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   usedChipLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 11,
     color: '#FFFFFF',
   },
   tipPlace: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 18,
     color: INK,
     letterSpacing: -0.4,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: '#FFFFFF',
   },

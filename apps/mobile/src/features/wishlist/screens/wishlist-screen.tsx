@@ -92,20 +92,20 @@ export function WishlistScreen() {
 
 const styles = StyleSheet.create({
   backGlyph: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 26,
     lineHeight: 26,
     color: INK,
   },
   headline: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 40,
     lineHeight: 44,
     color: INK,
     letterSpacing: -1,
     marginTop: 8,
   },
-  empty: { fontFamily: 'Geist_400Regular', fontSize: 13, color: MUTE, marginTop: 24 },
+  empty: { fontFamily: 'DMSans_400Regular', fontSize: 13, color: MUTE, marginTop: 24 },
   emptyCard: {
     marginTop: 24,
     padding: 18,
@@ -115,13 +115,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   emptyTitle: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 22,
     color: INK,
     letterSpacing: -0.4,
   },
   emptyBody: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     lineHeight: 20,
     color: MUTE,
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   destName: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 26,
     color: INK,
     letterSpacing: -0.5,
@@ -143,5 +143,5 @@ const styles = StyleSheet.create({
   childList: { marginTop: 10, gap: 6 },
   childRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   bullet: { width: 4, height: 4, borderRadius: 2, backgroundColor: CORAL },
-  childLabel: { fontFamily: 'Geist_400Regular', fontSize: 14, color: INK },
+  childLabel: { fontFamily: 'DMSans_400Regular', fontSize: 14, color: INK },
 });

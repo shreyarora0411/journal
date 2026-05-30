@@ -26,7 +26,7 @@ const CORAL = '#FF4D2E';
 export function Wordmark({ size = 'md', color = '#1A1410' }: Props) {
   const fontSize = SIZE_MAP[size];
   const baseStyle: TextStyle = {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize,
     color,
     // Italic serif looks best with slight negative tracking at large sizes.

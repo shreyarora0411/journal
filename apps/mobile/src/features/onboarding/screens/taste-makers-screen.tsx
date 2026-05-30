@@ -140,20 +140,20 @@ function TasteMakerCard({
 
 const styles = StyleSheet.create({
   backGlyph: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 26,
     lineHeight: 26,
     color: INK,
   },
   headline: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 40,
     lineHeight: 44,
     color: INK,
     letterSpacing: -1,
   },
   sub: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 14,
     lineHeight: 22,
     color: MUTE,
@@ -169,21 +169,21 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   name: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 15,
     color: INK,
   },
   bio: {
     // Italic serif per Session 2 task 8 — bios are the human voice,
     // not a UI label.
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 14,
     color: MUTE,
     marginTop: 4,
     letterSpacing: -0.2,
   },
   cue: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 10,
     letterSpacing: 1.2,
     color: MUTE,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   followPillOff: { backgroundColor: 'transparent', borderColor: CORAL },
   followPillOn: { backgroundColor: INK, borderColor: INK },
   followLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
   },
   emptyCard: {
@@ -213,13 +213,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   emptyTitle: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 22,
     color: INK,
     letterSpacing: -0.4,
   },
   emptyBody: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     lineHeight: 20,
     color: MUTE,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   ctaLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: '#FFFFFF',
   },

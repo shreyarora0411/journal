@@ -18,7 +18,7 @@ describe('Wordmark', () => {
     const root = screen.getByLabelText('lore.');
     const styles = Array.isArray(root.props.style) ? root.props.style : [root.props.style];
     const flat = Object.assign({}, ...styles);
-    expect(flat.fontFamily).toBe('InstrumentSerif_400Italic');
+    expect(flat.fontFamily).toBe('PlayfairDisplay_500Medium');
     expect(flat.fontSize).toBe(36);
   });
 

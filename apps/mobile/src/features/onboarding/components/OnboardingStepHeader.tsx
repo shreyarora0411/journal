@@ -40,7 +40,7 @@ export function OnboardingStepHeader({
         >
           <Text
             style={{
-              fontFamily: 'InstrumentSerif_400Italic',
+              fontFamily: 'PlayfairDisplay_500Medium',
               fontSize: 26,
               lineHeight: 26,
               color: '#1A1410',

@@ -2,6 +2,7 @@ import { CategoryPill, Eyebrow, PlacePicker, type Verdict, VerdictPicker } from 
 import { ListPickerSheet } from '@/features/lists';
 import {
   useCreateAtomicLog,
+  useCreateTripQuick,
   useMyTrips,
   useResolvePlace,
   useUploadVenuePhoto,
@@ -14,7 +15,7 @@ import { CATEGORIES, type Category } from '@/theme';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Platform,
@@ -37,7 +38,15 @@ const HAIR = '#EFEAE2';
 const EMERALD = '#00A67E';
 const PAPER = '#FFFFFF';
 
-const CATEGORIES_ORDER: ReadonlyArray<Category> = ['stay', 'food', 'drinks', 'wander', 'buy'];
+const CATEGORIES_ORDER: ReadonlyArray<Category> = [
+  'stay',
+  'food',
+  'drinks',
+  'nightlife',
+  'wander',
+  'do',
+  'buy',
+];
 
 /** Per-category placeholder copy — rotates so the field stays fresh. */
 const ONE_LINE_PLACEHOLDERS: Record<Category, string> = {
@@ -46,6 +55,8 @@ const ONE_LINE_PLACEHOLDERS: Record<Category, string> = {
   drinks: 'Their negroni is the best in the city.',
   wander: 'Walk from Kuramae to Asakusa at sunset.',
   buy: 'The vintage section in the back has the real treasures.',
+  do: 'Take the early boat — the reef is empty before 9.',
+  nightlife: 'Late, not early. The floor lifts after midnight.',
 };
 
 /**
@@ -78,6 +89,16 @@ const ONE_LINE_SUGGESTIONS: Record<Category, ReadonlyArray<string>> = {
     'Bargain. They expect it.',
     "Ask for the back room — that's where the real stuff is.",
     'Better than anything in the main market.',
+  ],
+  do: [
+    'Go with a local guide — worth every rupee.',
+    'Start early. By 10 the wind picks up.',
+    'Book the smaller boat, not the big group tour.',
+  ],
+  nightlife: [
+    'Friday is the night. Other days the floor is dead.',
+    "Don't bother before 11. Peak is 1am.",
+    'Skip the table service — the bar runs better.',
   ],
 };
 
@@ -112,6 +133,7 @@ export function AtomicLogForm() {
   const verdictMutation = useSetVerdict();
   const uploadPhoto = useUploadVenuePhoto();
   const tripsQ = useMyTrips();
+  const createTripMutation = useCreateTripQuick();
 
   const [category, setCategory] = useState<Category | null>(null);
   const [picked, setPicked] = useState<PlaceDetails | null>(null);
@@ -121,6 +143,15 @@ export function AtomicLogForm() {
   const [verdict, setVerdict] = useState<Verdict>('love');
   const [tripId, setTripId] = useState<string | null>(null);
   const [tripSheetOpen, setTripSheetOpen] = useState(false);
+  /** Sticks true the first time the user manually picks/clears a trip.
+   *  Used to suppress auto-suggest after a manual override so we don't
+   *  fight the user mid-edit. */
+  const [tripUserTouched, setTripUserTouched] = useState(false);
+  /** Inline-create state inside the trip attach sheet — switches the
+   *  sheet from "pick existing" to "name a new trip" without taking the
+   *  user out of the tip-log flow. */
+  const [creatingTrip, setCreatingTrip] = useState(false);
+  const [newTripTitle, setNewTripTitle] = useState('');
   const [savedVenueId, setSavedVenueId] = useState<string | null>(null);
   /** Local URI of the photo the user picked. Uploaded after the
    *  venue insert resolves so we have a venue_id to attach to. */
@@ -133,6 +164,47 @@ export function AtomicLogForm() {
     () => (tripsQ.data ?? []).find((t) => t.id === tripId) ?? null,
     [tripsQ.data, tripId],
   );
+
+  /**
+   * Auto-suggest the trip when the user picks a place.
+   *
+   * Scoring (highest wins; ties → most-recent trip):
+   *   +20 — today falls inside the trip's start_date..end_date (active)
+   *   +10 — picked.locality matches one of the trip's seed cities
+   *    +5 — picked.locality appears (case-insensitively) in the title
+   *
+   * Suppressed once the user has manually touched the trip picker so we
+   * don't overwrite their explicit choice. If the suggestion is wrong
+   * one tap on the "Which trip" chip lets them clear it.
+   */
+  useEffect(() => {
+    if (tripUserTouched) return;
+    if (!picked) return;
+    const trips = tripsQ.data ?? [];
+    if (trips.length === 0) return;
+    const locality = (picked.locality ?? picked.region ?? '').toLowerCase().trim();
+    const today = new Date();
+    const todayMs = today.getTime();
+    const scored = trips.map((t) => {
+      let score = 0;
+      if (t.start_date && t.end_date) {
+        const startMs = new Date(t.start_date).getTime();
+        const endMs = new Date(t.end_date).getTime() + 86_400_000; // include end day
+        if (todayMs >= startMs && todayMs <= endMs) score += 20;
+      }
+      if (locality) {
+        const matchCity = (t.cities ?? []).some((c) => c.name.toLowerCase() === locality);
+        if (matchCity) score += 10;
+        if (t.title.toLowerCase().includes(locality)) score += 5;
+      }
+      return { trip: t, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    const best = scored[0];
+    if (best && best.score >= 5) {
+      setTripId(best.trip.id);
+    }
+  }, [picked, tripsQ.data, tripUserTouched]);
 
   const onSubmit = async () => {
     if (!category) {
@@ -156,12 +228,13 @@ export function AtomicLogForm() {
         lng: picked.lng,
         country_iso2: picked.country_iso,
         country_name: picked.country,
-        // For a venue/area pick the parent locality is the city above
-        // it. Google's PlaceDetails already exposes that via `region`
-        // (admin level 1) — we don't have the locality place id from
-        // the current fetch, so pass null and let the RPC fall back to
-        // name match.
-        parent_locality_name: picked.region,
+        // Parent locality = the actual city ("Gurugram"), pulled from
+        // Google's `locality` address component. `picked.region` is
+        // admin_level_1 (the STATE, e.g. "Haryana") and must NOT be used
+        // here — that's how we ended up with cities named "Haryana" in
+        // the DB. Fall back to region only if locality is genuinely
+        // missing (rare: rural / disputed regions).
+        parent_locality_name: picked.locality ?? picked.region,
         parent_locality_place_id: null,
       });
 
@@ -173,7 +246,7 @@ export function AtomicLogForm() {
         place_types: picked.types,
         country_iso2: picked.country_iso,
         country_name: picked.country,
-        parent_locality_name: picked.region,
+        parent_locality_name: picked.locality ?? picked.region,
         parent_locality_place_id: null,
         category,
         one_line: oneLine.trim(),
@@ -302,7 +375,11 @@ export function AtomicLogForm() {
                         ? 'Search a neighborhood or sight…'
                         : category === 'buy'
                           ? 'Search a shop…'
-                          : 'Search a place…'
+                          : category === 'do'
+                            ? 'Search an activity, trail, dive site…'
+                            : category === 'nightlife'
+                              ? 'Search a club, late-night venue…'
+                              : 'Search a place…'
               }
               initialQuery={placeName ?? ''}
               onPick={(details) => {
@@ -328,6 +405,27 @@ export function AtomicLogForm() {
             <Text style={styles.changeLink}>Change</Text>
           </Pressable>
         )}
+      </View>
+
+      {/* Which trip — a tip is a moment INSIDE a trip. Surfaced right
+          after the place is picked so trip context is the second
+          decision, not an afterthought near visibility. Standalone is
+          still valid for one-off tips outside any trip. */}
+      <View style={{ marginTop: 22 }}>
+        <Eyebrow>Which trip</Eyebrow>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Attach to a trip"
+          onPress={() => setTripSheetOpen(true)}
+          style={[styles.attachChip, { marginTop: 8 }]}
+        >
+          <Text style={styles.attachLabel}>
+            {selectedTrip
+              ? `Inside “${selectedTrip.title}”`
+              : 'Standalone — tap to attach to a trip'}
+          </Text>
+          <Text style={styles.attachCaret}>›</Text>
+        </Pressable>
       </View>
 
       {/* The line — italic serif, single-line. */}
@@ -438,21 +536,6 @@ export function AtomicLogForm() {
         </Text>
       </View>
 
-      {/* Attach to trip (manual). */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Attach to a trip"
-        onPress={() => setTripSheetOpen(true)}
-        style={styles.attachChip}
-      >
-        <Text style={styles.attachLabel}>
-          {selectedTrip
-            ? `Attached to ${selectedTrip.title}`
-            : 'Standalone — tap to attach to a trip'}
-        </Text>
-        <Text style={styles.attachCaret}>›</Text>
-      </Pressable>
-
       {/* Visibility picker — three options. Default: my circle. */}
       <View style={{ marginTop: 18 }}>
         <Eyebrow>Who sees this</Eyebrow>
@@ -504,40 +587,150 @@ export function AtomicLogForm() {
         <View style={styles.sheetWrap} pointerEvents="box-none">
           <SafeAreaView edges={['bottom']} style={styles.sheet}>
             <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>Attach to a trip</Text>
-            <ScrollView style={{ maxHeight: 320 }}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Keep standalone"
-                onPress={() => {
-                  setTripId(null);
-                  setTripSheetOpen(false);
-                }}
-                style={[styles.tripRow, tripId === null && styles.tripRowActive]}
-              >
-                <Text style={styles.tripTitle}>Keep standalone</Text>
-                <Text style={styles.tripSub}>Not attached to any trip.</Text>
-              </Pressable>
-              {(tripsQ.data ?? []).slice(0, 8).map((t) => {
-                const isActive = tripId === t.id;
-                const dateBit = t.start_date ? new Date(t.start_date).toDateString() : '';
-                return (
+            <Text style={styles.sheetTitle}>
+              {creatingTrip ? 'Name your trip' : 'Attach to a trip'}
+            </Text>
+
+            {creatingTrip ? (
+              // Inline-create mode — title input + save. Seeds the new
+              // trip's city from the place the user already picked, so
+              // we don't drag them through a separate flow. If they
+              // haven't picked a place yet, fall back to disabling save
+              // with a hint.
+              <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 12 }}>
+                <TextInput
+                  autoFocus
+                  value={newTripTitle}
+                  onChangeText={setNewTripTitle}
+                  placeholder='e.g. "Lisbon, slow week"'
+                  placeholderTextColor={MUTE}
+                  style={styles.newTripInput}
+                  returnKeyType="done"
+                />
+                {!picked ? (
+                  <Text style={styles.newTripHint}>
+                    Pick a place above first — we'll use it as the trip's seed city.
+                  </Text>
+                ) : (
+                  <Text style={styles.newTripHint}>
+                    Will be seeded in {picked.locality ?? picked.region ?? picked.country ?? 'this city'}.
+                  </Text>
+                )}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
-                    key={t.id}
                     accessibilityRole="button"
-                    accessibilityLabel={`Attach to ${t.title}`}
+                    accessibilityLabel="Cancel"
                     onPress={() => {
-                      setTripId(t.id);
-                      setTripSheetOpen(false);
+                      setCreatingTrip(false);
+                      setNewTripTitle('');
                     }}
-                    style={[styles.tripRow, isActive && styles.tripRowActive]}
+                    style={[styles.newTripBtn, styles.newTripCancel]}
                   >
-                    <Text style={styles.tripTitle}>{t.title}</Text>
-                    {dateBit ? <Text style={styles.tripSub}>{dateBit}</Text> : null}
+                    <Text style={styles.newTripCancelLabel}>Cancel</Text>
                   </Pressable>
-                );
-              })}
-            </ScrollView>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Create trip"
+                    disabled={
+                      !picked || newTripTitle.trim().length === 0 || createTripMutation.isPending
+                    }
+                    onPress={async () => {
+                      if (!picked) return;
+                      const cityName = picked.locality ?? picked.region ?? picked.country ?? '';
+                      if (!cityName) {
+                        toast.show({
+                          message: 'No city info from the place — pick another.',
+                          variant: 'error',
+                        });
+                        return;
+                      }
+                      try {
+                        const result = await createTripMutation.mutateAsync({
+                          title: newTripTitle.trim(),
+                          city_name: cityName,
+                          start_date: null,
+                          end_date: null,
+                          visibility: 'friends_of_friends',
+                          city_country_id: null,
+                          city_region: picked.region ?? null,
+                          city_lat: picked.lat ?? null,
+                          city_lng: picked.lng ?? null,
+                          city_google_place_id: null,
+                          city_types: picked.types ?? null,
+                        });
+                        setTripId(result.trip.id);
+                        setTripUserTouched(true);
+                        setCreatingTrip(false);
+                        setNewTripTitle('');
+                        setTripSheetOpen(false);
+                        toast.show({
+                          message: `Created "${result.trip.title}". Tip will go inside it.`,
+                          variant: 'success',
+                        });
+                      } catch (err) {
+                        const msg = err instanceof Error ? err.message : 'Could not create trip.';
+                        toast.show({ message: msg, variant: 'error' });
+                      }
+                    }}
+                    style={[
+                      styles.newTripBtn,
+                      styles.newTripCreate,
+                      (!picked || newTripTitle.trim().length === 0) && { opacity: 0.5 },
+                    ]}
+                  >
+                    <Text style={styles.newTripCreateLabel}>
+                      {createTripMutation.isPending ? 'Creating…' : 'Create trip'}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 360 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Keep standalone"
+                  onPress={() => {
+                    setTripId(null);
+                    setTripUserTouched(true);
+                    setTripSheetOpen(false);
+                  }}
+                  style={[styles.tripRow, tripId === null && styles.tripRowActive]}
+                >
+                  <Text style={styles.tripTitle}>Keep standalone</Text>
+                  <Text style={styles.tripSub}>Not attached to any trip.</Text>
+                </Pressable>
+                {(tripsQ.data ?? []).slice(0, 8).map((t) => {
+                  const isActive = tripId === t.id;
+                  const dateBit = t.start_date ? new Date(t.start_date).toDateString() : '';
+                  return (
+                    <Pressable
+                      key={t.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Attach to ${t.title}`}
+                      onPress={() => {
+                        setTripId(t.id);
+                        setTripUserTouched(true);
+                        setTripSheetOpen(false);
+                      }}
+                      style={[styles.tripRow, isActive && styles.tripRowActive]}
+                    >
+                      <Text style={styles.tripTitle}>{t.title}</Text>
+                      {dateBit ? <Text style={styles.tripSub}>{dateBit}</Text> : null}
+                    </Pressable>
+                  );
+                })}
+                {/* Inline-create trigger — sits at the bottom of the list
+                    so it doesn't shadow existing-trip selection. */}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Create a new trip"
+                  onPress={() => setCreatingTrip(true)}
+                  style={[styles.tripRow, styles.tripRowNew]}
+                >
+                  <Text style={styles.tripRowNewLabel}>+ Create a new trip</Text>
+                </Pressable>
+              </ScrollView>
+            )}
           </SafeAreaView>
         </View>
       </Modal>
@@ -578,9 +771,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeName: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
-  placeArea: { fontFamily: 'Geist_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
-  changeLink: { fontFamily: 'Geist_500Medium', fontSize: 13, color: CORAL },
+  placeName: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: INK },
+  placeArea: { fontFamily: 'DMSans_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
+  changeLink: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: CORAL },
   suggestRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -601,13 +794,13 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   suggestPrefix: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 9,
     letterSpacing: 1.2,
     color: CORAL,
   },
   suggestText: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 13,
     color: INK,
     flexShrink: 1,
@@ -638,7 +831,7 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
   },
   photoActionLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 12,
     color: INK,
   },
@@ -660,7 +853,7 @@ const styles = StyleSheet.create({
     color: MUTE,
   },
   photoEmptyLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: MUTE,
   },
@@ -683,13 +876,13 @@ const styles = StyleSheet.create({
     backgroundColor: INK,
   },
   visSegLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: INK,
   },
   visSegLabelOn: { color: PAPER },
   visSegSub: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 10,
     color: MUTE,
     marginTop: 2,
@@ -705,7 +898,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   oneLineInput: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 22,
     lineHeight: 28,
     color: INK,
@@ -721,14 +914,14 @@ const styles = StyleSheet.create({
   },
   proseInput: {
     minHeight: 80,
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 15,
     lineHeight: 22,
     color: INK,
     textAlignVertical: 'top',
   },
   verdictHint: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 12,
     color: MUTE,
     marginTop: 10,
@@ -744,13 +937,13 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   attachLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: INK,
     flex: 1,
   },
   attachCaret: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 22,
     color: MUTE,
   },
@@ -774,13 +967,13 @@ const styles = StyleSheet.create({
   },
   checkGlyph: {
     color: PAPER,
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 10,
     lineHeight: 10,
   },
   visibilityLabel: {
     flex: 1,
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     color: MUTE,
   },
@@ -792,7 +985,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: PAPER,
   },
@@ -818,7 +1011,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sheetTitle: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 24,
     color: INK,
     marginBottom: 12,
@@ -835,6 +1028,47 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: EMERALD,
   },
-  tripTitle: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
-  tripSub: { fontFamily: 'Geist_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
+  tripTitle: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: INK },
+  tripSub: { fontFamily: 'DMSans_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
+  tripRowNew: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: HAIR,
+    marginTop: 4,
+  },
+  tripRowNewLabel: {
+    fontFamily: 'DMSans_600SemiBold',
+    fontSize: 14,
+    color: CORAL,
+    textAlign: 'center',
+  },
+  newTripInput: {
+    backgroundColor: TINT,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 15,
+    color: INK,
+  },
+  newTripHint: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 12,
+    color: MUTE,
+  },
+  newTripBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  newTripCancel: {
+    backgroundColor: TINT,
+  },
+  newTripCancelLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: MUTE },
+  newTripCreate: {
+    backgroundColor: INK,
+  },
+  newTripCreateLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: '#FFFFFF' },
 });

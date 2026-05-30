@@ -209,7 +209,7 @@ export function DestinationScreen() {
           />
         ))}
         {recs.length === 0 ? (
-          <Text style={{ color: MUTE, fontFamily: 'Geist_400Regular', fontSize: 14 }}>
+          <Text style={{ color: MUTE, fontFamily: 'DMSans_400Regular', fontSize: 14 }}>
             No friend recs in this category yet.
           </Text>
         ) : null}
@@ -311,16 +311,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionGlyph: { fontSize: 18, color: INK, fontFamily: 'InstrumentSerif_400Italic' },
+  actionGlyph: { fontSize: 18, color: INK, fontFamily: 'PlayfairDisplay_500Medium' },
   title: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 56,
     lineHeight: 60,
     color: INK,
     letterSpacing: -1.6,
   },
   country: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 11,
     letterSpacing: 1.4,
     color: MUTE,
@@ -333,8 +333,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     marginTop: 16,
   },
-  contextCue: { fontFamily: 'Geist_500Medium', fontSize: 13, color: INK },
-  contextLine: { fontFamily: 'Geist_400Regular', fontSize: 13, color: MUTE, lineHeight: 18 },
+  contextCue: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: INK },
+  contextLine: { fontFamily: 'DMSans_400Regular', fontSize: 13, color: MUTE, lineHeight: 18 },
   ctaRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 22, marginTop: 16 },
   ctaPrimary: {
     flex: 1,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  ctaPrimaryLabel: { fontFamily: 'Geist_500Medium', fontSize: 15, color: '#FFFFFF' },
+  ctaPrimaryLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: '#FFFFFF' },
   ctaGhost: {
     paddingVertical: 14,
     paddingHorizontal: 18,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   ctaGhostOn: {
     backgroundColor: CORAL,
   },
-  ctaGhostLabel: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
+  ctaGhostLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: INK },
   filterRow: {
     flexDirection: 'row',
     gap: 8,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   filterDot: { width: 6, height: 6, borderRadius: 3 },
-  filterLabel: { fontFamily: 'Geist_500Medium', fontSize: 12 },
+  filterLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 12 },
   destCard: {
     backgroundColor: '#FFFFFF',
     borderColor: HAIR,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
-  miniChipLabel: { fontFamily: 'Geist_500Medium', fontSize: 11, color: INK },
-  cardPlaceName: { fontFamily: 'Geist_500Medium', fontSize: 16, color: INK },
-  cardArea: { fontFamily: 'Geist_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
+  miniChipLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 11, color: INK },
+  cardPlaceName: { fontFamily: 'DMSans_600SemiBold', fontSize: 16, color: INK },
+  cardArea: { fontFamily: 'DMSans_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
 });

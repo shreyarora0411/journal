@@ -57,7 +57,7 @@ export function FaceStack({ people, max = 3, size = 'sm', testID }: Props) {
         >
           <Text
             style={{
-              fontFamily: 'Geist_500Medium',
+              fontFamily: 'DMSans_600SemiBold',
               fontSize: Math.round(dim * 0.32),
               color: '#1A1410',
             }}

@@ -118,7 +118,7 @@ export function FramingScreen() {
                   textContentType="name"
                   autoComplete="name"
                   style={{
-                    fontFamily: 'Geist_400Regular',
+                    fontFamily: 'DMSans_400Regular',
                     fontSize: 16,
                     color: '#1A1410',
                     paddingVertical: 2,
@@ -181,7 +181,7 @@ export function FramingScreen() {
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={{ color: '#FF4D2E', fontFamily: 'Geist_500Medium' }}>Change</Text>
+                  <Text style={{ color: '#FF4D2E', fontFamily: 'DMSans_600SemiBold' }}>Change</Text>
                 </Pressable>
               )}
             </Box>

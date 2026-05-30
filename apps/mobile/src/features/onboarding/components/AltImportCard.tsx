@@ -35,12 +35,12 @@ export function AltImportCard({ onPress }: Props) {
     >
       <PhotoStackGlyph />
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: 'Geist_500Medium', fontSize: 16, color: INK }}>
+        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 16, color: INK }}>
           Continue with your camera roll
         </Text>
         <Text
           style={{
-            fontFamily: 'Geist_400Regular',
+            fontFamily: 'DMSans_400Regular',
             fontSize: 13,
             color: MUTE,
             marginTop: 4,

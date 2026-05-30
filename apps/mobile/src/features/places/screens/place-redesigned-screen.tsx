@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   actionGlyph: {
     fontSize: 18,
     color: INK,
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
   },
   dotsRow: {
     position: 'absolute',
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   dotActive: { width: 24, backgroundColor: '#FFFFFF' },
   dotInactive: { width: 6, backgroundColor: 'rgba(255,255,255,0.5)' },
   title: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 40,
     lineHeight: 44,
     color: INK,
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   area: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     color: MUTE,
     marginTop: 4,
@@ -264,9 +264,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
   },
-  friendName: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
+  friendName: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: INK },
   friendWhen: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 9,
     letterSpacing: 1.2,
     color: MUTE,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tipBody: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 14,
     lineHeight: 22,
     color: INK,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
   },
   miniFriendName: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: INK,
     marginBottom: 4,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  ctaPrimaryLabel: { fontFamily: 'Geist_500Medium', fontSize: 15, color: '#FFFFFF' },
+  ctaPrimaryLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: '#FFFFFF' },
   ctaGhost: {
     paddingVertical: 16,
     paddingHorizontal: 18,
@@ -318,5 +318,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: HAIR,
   },
-  ctaGhostLabel: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
+  ctaGhostLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: INK },
 });

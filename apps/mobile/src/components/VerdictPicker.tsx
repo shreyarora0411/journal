@@ -54,7 +54,7 @@ export function VerdictPicker({ value = 'love', onChange }: Props) {
           >
             <Text
               style={{
-                fontFamily: 'Geist_500Medium',
+                fontFamily: 'DMSans_600SemiBold',
                 fontSize: 18,
                 color: selected ? '#FFFFFF' : v.color,
               }}
@@ -63,7 +63,7 @@ export function VerdictPicker({ value = 'love', onChange }: Props) {
             </Text>
             <Text
               style={{
-                fontFamily: 'Geist_500Medium',
+                fontFamily: 'DMSans_600SemiBold',
                 fontSize: 12,
                 color: selected ? '#FFFFFF' : '#7A716A',
                 marginTop: 4,

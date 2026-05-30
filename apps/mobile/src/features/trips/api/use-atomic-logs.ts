@@ -11,7 +11,7 @@ export type AtomicLogRow = {
   id: string;
   user_id: string;
   name: string;
-  category: 'stay' | 'food' | 'drinks' | 'wander' | 'buy' | null;
+  category: 'stay' | 'food' | 'drinks' | 'wander' | 'buy' | 'do' | 'nightlife' | null;
   one_line: string | null;
   prose: string | null;
   visibility: 'followers' | 'friends_of_friends' | 'everyone';

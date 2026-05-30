@@ -133,7 +133,7 @@ const kindStyle = (k: string) => {
 
 const styles = StyleSheet.create({
   headline: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 36,
     lineHeight: 40,
     color: INK,
@@ -153,14 +153,14 @@ const styles = StyleSheet.create({
   searchGlyph: { fontSize: 18, color: MUTE },
   searchInput: {
     flex: 1,
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 15,
     color: INK,
     paddingVertical: 2,
   },
   hint: {
     marginTop: 20,
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     lineHeight: 20,
     color: MUTE,
@@ -174,13 +174,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   emptyTitle: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 22,
     color: INK,
     letterSpacing: -0.4,
   },
   emptyBody: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     lineHeight: 20,
     color: MUTE,
@@ -205,30 +205,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   kindLetter: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 10,
     letterSpacing: 0.8,
     color: INK,
   },
   rowName: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 20,
     color: INK,
     letterSpacing: -0.4,
   },
   rowMeta: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 9,
     letterSpacing: 1.2,
     color: MUTE,
     marginTop: 2,
   },
   rowQuote: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 14,
     lineHeight: 20,
     color: INK,
     marginTop: 6,
   },
-  chevron: { fontFamily: 'InstrumentSerif_400Italic', fontSize: 26, color: MUTE },
+  chevron: { fontFamily: 'PlayfairDisplay_500Medium', fontSize: 26, color: MUTE },
 });

@@ -30,7 +30,7 @@ describe('Eyebrow', () => {
     const label = screen.getByText('X');
     const styles = Array.isArray(label.props.style) ? label.props.style : [label.props.style];
     const flat = Object.assign({}, ...styles);
-    expect(flat.fontFamily).toBe('JetBrainsMono_400Regular');
+    expect(flat.fontFamily).toBe('DMSans_700Bold');
     expect(flat.fontSize).toBe(10);
     expect(flat.letterSpacing).toBe(1.4);
   });

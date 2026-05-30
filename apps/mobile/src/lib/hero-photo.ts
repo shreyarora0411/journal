@@ -97,6 +97,39 @@ const tryUnsplash = async (
 
 // — Google Places photo --------------------------------------------------
 
+/**
+ * Pick the best photo from Google Places' list for hero use.
+ *
+ * Google returns photos roughly by recency, not by quality, so the first
+ * one is often a low-light user storefront snap. We pick the photo with
+ * the highest "quality score" using these signals:
+ *   - Native resolution (bigger native = sharper at our render size)
+ *   - Landscape orientation (covers are wide; portrait photos crop badly)
+ *   - Has author attribution (real human upload, not robotic capture)
+ *
+ * Score = width * height * landscape_bonus * attribution_bonus. Picking
+ * by score alone (not "first photo") substantially improved aesthetic on
+ * Indian-city venues that don't have Unsplash coverage.
+ */
+type GooglePhoto = {
+  name?: string;
+  widthPx?: number;
+  heightPx?: number;
+  authorAttributions?: Array<{ displayName?: string }>;
+};
+
+const photoQualityScore = (p: GooglePhoto): number => {
+  const w = p.widthPx ?? 0;
+  const h = p.heightPx ?? 0;
+  if (!w || !h) return 0;
+  const area = w * h;
+  // Landscape bonus — covers are 16:9-ish; portrait photos crop poorly.
+  const landscape = w >= h ? 1 : 0.55;
+  // Attributed photos tend to be intentional uploads.
+  const attributed = (p.authorAttributions?.length ?? 0) > 0 ? 1.15 : 1;
+  return area * landscape * attributed;
+};
+
 export const tryGooglePlacesPhoto = async (
   googlePlaceId: string,
 ): Promise<{ url: string; credit: string } | null> => {
@@ -108,23 +141,26 @@ export const tryGooglePlacesPhoto = async (
       {
         headers: {
           'X-Goog-Api-Key': key,
-          'X-Goog-FieldMask': 'photos',
+          // Explicit subfields so widthPx/heightPx come back — without
+          // these we can't pick by quality and the picker collapses to
+          // "first photo" (the historical bug).
+          'X-Goog-FieldMask':
+            'photos.name,photos.widthPx,photos.heightPx,photos.authorAttributions',
         },
       },
     );
     if (!detailRes.ok) return null;
-    const detail = (await detailRes.json()) as {
-      photos?: Array<{
-        name?: string;
-        authorAttributions?: Array<{ displayName?: string }>;
-      }>;
-    };
-    const first = detail.photos?.[0];
-    if (!first?.name) return null;
+    const detail = (await detailRes.json()) as { photos?: GooglePhoto[] };
+    const photos = (detail.photos ?? []).filter((p) => p.name);
+    if (photos.length === 0) return null;
+    const best = photos
+      .map((p) => ({ p, score: photoQualityScore(p) }))
+      .sort((a, b) => b.score - a.score)[0]?.p;
+    if (!best?.name) return null;
     const url =
-      `https://places.googleapis.com/v1/${first.name}/media` +
+      `https://places.googleapis.com/v1/${best.name}/media` +
       `?maxWidthPx=1600&key=${encodeURIComponent(key)}`;
-    const attribution = first.authorAttributions?.[0]?.displayName;
+    const attribution = best.authorAttributions?.[0]?.displayName;
     const credit = attribution ? `Photo via Google · ${attribution}` : 'Photo via Google';
     return { url, credit };
   } catch (err) {

@@ -162,13 +162,13 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   wordmark: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 26,
     color: INK,
     letterSpacing: -0.6,
   },
   signInTop: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 14,
     color: INK,
   },
@@ -210,17 +210,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitial: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 15,
     color: PAPER,
   },
   cardName: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 15,
     color: INK,
   },
   cardMeta: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 10,
     letterSpacing: 1.2,
     color: MUTE,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   cardMetaDim: { color: '#C8BFB5' },
   cardQuote: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 19,
     lineHeight: 26,
     color: INK,
@@ -247,20 +247,20 @@ const styles = StyleSheet.create({
     backgroundColor: CORAL,
   },
   eyebrowLabel: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 11,
     letterSpacing: 1.4,
     color: CORAL,
   },
   headline: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 38,
     lineHeight: 42,
     color: INK,
     letterSpacing: -1,
   },
   sub: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 14,
     lineHeight: 22,
     color: MUTE,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 15,
     color: PAPER,
   },

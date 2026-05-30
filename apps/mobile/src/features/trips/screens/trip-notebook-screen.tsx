@@ -167,12 +167,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backGlyph: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 22,
     color: INK,
   },
   title: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 38,
     lineHeight: 42,
     color: INK,
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   meta: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     color: MUTE,
     flex: 1,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   pinIdx: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 12,
     color: '#FFFFFF',
   },
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   pinLabel: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 9,
     letterSpacing: 1.0,
     color: MUTE,
@@ -275,17 +275,17 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   entryPlace: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: INK,
   },
   entryArea: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 12,
     color: MUTE,
   },
   entryDay: {
-    fontFamily: 'JetBrainsMono_400Regular',
+    fontFamily: 'DMSans_700Bold',
     fontSize: 9,
     letterSpacing: 1.4,
     color: MUTE,

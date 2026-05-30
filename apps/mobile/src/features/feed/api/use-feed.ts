@@ -53,6 +53,10 @@ export const useFeed = () => {
           'id, user_id, title, start_date, end_date, note, cover_photo_id, visibility, imported_from, created_at, updated_at, deleted_at, author:user_id(id, display_name, handle, avatar_url), cover:cover_photo_id(storage_path)',
         )
         .is('deleted_at', null)
+        // Feed is "your circle", never yourself — own trips live on the
+        // Profile tab. RLS already restricts to visible rows; this extra
+        // filter just excludes self.
+        .neq('user_id', userId ?? '')
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE);
       if (pageParam) q = q.lt('created_at', pageParam);

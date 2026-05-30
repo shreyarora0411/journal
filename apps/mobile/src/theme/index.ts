@@ -31,6 +31,12 @@ const palette = {
   emeraldSoft: 'rgba(0, 166, 126, 0.10)',
   gold: '#FFB300',
   goldSoft: 'rgba(255, 179, 0, 0.10)',
+  // Added with the Do + Nightlife categories. Teal for active/outdoor
+  // (hiking, scuba, surf, tours), plum for late-night venues.
+  teal: '#2F8F8C',
+  tealSoft: 'rgba(47, 143, 140, 0.10)',
+  plum: '#6B2F5C',
+  plumSoft: 'rgba(107, 47, 92, 0.10)',
 
   // Status / toast
   errorBg: 'rgba(255, 77, 46, 0.95)',
@@ -124,7 +130,7 @@ export const theme = createTheme({
   },
   textVariants: {
     defaults: {
-      fontFamily: 'Geist_400Regular',
+      fontFamily: 'DMSans_400Regular',
       fontSize: 14,
       lineHeight: 22,
       color: 'text',
@@ -132,7 +138,7 @@ export const theme = createTheme({
     // Display — Instrument Serif italic. Editorial titles, pull quotes,
     // the wordmark. Letter-spacing tightens at larger sizes (-0.5 → -1.6).
     display: {
-      fontFamily: 'InstrumentSerif_400Italic',
+      fontFamily: 'PlayfairDisplay_500Medium',
       fontSize: 44,
       lineHeight: 48,
       color: 'text',
@@ -140,7 +146,7 @@ export const theme = createTheme({
     },
     // Title — Instrument Serif italic, screen titles
     title: {
-      fontFamily: 'InstrumentSerif_400Italic',
+      fontFamily: 'PlayfairDisplay_500Medium',
       fontSize: 32,
       lineHeight: 36,
       color: 'text',
@@ -148,7 +154,7 @@ export const theme = createTheme({
     },
     // Heading — for mid-size moments
     heading: {
-      fontFamily: 'InstrumentSerif_400Italic',
+      fontFamily: 'PlayfairDisplay_500Medium',
       fontSize: 26,
       lineHeight: 30,
       color: 'text',
@@ -156,40 +162,40 @@ export const theme = createTheme({
     },
     // Headline — sans 500, section headers (rare; prefer eyebrow)
     headline: {
-      fontFamily: 'Geist_500Medium',
+      fontFamily: 'DMSans_600SemiBold',
       fontSize: 15,
       lineHeight: 22,
       color: 'text',
     },
     // Body — Geist 400, the default for UI
     body: {
-      fontFamily: 'Geist_400Regular',
+      fontFamily: 'DMSans_400Regular',
       fontSize: 14,
       lineHeight: 22,
       color: 'text',
     },
     bodyMute: {
-      fontFamily: 'Geist_400Regular',
+      fontFamily: 'DMSans_400Regular',
       fontSize: 14,
       lineHeight: 22,
       color: 'textMuted',
     },
     // Voice quote — Instrument Serif italic, for friend-quote pull quotes
     quote: {
-      fontFamily: 'InstrumentSerif_400Italic',
+      fontFamily: 'PlayfairDisplay_500Medium',
       fontSize: 22,
       lineHeight: 28,
       color: 'text',
     },
     // Place name — Geist 500, where the brief shows a sans place name
     placeName: {
-      fontFamily: 'Geist_500Medium',
+      fontFamily: 'DMSans_600SemiBold',
       fontSize: 15,
       lineHeight: 20,
       color: 'text',
     },
     caption: {
-      fontFamily: 'Geist_400Regular',
+      fontFamily: 'DMSans_400Regular',
       fontSize: 13,
       lineHeight: 20,
       color: 'textMuted',
@@ -197,7 +203,7 @@ export const theme = createTheme({
     // Eyebrow — JetBrains Mono 9–10px, uppercase, letter-spacing 1.4,
     // always paired with a 6×6 colored dot via the Eyebrow primitive.
     eyebrow: {
-      fontFamily: 'JetBrainsMono_400Regular',
+      fontFamily: 'DMSans_700Bold',
       fontSize: 10,
       lineHeight: 14,
       color: 'text',
@@ -205,14 +211,14 @@ export const theme = createTheme({
     },
     // Label — mono small caps for inline labels
     label: {
-      fontFamily: 'JetBrainsMono_400Regular',
+      fontFamily: 'DMSans_700Bold',
       fontSize: 9,
       lineHeight: 14,
       color: 'textMuted',
       letterSpacing: 1.4,
     },
     meta: {
-      fontFamily: 'Geist_400Regular',
+      fontFamily: 'DMSans_400Regular',
       fontSize: 12,
       lineHeight: 18,
       color: 'textMuted',
@@ -291,6 +297,12 @@ export const CATEGORIES = {
   drinks: { label: 'Drinks', color: palette.emerald, soft: palette.emeraldSoft },
   wander: { label: 'Wander', color: palette.gold, soft: palette.goldSoft },
   buy: { label: 'Buy', color: palette.mute, soft: 'rgba(122, 113, 106, 0.10)' },
+  // Do — active/outdoor experiences (hiking, scuba, surf, tours).
+  // Distinct from Wander, which stays for passive sightseeing.
+  do: { label: 'Do', color: palette.teal, soft: palette.tealSoft },
+  // Nightlife — strip clubs, dance floors, late-night venues that aren't
+  // really "the negroni is the move" drinks recommendations.
+  nightlife: { label: 'Nightlife', color: palette.plum, soft: palette.plumSoft },
 } as const;
 
 export type Category = keyof typeof CATEGORIES;

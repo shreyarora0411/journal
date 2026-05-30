@@ -91,7 +91,7 @@ export function Nav({ active, onPress }: Props) {
                   style={{
                     fontSize: isAdd ? 22 : 18,
                     color: isAdd ? '#FFFFFF' : isActive ? INK : MUTE,
-                    fontFamily: 'Geist_500Medium',
+                    fontFamily: 'DMSans_600SemiBold',
                   }}
                 >
                   {s.glyph}
@@ -101,7 +101,7 @@ export function Nav({ active, onPress }: Props) {
                 <Text
                   style={{
                     marginTop: 4,
-                    fontFamily: isActive ? 'InstrumentSerif_400Italic' : 'JetBrainsMono_400Regular',
+                    fontFamily: isActive ? 'PlayfairDisplay_500Medium' : 'DMSans_700Bold',
                     fontSize: isActive ? 12 : 9,
                     letterSpacing: isActive ? 0 : 1.4,
                     color: isActive ? INK : MUTE,

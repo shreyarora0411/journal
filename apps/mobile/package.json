@@ -14,11 +14,13 @@
     "build": "expo export"
   },
   "dependencies": {
+    "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/fraunces": "^0.2.3",
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/instrument-serif": "^0.4.1",
     "@expo-google-fonts/inter": "^0.2.3",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
     "@hookform/resolvers": "^3.9.1",
     "@journal/shared": "workspace:*",

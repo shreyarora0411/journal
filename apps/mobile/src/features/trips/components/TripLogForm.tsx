@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   titleInput: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 22,
     lineHeight: 28,
     color: INK,
@@ -255,9 +255,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeName: { fontFamily: 'Geist_500Medium', fontSize: 15, color: INK },
-  placeArea: { fontFamily: 'Geist_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
-  changeLink: { fontFamily: 'Geist_500Medium', fontSize: 13, color: CORAL },
+  placeName: { fontFamily: 'DMSans_600SemiBold', fontSize: 15, color: INK },
+  placeArea: { fontFamily: 'DMSans_400Regular', fontSize: 12, color: MUTE, marginTop: 2 },
+  changeLink: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: CORAL },
   noteCard: {
     marginTop: 8,
     backgroundColor: PAPER,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   noteInput: {
     minHeight: 100,
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 15,
     lineHeight: 22,
     color: INK,
@@ -293,13 +293,13 @@ const styles = StyleSheet.create({
     backgroundColor: INK,
   },
   visSegLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 13,
     color: INK,
   },
   visSegLabelOn: { color: PAPER },
   visSegSub: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 10,
     color: MUTE,
     marginTop: 2,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaLabel: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,
     color: PAPER,
   },

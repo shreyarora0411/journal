@@ -25,7 +25,7 @@ export function Eyebrow({ children, color = CORAL }: Props) {
       />
       <Text
         style={{
-          fontFamily: 'JetBrainsMono_400Regular',
+          fontFamily: 'DMSans_700Bold',
           fontSize: 10,
           letterSpacing: 1.4,
           color,

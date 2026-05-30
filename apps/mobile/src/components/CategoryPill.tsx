@@ -37,7 +37,7 @@ export function CategoryPill({ category, variant = 'soft', onPress, style }: Pro
     >
       <Text
         style={{
-          fontFamily: 'Geist_500Medium',
+          fontFamily: 'DMSans_600SemiBold',
           fontSize: 10,
           letterSpacing: 0.7,
           color: labelColor,

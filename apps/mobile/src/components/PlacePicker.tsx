@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 15,
     color: INK,
     paddingVertical: 2,
@@ -195,18 +195,18 @@ const styles = StyleSheet.create({
   },
   hitRowPressed: { backgroundColor: TINT },
   hitPrimary: {
-    fontFamily: 'Geist_500Medium',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: 15,
     color: INK,
   },
   hitSecondary: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 12,
     color: MUTE,
     marginTop: 2,
   },
   chevron: {
-    fontFamily: 'InstrumentSerif_400Italic',
+    fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 22,
     color: MUTE,
   },
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   freeTextLabel: {
-    fontFamily: 'Geist_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     color: MUTE,
   },

@@ -91,7 +91,9 @@ describe('FeedScreen', () => {
     renderWithProviders(<FeedScreen />);
     expect(screen.getByText('Tokyo, October')).toBeTruthy();
     expect(screen.getByText('Tara')).toBeTruthy();
-    expect(screen.getByText('Walked the river at sunset.')).toBeTruthy();
-    expect(screen.getByText('TRIPS FROM MY CIRCLE')).toBeTruthy();
+    // The redesigned carousel renders title + author + date, not the note
+    // body — note is reserved for the trip detail view.
+    expect(screen.queryByText('Walked the river at sunset.')).toBeNull();
+    expect(screen.getByText('Trips from your circle')).toBeTruthy();
   });
 });

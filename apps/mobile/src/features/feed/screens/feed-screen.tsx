@@ -1,4 +1,4 @@
-import { CategoryPill, Eyebrow, Face, Page, StatusSpace, Wordmark } from '@/components';
+import { CategoryPill, Eyebrow, Face, Page, StatusSpace, VenueThumb, Wordmark } from '@/components';
 import { useFeed } from '@/features/feed';
 import { useAtomicLogFeed, useMyAtomicLogs } from '@/features/trips';
 import { log } from '@/lib/log';
@@ -120,12 +120,23 @@ export function FeedScreen() {
                       <CategoryPill category={t.category as Category} variant="soft" />
                     ) : null}
                   </View>
-                  <Text style={styles.tipName}>{t.name}</Text>
-                  {t.one_line ? (
-                    <Text style={styles.tipQuote} numberOfLines={3}>
-                      "{t.one_line}"
-                    </Text>
-                  ) : null}
+                  <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                    {t.cover_photo_path || t.google_place_id ? (
+                      <VenueThumb
+                        storagePath={t.cover_photo_path}
+                        googlePlaceId={t.google_place_id}
+                        size={80}
+                      />
+                    ) : null}
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <Text style={styles.tipName}>{t.name}</Text>
+                      {t.one_line ? (
+                        <Text style={styles.tipQuote} numberOfLines={3}>
+                          "{t.one_line}"
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
                 </Pressable>
               ))}
             </View>

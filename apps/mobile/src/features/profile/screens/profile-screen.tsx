@@ -1,14 +1,15 @@
-import { CategoryPill, Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { CategoryPill, CityHero, Eyebrow, Face, Page, StatusSpace, VenueThumb } from '@/components';
 import { useAuthStore, useProfile, useSignOut } from '@/features/auth';
 import { useDeleteList, useMyLists } from '@/features/lists';
 import { useDeleteAtomicLog, useMyAtomicLogs } from '@/features/trips';
+import { useWishlistRows } from '@/features/wishlist';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import type { Category } from '@/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMeStats } from '../api/use-me-stats';
 import { useUserTrips } from '../api/use-user-trips';
 
@@ -41,6 +42,7 @@ export function ProfileScreen() {
   const tripsQ = useUserTrips(userId);
   const tipsQ = useMyAtomicLogs(12);
   const listsQ = useMyLists();
+  const wishlistQ = useWishlistRows();
   const deleteTip = useDeleteAtomicLog();
   const deleteList = useDeleteList();
   const toast = useToast();
@@ -90,20 +92,26 @@ export function ProfileScreen() {
   const myTrips = tripsQ.data ?? [];
 
   const onSignOut = () => {
+    // Alert.alert is a no-op on React Native Web — fall back to
+    // window.confirm so the sign-out flow works during web preview.
+    const run = async () => {
+      try {
+        await signOut.mutateAsync();
+        log.event('profile.signed_out');
+      } catch (err) {
+        log.error('sign out failed', err);
+      }
+    };
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (typeof window !== 'undefined' && window.confirm('Sign out? You can sign back in with the same number.')) {
+        void run();
+      }
+      return;
+    }
     Alert.alert('Sign out?', 'You can sign back in with the same number.', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await signOut.mutateAsync();
-            log.event('profile.signed_out');
-          } catch (err) {
-            log.error('sign out failed', err);
-          }
-        },
-      },
+      { text: 'Sign out', style: 'destructive', onPress: run },
     ]);
   };
 
@@ -166,92 +174,196 @@ export function ProfileScreen() {
         </Pressable>
       ) : null}
 
-      {/* My book — real trips. */}
-      <View style={{ marginTop: 28 }}>
-        <Eyebrow>My book</Eyebrow>
-        {tripsQ.isLoading ? (
+      {/* =====================================================
+          AUTHORED — things I wrote (trips + tips).
+          ===================================================== */}
+      <View style={{ marginTop: 32 }}>
+        <Eyebrow>I wrote</Eyebrow>
+
+        {/* Trips */}
+        <View style={{ marginTop: 14 }}>
+          <Text style={styles.subEyebrow}>Trips</Text>
+          {tripsQ.isLoading ? (
+            <Text style={styles.empty}>Loading…</Text>
+          ) : myTrips.length === 0 ? (
+            <View style={styles.emptyInline}>
+              <Text style={styles.emptyInlineBody}>
+                No trips yet. The Trip mode on Add lets you frame one.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {myTrips.map((t) => (
+                <Pressable
+                  key={t.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.title}
+                  onPress={() => router.push(`/trip/${t.id}` as never)}
+                  style={styles.tripCard}
+                >
+                  <View style={styles.tripCardInner}>
+                    <Text style={styles.tripDest}>{t.title}</Text>
+                    {t.start_date ? (
+                      <Text style={styles.tripMeta}>
+                        {new Date(t.start_date).toDateString().toUpperCase()}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Tips */}
+        <View style={{ marginTop: 22 }}>
+          <Text style={styles.subEyebrow}>Tips</Text>
+          {tipsQ.isLoading ? (
+            <Text style={styles.empty}>Loading…</Text>
+          ) : (tipsQ.data ?? []).length === 0 ? (
+            <View style={styles.emptyInline}>
+              <Text style={styles.emptyInlineBody}>
+                No tips yet. Atomic recommendations from Add land here.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 18, marginTop: 8 }}>
+              {(() => {
+                // Group tips by city. Cityless tips go in a "Standalone"
+                // bucket at the end so they're still visible.
+                const tips = tipsQ.data ?? [];
+                const groups = new Map<
+                  string,
+                  {
+                    cityName: string;
+                    countryName: string | null;
+                    items: typeof tips;
+                  }
+                >();
+                for (const t of tips) {
+                  const key = t.city?.id ?? '__standalone__';
+                  const existing = groups.get(key);
+                  if (existing) {
+                    existing.items.push(t);
+                  } else {
+                    groups.set(key, {
+                      cityName: t.city?.name ?? 'Standalone',
+                      countryName: t.city?.country?.display_name ?? null,
+                      items: [t],
+                    });
+                  }
+                }
+                return Array.from(groups.entries()).map(([key, group]) => (
+                  <View key={key} style={{ gap: 10 }}>
+                    <CityHero
+                      cityName={group.cityName}
+                      countryName={group.countryName}
+                      meta={`${group.items.length} TIP${group.items.length === 1 ? '' : 'S'}`}
+                      height={140}
+                    />
+                    {group.items.map((t) => (
+                      <Pressable
+                        key={t.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={t.name}
+                        onPress={() => router.push('/(tabs)/book' as never)}
+                        onLongPress={() =>
+                          confirmDelete('tip', t.name, () => deleteTip.mutateAsync(t.id))
+                        }
+                        delayLongPress={400}
+                        style={styles.tipCard}
+                      >
+                        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                          {t.cover_photo_path || t.google_place_id ? (
+                            <VenueThumb
+                              storagePath={t.cover_photo_path}
+                              googlePlaceId={t.google_place_id}
+                              size={72}
+                            />
+                          ) : null}
+                          <View style={{ flex: 1, gap: 8 }}>
+                            <View style={styles.tipHeader}>
+                              <Text style={styles.tipName}>{t.name}</Text>
+                              {t.category ? (
+                                <CategoryPill category={t.category as Category} variant="soft" />
+                              ) : null}
+                            </View>
+                            {t.one_line ? (
+                              <Text style={styles.tipQuote} numberOfLines={2}>
+                                "{t.one_line}"
+                              </Text>
+                            ) : null}
+                          </View>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                ));
+              })()}
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* =====================================================
+          SAVED — places I want to act on (wishlist).
+          ===================================================== */}
+      <View style={{ marginTop: 32 }}>
+        <Eyebrow>I saved</Eyebrow>
+        {wishlistQ.isLoading ? (
           <Text style={styles.empty}>Loading…</Text>
-        ) : myTrips.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>Nothing in the book yet.</Text>
-            <Text style={styles.emptyBody}>
-              Tap the Add tab. One honest line is enough to start.
-            </Text>
-          </View>
         ) : (
-          <View style={styles.grid}>
-            {myTrips.map((t) => (
-              <Pressable
-                key={t.id}
-                accessibilityRole="button"
-                accessibilityLabel={t.title}
-                onPress={() => router.push(`/trip/${t.id}` as never)}
-                style={styles.tripCard}
-              >
-                <View style={styles.tripCardInner}>
-                  <Text style={styles.tripDest}>{t.title}</Text>
-                  {t.start_date ? (
-                    <Text style={styles.tripMeta}>
-                      {new Date(t.start_date).toDateString().toUpperCase()}
-                    </Text>
-                  ) : null}
+          (() => {
+            const rows = wishlistQ.data ?? [];
+            const parents = rows.filter((w) => w.parent_wishlist_item_id === null);
+            if (parents.length === 0) {
+              return (
+                <View style={styles.emptyInline}>
+                  <Text style={styles.emptyInlineBody}>
+                    Nothing saved yet. Tap "+ Plan" on a destination or "Stash" on a venue.
+                  </Text>
                 </View>
-              </Pressable>
-            ))}
-          </View>
+              );
+            }
+            return (
+              <View style={{ gap: 12, marginTop: 12 }}>
+                {parents.map((p) => {
+                  const stashed = rows.filter((c) => c.parent_wishlist_item_id === p.id);
+                  return (
+                    <Pressable
+                      key={p.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={p.target_label ?? 'Saved destination'}
+                      onPress={() =>
+                        p.target_external_id
+                          ? router.push(`/(tabs)/destination/${p.target_external_id}` as never)
+                          : undefined
+                      }
+                    >
+                      <CityHero
+                        cityName={p.target_label ?? 'Saved'}
+                        countryName={null}
+                        meta={
+                          stashed.length > 0
+                            ? `${stashed.length} STASH${stashed.length === 1 ? '' : 'ES'}`
+                            : 'PLANNED'
+                        }
+                        height={120}
+                      />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            );
+          })()
         )}
       </View>
 
-      {/* My tips — atomic logs authored by this user. */}
-      <View style={{ marginTop: 28 }}>
-        <Eyebrow>My tips</Eyebrow>
-        {tipsQ.isLoading ? (
-          <Text style={styles.empty}>Loading…</Text>
-        ) : (tipsQ.data ?? []).length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No tips yet.</Text>
-            <Text style={styles.emptyBody}>
-              Atomic recommendations you log via the Add tab show up here.
-            </Text>
-          </View>
-        ) : (
-          <View style={{ gap: 10, marginTop: 12 }}>
-            {(tipsQ.data ?? []).map((t) => (
-              <Pressable
-                key={t.id}
-                accessibilityRole="button"
-                accessibilityLabel={t.name}
-                onPress={() => router.push('/(tabs)/book' as never)}
-                onLongPress={() => confirmDelete('tip', t.name, () => deleteTip.mutateAsync(t.id))}
-                delayLongPress={400}
-                style={styles.tipCard}
-              >
-                <View style={styles.tipHeader}>
-                  <Text style={styles.tipName}>{t.name}</Text>
-                  {t.category ? (
-                    <CategoryPill category={t.category as Category} variant="soft" />
-                  ) : null}
-                </View>
-                {t.city ? (
-                  <Text style={styles.tipMeta}>
-                    {t.city.name}
-                    {t.city.country ? ` · ${t.city.country.display_name}` : ''}
-                  </Text>
-                ) : null}
-                {t.one_line ? (
-                  <Text style={styles.tipQuote} numberOfLines={2}>
-                    "{t.one_line}"
-                  </Text>
-                ) : null}
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </View>
-
-      {/* My lists. */}
-      <View style={{ marginTop: 28, marginBottom: 80 }}>
-        <Eyebrow>My lists</Eyebrow>
+      {/* =====================================================
+          LISTS — curated groupings, neither pure authored nor saved.
+          ===================================================== */}
+      <View style={{ marginTop: 32, marginBottom: 80 }}>
+        <Eyebrow>Lists I made</Eyebrow>
         {listsQ.isLoading ? (
           <Text style={styles.empty}>Loading…</Text>
         ) : (listsQ.data ?? []).length === 0 ? (
@@ -374,6 +486,22 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#FFFFFF',
     marginLeft: 12,
+  },
+  subEyebrow: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: MUTE,
+    marginBottom: 6,
+  },
+  emptyInline: {
+    paddingVertical: 14,
+  },
+  emptyInlineBody: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: MUTE,
   },
   tipCard: {
     padding: 14,

@@ -64,7 +64,10 @@ describe('LoginScreen', () => {
     fireEvent.press(screen.getByLabelText('Send me a code'));
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({ phone: '+919876543210' });
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/framing');
     });
+    // Routing intentionally NOT done from this screen — the AuthGate in
+    // app/_layout.tsx handles post-signin navigation based on the freshly
+    // settled profile (returning users → /book, new users → /framing).
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

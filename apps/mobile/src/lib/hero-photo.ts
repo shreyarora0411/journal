@@ -97,7 +97,7 @@ const tryUnsplash = async (
 
 // — Google Places photo --------------------------------------------------
 
-const tryGooglePlacesPhoto = async (
+export const tryGooglePlacesPhoto = async (
   googlePlaceId: string,
 ): Promise<{ url: string; credit: string } | null> => {
   const key = getGooglePlacesKey();

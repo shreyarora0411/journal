@@ -1,5 +1,7 @@
+import { fetchSelf } from '@/features/auth/api/use-profile';
 import { useAuthStore, useStartSession } from '@/features/auth';
 import { useToast } from '@/hooks/use-toast';
+import { getSupabase } from '@/lib/supabase';
 import { log } from '@/lib/log';
 import { isLikelyValidPhone } from '@journal/shared';
 import { useRouter } from 'expo-router';
@@ -60,12 +62,35 @@ export function LoginScreen() {
       return;
     }
     try {
-      if (!session) {
-        await start.mutateAsync({ phone: e164 });
+      // If a stale session is hanging around (e.g. a half-onboarded anon
+      // user from a previous attempt), wipe it BEFORE invoking recovery
+      // — otherwise useStartSession short-circuits on `!session` and the
+      // phone-keyed recover-session path never gets a chance to fire.
+      if (session) {
+        await getSupabase().auth.signOut();
       }
+      await start.mutateAsync({ phone: e164 });
       log.event('onboarding.screen_completed', { screen: 'login', choice: 'phone' });
-      // Pilot flow: Welcome → Login → Framing (name) → Circle → Feed.
-      router.replace('/(auth)/framing');
+
+      // After sign-in: read the profile directly off the freshly-set
+      // supabase session (not via Zustand — onAuthStateChange may not
+      // have fired yet, leaving the store stale). Then route ourselves
+      // explicitly instead of waiting for the AuthGate.
+      const supabase = getSupabase();
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id ?? null;
+      if (!userId) {
+        toast.show({ message: 'Sign in succeeded but no user — try again.', variant: 'error' });
+        return;
+      }
+      const profile = await fetchSelf(userId);
+      if (profile?.onboarding_completed_at) {
+        router.replace('/(tabs)/book');
+      } else if (profile?.display_name) {
+        router.replace('/(auth)/circle');
+      } else {
+        router.replace('/(auth)/framing');
+      }
     } catch (err) {
       log.error('startSession failed', err);
       toast.show({ message: 'Could not start. Try again.', variant: 'error' });

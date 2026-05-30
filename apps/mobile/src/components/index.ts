@@ -12,6 +12,8 @@ export { PullQuote } from './PullQuote';
 export { Nav, type NavSlot } from './Nav';
 export { PlacePicker } from './PlacePicker';
 export { FloatingTabBar } from './FloatingTabBar';
+export { CityHero } from './CityHero';
+export { VenueThumb } from './VenueThumb';
 
 // Pre-existing primitives (kept; rebuilt or extended in place)
 export { Box } from './Box';

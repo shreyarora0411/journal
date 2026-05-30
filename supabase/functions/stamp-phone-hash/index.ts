@@ -109,6 +109,23 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Set a deterministic synthetic email on auth.users so the user can be
+  // recovered later via the `recover-session` flow (magic-link by email).
+  // Idempotent: re-running with the same userId is a no-op when the email
+  // is already set. We use `auth.admin.updateUserById` so email-confirm
+  // is bypassed (no real mail is sent).
+  const syntheticEmail = `${callerId}@no-email.lore.app`;
+  const { error: emailErr } = await admin.auth.admin.updateUserById(callerId, {
+    email: syntheticEmail,
+    email_confirm: true,
+  });
+  if (emailErr) {
+    // Non-fatal — the phone_hash is the critical write. Log and continue.
+    // The client will succeed signing in but won't be recoverable on a
+    // fresh install until this is retried.
+    console.warn('synthetic-email set failed', emailErr.message);
+  }
+
   return new Response(JSON.stringify({ ok: true }), {
     headers: { ...corsHeaders, 'content-type': 'application/json' },
   });

@@ -152,6 +152,7 @@ export function CircleScreen() {
           title="Instagram"
           subtitle="Detect trips from your last 6 months."
           badge="Coming soon"
+          muted
           onPress={() =>
             toast.show({ message: 'Instagram is coming soon. Try Contacts.', variant: 'info' })
           }
@@ -160,6 +161,7 @@ export function CircleScreen() {
           title="WhatsApp chat"
           subtitle="Forward a chat to find friends inside it."
           badge="Coming soon"
+          muted
           onPress={() =>
             toast.show({ message: 'WhatsApp forward is coming soon.', variant: 'info' })
           }
@@ -237,6 +239,10 @@ function ConnectorCard({
   badge,
   coralBorder = false,
   loading = false,
+  /** When true, the card renders as muted/unavailable — used for the
+   *  Instagram + WhatsApp placeholders so they don't compete visually
+   *  with the live Contacts CTA. */
+  muted = false,
   onPress,
 }: {
   title: string;
@@ -244,6 +250,7 @@ function ConnectorCard({
   badge?: string;
   coralBorder?: boolean;
   loading?: boolean;
+  muted?: boolean;
   onPress: () => void;
 }) {
   return (
@@ -254,21 +261,26 @@ function ConnectorCard({
       disabled={loading}
       style={[
         styles.connector,
-        { borderColor: coralBorder ? CORAL : HAIR, borderWidth: coralBorder ? 1.5 : 1 },
+        {
+          borderColor: coralBorder ? CORAL : HAIR,
+          borderWidth: coralBorder ? 1.5 : 1,
+          backgroundColor: muted ? TINT : '#FFFFFF',
+          opacity: muted ? 0.65 : 1,
+        },
       ]}
     >
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={styles.connectorTitle}>{title}</Text>
+          <Text style={[styles.connectorTitle, muted && { color: MUTE }]}>{title}</Text>
           {badge ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeLabel}>{badge}</Text>
+            <View style={[styles.badge, muted && styles.badgeMuted]}>
+              <Text style={[styles.badgeLabel, muted && styles.badgeLabelMuted]}>{badge}</Text>
             </View>
           ) : null}
         </View>
         <Text style={styles.connectorSub}>{subtitle}</Text>
       </View>
-      <Text style={styles.connectorChevron}>›</Text>
+      <Text style={[styles.connectorChevron, muted && { opacity: 0.5 }]}>›</Text>
     </Pressable>
   );
 }
@@ -334,6 +346,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     color: '#FFFFFF',
     textTransform: 'uppercase',
+  },
+  badgeMuted: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: HAIR,
+  },
+  badgeLabelMuted: {
+    color: MUTE,
   },
   matchedCard: {
     backgroundColor: TINT,

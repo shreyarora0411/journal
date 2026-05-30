@@ -26,18 +26,49 @@ jest.mock('../api/use-user-trips', () => ({
   useUserTrips: () => mockTrips(),
 }));
 
+const mockAtomicLogs = jest.fn();
+const mockDeleteTip = jest.fn();
+jest.mock('@/features/trips', () => ({
+  useMyAtomicLogs: () => mockAtomicLogs(),
+  useDeleteAtomicLog: () => ({ mutateAsync: mockDeleteTip, isPending: false }),
+}));
+
+const mockLists = jest.fn();
+const mockDeleteList = jest.fn();
+jest.mock('@/features/lists', () => ({
+  useMyLists: () => mockLists(),
+  useDeleteList: () => ({ mutateAsync: mockDeleteList, isPending: false }),
+}));
+
+const mockWishlist = jest.fn();
+jest.mock('@/features/wishlist', () => ({
+  useWishlistRows: () => mockWishlist(),
+}));
+
+const mockToastShow = jest.fn();
+jest.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ show: mockToastShow }),
+  ToastContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
+}));
+
 beforeEach(() => {
   mockPush.mockReset();
   mockSignOut.mockReset();
   mockStats.mockReset();
   mockProfile.mockReset();
   mockTrips.mockReset();
+  mockAtomicLogs.mockReset();
+  mockLists.mockReset();
+  mockWishlist.mockReset();
   mockStats.mockReturnValue({ data: null, isLoading: true });
   mockProfile.mockReturnValue({
     data: { display_name: 'Shrey', handle: 'shrey', avatar_url: null },
     isLoading: false,
   });
   mockTrips.mockReturnValue({ data: [], isLoading: false });
+  mockAtomicLogs.mockReturnValue({ data: [], isLoading: false });
+  mockLists.mockReturnValue({ data: [], isLoading: false });
+  mockWishlist.mockReturnValue({ data: [], isLoading: false });
 });
 
 describe('ProfileScreen', () => {
@@ -77,9 +108,10 @@ describe('ProfileScreen', () => {
     expect(screen.getByLabelText('Open my Wrapped')).toBeTruthy();
   });
 
-  it('shows the empty book message when the user has no trips yet', () => {
+  it('renders the I-wrote section header when the user has no trips yet', () => {
     renderWithProviders(<ProfileScreen />);
-    expect(screen.getByText('Nothing in the book yet.')).toBeTruthy();
+    expect(screen.getByText('I WROTE')).toBeTruthy();
+    expect(screen.getByText(/No trips yet/)).toBeTruthy();
   });
 
   it('renders trip cards when useUserTrips returns rows', () => {

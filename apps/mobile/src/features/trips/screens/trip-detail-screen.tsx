@@ -1,7 +1,7 @@
-import { Box, Button, Card, DetailHeader, Pill, Text } from '@/components';
+import { Box, Button, Card, DetailHeader, FirstVoucherBadge, Pill, Text } from '@/components';
 import { useAuthStore } from '@/features/auth';
 import { ListPickerSheet, useListsContaining } from '@/features/lists';
-import { useTrip } from '@/features/trips';
+import { useFirstVoucherForPlace, useTrip } from '@/features/trips';
 import type { VenueKind } from '@journal/shared';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -67,6 +67,24 @@ export default function TripDetailScreen() {
   const dateRange = formatDateRange(trip.start_date, trip.end_date);
   const cover = trip.photos.find((p) => p.id === trip.cover_photo_id) ?? trip.photos[0];
 
+  // First-to-vouch (Round 2, Phase C). Probe the trip's PRIMARY city
+  // — the first one in the trip's city list. Multi-city trips with
+  // distinct firsts-per-city would render multiple badges, which is
+  // noisier than the "social proof at the top of the page" the brief
+  // calls for. Hide entirely on the viewer's own trips: a user being
+  // "first in their own network" is meaningless.
+  const primaryCity = trip.cities[0] ?? null;
+  const primaryGooglePlaceId =
+    (primaryCity as { google_place_id?: string | null } | null)?.google_place_id ?? null;
+  const firstVoucherQ = useFirstVoucherForPlace(isMine ? null : primaryGooglePlaceId);
+  const showBadge =
+    !isMine &&
+    primaryCity &&
+    firstVoucherQ.data &&
+    firstVoucherQ.data.voucher_user_id === trip.user_id &&
+    firstVoucherQ.data.months_gap !== null &&
+    firstVoucherQ.data.months_gap >= 3;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <DetailHeader
@@ -122,6 +140,16 @@ export default function TripDetailScreen() {
             onPress={() => setListPickerOpen(true)}
           />
         </Box>
+
+        {showBadge && firstVoucherQ.data && primaryCity ? (
+          <Box marginBottom="l">
+            <FirstVoucherBadge
+              voucherName={firstVoucherQ.data.voucher_display_name}
+              placeName={primaryCity.name}
+              monthsAhead={firstVoucherQ.data.months_gap ?? 0}
+            />
+          </Box>
+        ) : null}
 
         {trip.note ? (
           <Box marginBottom="l">

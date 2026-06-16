@@ -208,6 +208,18 @@ export function ProfileScreen() {
                         {new Date(t.start_date).toDateString().toUpperCase()}
                       </Text>
                     ) : null}
+                    {/* Count line per Round 2 spec: surfaces the trip's
+                        actual content density on the profile card.
+                        Tip count = venues with category (atomic logs);
+                        we approximate by total venues for now since the
+                        atomic-vs-trip-venue distinction needs a category
+                        filter we can't do in the embedded count. */}
+                    <Text style={styles.tripCounts}>
+                      {t.venues_count} venue{t.venues_count === 1 ? '' : 's'} ·{' '}
+                      {t.cities_count} cit{t.cities_count === 1 ? 'y' : 'ies'} ·{' '}
+                      {t.trip_photos_count} photo
+                      {t.trip_photos_count === 1 ? '' : 's'}
+                    </Text>
                   </View>
                 </Pressable>
               ))}
@@ -605,5 +617,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: MUTE,
     marginTop: 4,
+  },
+  tripCounts: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 11.5,
+    color: MUTE,
+    marginTop: 6,
   },
 });

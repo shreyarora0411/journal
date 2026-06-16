@@ -3,6 +3,7 @@ import { useFeed } from '@/features/feed';
 import { useAtomicLogFeed, type AtomicLogRow } from '@/features/trips';
 import { getPhotoUrl } from '@/features/trips/lib/photo-url';
 import { useWishlistRows } from '@/features/wishlist';
+import { formatVouchDate } from '@/lib/format-vouch-date';
 import { tryGooglePlacesPhoto } from '@/lib/hero-photo';
 import { log } from '@/lib/log';
 import { useQuery } from '@tanstack/react-query';
@@ -102,18 +103,9 @@ function useVenuePhoto(storagePath?: string | null, googlePlaceId?: string | nul
 }
 
 // ---- date formatting ------------------------------------------------------
-// Single human formatter for "when this was posted" — never raw ISO.
-function relativeDay(iso: string): string {
-  const then = new Date(iso);
-  const today = new Date();
-  const start = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round((start(today).getTime() - start(then).getTime()) / 86_400_000);
-  if (diff <= 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
-  if (diff < 7) return `${diff}d ago`;
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${MONTHS[then.getMonth()]} ${then.getDate()}`;
-}
+// Replaced the local relativeDay helper with formatVouchDate
+// (src/lib/format-vouch-date.ts) per Round 2 — every vouch surface uses
+// the same freshness flag so stale vouches de-emphasize consistently.
 
 function tripRange(start?: string | null, end?: string | null): string | null {
   if (!start) return null;
@@ -453,7 +445,16 @@ function TipCard({
             {who}
           </Text>
           <Text style={styles.tripDot}>·</Text>
-          <Text style={styles.friendWhen}>{relativeDay(row.created_at)}</Text>
+          {(() => {
+            const d = formatVouchDate(new Date(row.created_at));
+            return (
+              <Text
+                style={[styles.friendWhen, d.freshness === 'stale' && styles.friendWhenStale]}
+              >
+                {d.display}
+              </Text>
+            );
+          })()}
         </View>
 
         <Text style={styles.cardTitle} numberOfLines={1}>
@@ -560,7 +561,7 @@ function DetailSheet({ row, onClose }: { row: AtomicLogRow | null; onClose: () =
               <View style={{ flex: 1 }}>
                 <Text style={styles.sheetFriendName}>{who}</Text>
                 <Text style={styles.sheetFriendWhen}>
-                  recommended · {relativeDay(row.created_at)}
+                  vouched · {formatVouchDate(new Date(row.created_at)).display}
                 </Text>
               </View>
               <View style={styles.lovedRow}>
@@ -766,6 +767,9 @@ const styles = StyleSheet.create({
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   friendName: { fontFamily: 'DMSans_600SemiBold', fontSize: 13.5, color: INK },
   friendWhen: { fontFamily: 'DMSans_400Regular', fontSize: 13, color: FAINT },
+  // 70% opacity on stale vouches (> 12 months) — they still appear,
+  // but read with less authority than recent ones.
+  friendWhenStale: { opacity: 0.7 },
   cardTitle: {
     // Upright Playfair (not italic) per the reference snapshot — the
     // venue name reads as a proper noun / brand mark; italic was

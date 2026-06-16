@@ -14,6 +14,8 @@ export { PlacePicker } from './PlacePicker';
 export { FloatingTabBar } from './FloatingTabBar';
 export { CityHero } from './CityHero';
 export { VenueThumb } from './VenueThumb';
+export { EntityCard } from './EntityCard';
+export { FirstVoucherBadge } from './FirstVoucherBadge';
 
 // Pre-existing primitives (kept; rebuilt or extended in place)
 export { Box } from './Box';

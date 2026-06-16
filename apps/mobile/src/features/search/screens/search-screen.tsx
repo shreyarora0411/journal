@@ -1,9 +1,9 @@
-import { Eyebrow, Page, StatusSpace } from '@/components';
+import { EntityCard, Eyebrow, Page, StatusSpace } from '@/components';
 import { useSearch } from '@/features/search';
 import { log } from '@/lib/log';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 const CORAL = '#FF4D2E';
 const INK = '#1A1410';
@@ -80,33 +80,36 @@ export function SearchScreen() {
             {results.length} result{results.length === 1 ? '' : 's'}
           </Eyebrow>
           <View style={{ gap: 8, marginTop: 12 }}>
-            {results.map((r) => (
-              <Pressable
-                key={`${r.kind}-${r.id}`}
-                accessibilityRole="button"
-                accessibilityLabel={r.name}
-                onPress={() => onRowPress(r)}
-                style={styles.row}
-              >
-                <View style={[styles.kindGlyph, kindStyle(r.kind)]}>
-                  <Text style={styles.kindLetter}>{kindLetter(r.kind)}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowName}>{r.name}</Text>
-                  <Text style={styles.rowMeta}>
-                    {r.kind.toUpperCase()}
-                    {r.country_name ? ` · ${r.country_name}` : ''}
-                    {r.trip_title ? ` · ${r.trip_title}` : ''}
-                  </Text>
-                  {r.quote ? (
-                    <Text style={styles.rowQuote} numberOfLines={2}>
-                      "{r.quote}"
-                    </Text>
-                  ) : null}
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </Pressable>
-            ))}
+            {results.map((r) => {
+              const area = [
+                r.kind.toUpperCase(),
+                r.country_name,
+                r.trip_title,
+              ]
+                .filter(Boolean)
+                .join(' · ');
+              // Search RPC returns trip_user_id but not the voucher's
+              // display_name (search_friend_graph migration 11 didn't
+              // join users). Voucher attribution skipped until that
+              // RPC is widened — see follow-up.
+              return (
+                <EntityCard
+                  key={`${r.kind}-${r.id}`}
+                  name={r.name}
+                  area={area || null}
+                  quote={r.quote}
+                  voucherName={null}
+                  vouchedAt={r.created_at ? new Date(r.created_at) : null}
+                  glyph={
+                    <View style={[styles.kindGlyph, kindStyle(r.kind)]}>
+                      <Text style={styles.kindLetter}>{kindLetter(r.kind)}</Text>
+                    </View>
+                  }
+                  rightSlot={<Text style={styles.chevron}>›</Text>}
+                  onPress={() => onRowPress(r)}
+                />
+              );
+            })}
           </View>
         </View>
       )}

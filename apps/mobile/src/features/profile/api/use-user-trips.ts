@@ -2,26 +2,53 @@ import { getSupabase } from '@/lib/supabase';
 import type { Trip } from '@journal/shared';
 import { useQuery } from '@tanstack/react-query';
 
+/** A trip plus the small child-counts the profile uses to render the
+ *  `X venues · Y cities · Z photos` summary line per Round 2 spec. */
+export type TripWithCounts = Trip & {
+  cities_count: number;
+  venues_count: number;
+  trip_photos_count: number;
+};
+
 /**
  * Trips authored by a specific user. RLS filters out anything the viewer
  * isn't allowed to see, so for a non-follow this returns only 'everyone'
  * trips, for a follower the 'followers' + 'everyone' set, etc.
+ *
+ * Embeds child counts via PostgREST's `relation(count)` syntax so the
+ * profile can show `X venues · Y cities · Z photos` without an N+1
+ * query per card.
  */
 export const useUserTrips = (userId: string | null | undefined) =>
   useQuery({
     queryKey: ['profile', 'trips', userId],
     enabled: Boolean(userId),
-    queryFn: async (): Promise<Trip[]> => {
+    queryFn: async (): Promise<TripWithCounts[]> => {
       if (!userId) return [];
       const supabase = getSupabase();
       const { data, error } = await supabase
         .from('trips')
-        .select('*')
+        .select(
+          '*, cities_count:cities(count), venues_count:venues(count), trip_photos_count:trip_photos(count)',
+        )
         .eq('user_id', userId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Trip[];
+      // PostgREST returns each count as [{ count: N }]. Flatten so the
+      // consumer reads `.venues_count` as a number.
+      type Raw = Trip & {
+        cities_count: { count: number }[];
+        venues_count: { count: number }[];
+        trip_photos_count: { count: number }[];
+      };
+      const rows = (data ?? []) as unknown as Raw[];
+      return rows.map((r) => ({
+        ...r,
+        cities_count: r.cities_count?.[0]?.count ?? 0,
+        venues_count: r.venues_count?.[0]?.count ?? 0,
+        trip_photos_count: r.trip_photos_count?.[0]?.count ?? 0,
+      }));
     },
   });
 

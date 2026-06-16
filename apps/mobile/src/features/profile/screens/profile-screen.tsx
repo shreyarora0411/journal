@@ -188,7 +188,7 @@ export function ProfileScreen() {
           ) : myTrips.length === 0 ? (
             <View style={styles.emptyInline}>
               <Text style={styles.emptyInlineBody}>
-                No trips yet. The Trip mode on Add lets you frame one.
+                Add your first trip to start your recommendations.
               </Text>
             </View>
           ) : (
@@ -223,7 +223,7 @@ export function ProfileScreen() {
           ) : (tipsQ.data ?? []).length === 0 ? (
             <View style={styles.emptyInline}>
               <Text style={styles.emptyInlineBody}>
-                No tips yet. Atomic recommendations from Add land here.
+                Add your first tip to start your recommendations.
               </Text>
             </View>
           ) : (

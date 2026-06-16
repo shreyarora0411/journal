@@ -191,12 +191,14 @@ export function TripLogForm() {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Save trip"
+        accessibilityLabel="Save & share"
         onPress={onSubmit}
         disabled={createTrip.isPending}
         style={styles.cta}
       >
-        <Text style={styles.ctaLabel}>{createTrip.isPending ? 'Saving…' : 'Save trip ✦'}</Text>
+        <Text style={styles.ctaLabel}>
+          {createTrip.isPending ? 'Saving…' : 'Save & share ✦'}
+        </Text>
       </Pressable>
 
       {savedTripId ? (

@@ -45,7 +45,7 @@ export default function MapScreen() {
         ) : rows.length === 0 ? (
           <Text variant="caption">
             {filter === 'visited'
-              ? 'Log a trip and it shows up here.'
+              ? 'Add a trip and it shows up here.'
               : "Tap any place to save it. We'll keep it for the trip you haven't booked yet."}
           </Text>
         ) : (

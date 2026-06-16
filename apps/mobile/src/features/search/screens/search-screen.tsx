@@ -63,13 +63,13 @@ export function SearchScreen() {
 
       {showEmptyState ? (
         <Text style={styles.hint}>
-          Search a city or a venue. Friends' notes show up here as your circle grows.
+          Search a city or a venue. Vouches from your circle show up here as it grows.
         </Text>
       ) : showNoResults ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>Nothing in your circle yet.</Text>
           <Text style={styles.emptyBody}>
-            When your friends log "{trimmed}", their notes will show up here.
+            No one in your network has vouched for "{trimmed}" yet.
           </Text>
         </View>
       ) : q.isLoading ? (

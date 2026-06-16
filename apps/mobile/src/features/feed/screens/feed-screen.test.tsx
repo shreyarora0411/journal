@@ -42,7 +42,7 @@ describe('FeedScreen', () => {
     renderWithProviders(<FeedScreen />);
     expect(screen.getByLabelText('lore.')).toBeTruthy();
     expect(screen.getByText('Quiet here.')).toBeTruthy();
-    expect(screen.getByLabelText('Log your first tip')).toBeTruthy();
+    expect(screen.getByLabelText('Add your first tip')).toBeTruthy();
   });
 
   it('does NOT render the "Right now" live-status strip', () => {

@@ -265,7 +265,7 @@ export function FeedScreen() {
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Log your first tip"
+            accessibilityLabel="Add your first tip"
             onPress={() => router.push('/(tabs)/add' as never)}
             style={styles.emptyCta}
           >

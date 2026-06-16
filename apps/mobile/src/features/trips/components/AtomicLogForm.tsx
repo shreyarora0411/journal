@@ -508,13 +508,16 @@ export function AtomicLogForm() {
         )}
       </View>
 
-      {/* Optional prose. */}
+      {/* Optional prose. Reframed from "notes" → "vouching" per the
+          validator-thesis copy pass (Round 2). The prose is what gives
+          the recommendation its credibility; the field copy needs to
+          surface that, not present this as a neutral notes field. */}
       <View style={{ marginTop: 22 }}>
-        <Eyebrow>Anything else?</Eyebrow>
+        <Eyebrow>What's worth vouching for?</Eyebrow>
         <View style={styles.proseCard}>
           <TextInput
-            accessibilityLabel="The longer thought"
-            placeholder="Optional — the longer thought."
+            accessibilityLabel="What's worth vouching for"
+            placeholder="Optional — the longer reason you'd send a friend here."
             placeholderTextColor="#B7AEA5"
             value={prose}
             onChangeText={(v) => setProse(v.slice(0, 10_000))}

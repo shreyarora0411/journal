@@ -111,7 +111,7 @@ describe('ProfileScreen', () => {
   it('renders the I-wrote section header when the user has no trips yet', () => {
     renderWithProviders(<ProfileScreen />);
     expect(screen.getByText('I WROTE')).toBeTruthy();
-    expect(screen.getByText(/No trips yet/)).toBeTruthy();
+    expect(screen.getByText(/Add your first trip/)).toBeTruthy();
   });
 
   it('renders trip cards when useUserTrips returns rows', () => {

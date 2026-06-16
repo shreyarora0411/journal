@@ -63,7 +63,7 @@ describe('LogScreen', () => {
     renderWithProviders(<LogScreen />);
     fireEvent.press(screen.getByLabelText('Switch to Trip mode'));
     expect(screen.getByText('Frame a trip.')).toBeTruthy();
-    expect(screen.getByLabelText('Save trip')).toBeTruthy();
+    expect(screen.getByLabelText('Save & share')).toBeTruthy();
   });
 
   it('renders the visibility picker with the My-circle segment', () => {

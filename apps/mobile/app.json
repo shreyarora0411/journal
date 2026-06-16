@@ -9,10 +9,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.shreyarora.postmark"
+      "bundleIdentifier": "com.shreyarora.lore"
     },
     "android": {
-      "package": "com.shreyarora.postmark",
+      "package": "com.shreyarora.lore",
       "adaptiveIcon": {
         "backgroundColor": "#FAF8F3"
       }
@@ -28,12 +28,9 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FAF8F3",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
           "resizeMode": "contain"
         }
       ],
-      "@sentry/react-native",
       "@react-native-community/datetimepicker"
     ],
     "experiments": {

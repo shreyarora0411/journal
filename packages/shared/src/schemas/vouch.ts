@@ -20,10 +20,9 @@ import { VisibilitySchema } from './index';
 export const VouchTypeSchema = z.enum(['stay', 'eat_drink', 'do', 'good_to_know', 'skip']);
 export type VouchType = z.infer<typeof VouchTypeSchema>;
 
-// One-tap trip verdict. Mirrors the DB verdict_kind enum (love/mid/skip);
-// surfaced as "Loved it / Mixed / Skip it".
-export const TripVerdictSchema = z.enum(['love', 'mid', 'skip']);
-export type TripVerdict = z.infer<typeof TripVerdictSchema>;
+// Verdict was dropped in v3.1 (the voiced vouch text carries the sentiment —
+// "book the tents", "skip Kaza"). The verdict_kind DB enum survives only for
+// the legacy trips table; the vouch flow has no verdict.
 
 /** Display metadata for each category ask, in composer order. The prompt is
  *  the question; the hint models register; the placeholder is a real voiced

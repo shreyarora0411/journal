@@ -1,9 +1,11 @@
 import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import type { VouchType } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSaveVouch, useSavedVouchIds } from '../api/use-plans';
 import { type VouchSearchResult, useVouchSearch, vouchReason } from '../api/use-vouch-search';
 
 const CORAL = '#FF4D2E';
@@ -39,9 +41,12 @@ type TripGroup = {
  */
 export function PlanScreen() {
   const router = useRouter();
+  const toast = useToast();
   const [destination, setDestination] = useState('');
   const [context, setContext] = useState('');
   const q = useVouchSearch(destination, context);
+  const savedIds = useSavedVouchIds();
+  const saveVouch = useSaveVouch();
 
   useEffect(() => {
     log.event('plan.screen_entered');
@@ -147,6 +152,20 @@ export function PlanScreen() {
 
                 {g.rows.map((r) => {
                   const pill = TYPE_PILL[r.vouch_type];
+                  const isSaved = savedIds.data?.has(r.vouch_id) ?? false;
+                  const onSave = async () => {
+                    if (isSaved) return;
+                    try {
+                      await saveVouch.mutateAsync({
+                        vouchId: r.vouch_id,
+                        destinationText: r.destination_text,
+                      });
+                      toast.show({ message: `Saved to your ${r.destination_text} plan.`, variant: 'success' });
+                    } catch (err) {
+                      log.error('save vouch failed', err);
+                      toast.show({ message: 'Could not save. Try again.', variant: 'error' });
+                    }
+                  };
                   return (
                     <Pressable
                       key={r.vouch_id}
@@ -159,6 +178,17 @@ export function PlanScreen() {
                         <View style={[styles.pill, { backgroundColor: pill.bg }]}>
                           <Text style={[styles.pillLabel, { color: pill.fg }]}>{pill.label}</Text>
                         </View>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={isSaved ? 'Saved' : 'Save to plan'}
+                          onPress={onSave}
+                          hitSlop={8}
+                          style={styles.saveBtn}
+                        >
+                          <Text style={[styles.saveGlyph, isSaved && styles.saveGlyphOn]}>
+                            {isSaved ? '🔖' : '+ Save'}
+                          </Text>
+                        </Pressable>
                       </View>
                       <Text style={styles.vouchText}>"{r.vouch_text}"</Text>
                       <Text style={styles.reason}>{vouchReason(r)}</Text>
@@ -244,9 +274,12 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     padding: 14,
   },
-  vouchHead: { flexDirection: 'row', alignItems: 'center' },
+  vouchHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   pillLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 11, letterSpacing: 0.3 },
+  saveBtn: { paddingHorizontal: 4, paddingVertical: 2 },
+  saveGlyph: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: CORAL },
+  saveGlyphOn: { fontSize: 15 },
   vouchText: {
     fontFamily: 'PlayfairDisplay_500Medium_Italic',
     fontSize: 17,

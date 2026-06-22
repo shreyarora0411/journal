@@ -1,5 +1,6 @@
 import { Face, Page, StatusSpace } from '@/components';
 import { useFeed } from '@/features/feed';
+import { useVouchFeed, type FeedVouch } from '../api/use-vouch-feed';
 import { useAtomicLogFeed, type AtomicLogRow } from '@/features/trips';
 import { getPhotoUrl } from '@/features/trips/lib/photo-url';
 import { useWishlistRows } from '@/features/wishlist';
@@ -130,6 +131,7 @@ export function FeedScreen() {
   const router = useRouter();
   const tripsQ = useFeed();
   const tipsQ = useAtomicLogFeed(50);
+  const vouchQ = useVouchFeed(40);
   const wishlistQ = useWishlistRows();
   const savedCount = wishlistQ.data?.length ?? 0;
   const [filter, setFilter] = useState<FilterKey>('all');
@@ -141,6 +143,7 @@ export function FeedScreen() {
 
   const tripRows = tripsQ.data?.pages.flatMap((p) => p.rows) ?? [];
   const tipRows: AtomicLogRow[] = tipsQ.data ?? [];
+  const vouchRows = vouchQ.data ?? [];
 
   const visibleTips = useMemo(
     () => (filter === 'all' ? tipRows : tipRows.filter((t) => t.category === filter)),
@@ -179,8 +182,8 @@ export function FeedScreen() {
         return bMost.localeCompare(aMost);
       });
   }, [visibleTips]);
-  const hasAnyContent = tripRows.length > 0 || tipRows.length > 0;
-  const loading = tripsQ.isLoading || tipsQ.isLoading;
+  const hasAnyContent = tripRows.length > 0 || tipRows.length > 0 || vouchRows.length > 0;
+  const loading = tripsQ.isLoading || tipsQ.isLoading || vouchQ.isLoading;
 
   return (
     <Page>
@@ -332,6 +335,21 @@ export function FeedScreen() {
             </View>
           ) : null}
 
+          {/* Vouches from your circle (v3) — shown on All so a category
+              filter (old atomic-log taxonomy) never silently hides them. */}
+          {filter === 'all' && vouchRows.length > 0 ? (
+            <View style={{ gap: 12 }}>
+              <Text style={styles.eyebrow}>Vouches from your circle</Text>
+              {vouchRows.map((v) => (
+                <VouchFeedCard
+                  key={`vouch-${v.id}`}
+                  vouch={v}
+                  onPress={() => router.push(`/(tabs)/trip/${v.trip_id}` as never)}
+                />
+              ))}
+            </View>
+          ) : null}
+
           {/* Tips section */}
           <View style={{ gap: 14 }}>
             <Text style={styles.eyebrow}>
@@ -373,6 +391,51 @@ export function FeedScreen() {
 
       <DetailSheet row={selected} onClose={() => setSelected(null)} />
     </Page>
+  );
+}
+
+// ---- Vouch feed card (v3) -------------------------------------------------
+const VOUCH_PILL: Record<string, { label: string; fg: string; bg: string }> = {
+  stay: { label: 'Stay', fg: '#4E6B45', bg: '#E6EEDF' },
+  eat_drink: { label: 'Eat / Drink', fg: '#B23A14', bg: '#FBE6DC' },
+  do: { label: 'Do', fg: '#1F5F5C', bg: '#D6E9E7' },
+  good_to_know: { label: 'Good to know', fg: '#2F5E6E', bg: '#DEEBEF' },
+  skip: { label: 'Skip', fg: '#7A3A20', bg: '#F2E2D2' },
+};
+
+function VouchFeedCard({ vouch, onPress }: { vouch: FeedVouch; onPress: () => void }) {
+  const pill = VOUCH_PILL[vouch.vouch_type] ?? VOUCH_PILL.do!;
+  const who = vouch.author?.display_name ?? vouch.author?.handle ?? 'Someone';
+  const reason = vouch.trip?.title
+    ? `${who} vouched from ${vouch.trip.title}`
+    : `${who} vouched for ${vouch.destination_text}`;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${pill.label}: ${vouch.text}`}
+      onPress={onPress}
+      style={styles.card}
+    >
+      <View style={styles.cardBody}>
+        <View style={styles.friendRow}>
+          <Face
+            uri={vouch.author?.avatar_url ?? null}
+            initials={who.slice(0, 2).toUpperCase()}
+            size="sm"
+          />
+          <Text style={styles.friendName} numberOfLines={1}>
+            {who}
+          </Text>
+          <View style={[styles.catPill, { backgroundColor: pill.bg, position: 'relative', top: 0, left: 0, marginLeft: 'auto' }]}>
+            <Text style={[styles.catPillLabel, { color: pill.fg }]}>{pill.label}</Text>
+          </View>
+        </View>
+        <Text style={styles.cardQuote} numberOfLines={4}>
+          "{vouch.text}"
+        </Text>
+        <Text style={styles.vouchReason}>{reason.toUpperCase()}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -789,6 +852,13 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: MUTE,
     marginTop: 6,
+  },
+  vouchReason: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 10,
+    letterSpacing: 1,
+    color: FAINT,
+    marginTop: 12,
   },
   cardFooter: {
     flexDirection: 'row',

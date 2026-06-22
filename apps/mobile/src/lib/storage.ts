@@ -28,11 +28,39 @@ const webStorage = {
   },
 };
 
+/**
+ * Whether SecureStore can actually write on this build. Simulator and
+ * sideloaded builds may lack the keychain-access-groups entitlement, in
+ * which case `setValueWithKeyAsync` throws "A required entitlement isn't
+ * present." We probe once, lazily, and cache the result — if SecureStore
+ * can't write, the adapter falls back to AsyncStorage for everything so
+ * auth still works.
+ *
+ * Auth tokens in AsyncStorage are less protected than in the Keychain,
+ * but a non-functioning login is worse. Production builds with proper
+ * entitlements keep using SecureStore.
+ */
+let secureStoreUsable: boolean | null = null;
+
+const probeSecureStore = async (): Promise<boolean> => {
+  if (secureStoreUsable !== null) return secureStoreUsable;
+  try {
+    await SecureStore.setItemAsync('__lore_probe__', '1');
+    await SecureStore.deleteItemAsync('__lore_probe__').catch(() => undefined);
+    secureStoreUsable = true;
+  } catch {
+    secureStoreUsable = false;
+  }
+  return secureStoreUsable;
+};
+
 export const supabaseStorageAdapter = {
   getItem: async (key: string): Promise<string | null> => {
     if (isWeb) return webStorage.getItem(key);
-    const secure = await SecureStore.getItemAsync(key).catch(() => null);
-    if (secure != null) return secure;
+    if (await probeSecureStore()) {
+      const secure = await SecureStore.getItemAsync(key).catch(() => null);
+      if (secure != null) return secure;
+    }
     return AsyncStorage.getItem(key);
   },
   setItem: async (key: string, value: string): Promise<void> => {
@@ -40,13 +68,22 @@ export const supabaseStorageAdapter = {
       webStorage.setItem(key, value);
       return;
     }
-    if (value.length > SECURE_VALUE_LIMIT) {
+    // Oversized values, or any value when SecureStore is unavailable,
+    // go to AsyncStorage.
+    if (value.length > SECURE_VALUE_LIMIT || !(await probeSecureStore())) {
       await AsyncStorage.setItem(key, value);
       await SecureStore.deleteItemAsync(key).catch(() => undefined);
       return;
     }
-    await SecureStore.setItemAsync(key, value);
-    await AsyncStorage.removeItem(key).catch(() => undefined);
+    try {
+      await SecureStore.setItemAsync(key, value);
+      await AsyncStorage.removeItem(key).catch(() => undefined);
+    } catch {
+      // SecureStore failed despite the probe — degrade rather than
+      // failing the whole auth flow.
+      secureStoreUsable = false;
+      await AsyncStorage.setItem(key, value);
+    }
   },
   removeItem: async (key: string): Promise<void> => {
     if (isWeb) {

@@ -12,103 +12,78 @@ jest.mock('@/hooks/use-toast', () => ({
   ToastContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
 }));
 
-const mockExtract = jest.fn();
 const mockCreate = jest.fn();
 jest.mock('../index', () => ({
-  useExtractTips: () => ({ mutateAsync: mockExtract, isPending: false }),
-  useCreateTripLog: () => ({ mutateAsync: mockCreate, isPending: false }),
+  useCreateVouchedTrip: () => ({ mutateAsync: mockCreate, isPending: false }),
 }));
 
 beforeEach(() => {
   mockReplace.mockReset();
   mockShow.mockReset();
-  mockExtract.mockReset();
   mockCreate.mockReset();
 });
 
-describe('TripComposerScreen', () => {
-  it('renders the four friend-framed prompts and the register-setting example', () => {
+describe('TripComposerScreen (v3 category-slotted, no extraction)', () => {
+  it('renders the verdict frame and all five category asks', () => {
     renderWithProviders(<TripComposerScreen />);
     // Eyebrow uppercases its label text in JS.
     expect(screen.getByText('WHERE DID YOU GO?')).toBeTruthy();
     expect(screen.getByText('WORTH IT?')).toBeTruthy();
-    expect(
-      screen.getByText("IF A FRIEND WERE GOING, WHAT'S THE ONE THING YOU'D TELL THEM?"),
-    ).toBeTruthy();
-    expect(screen.getByText(/Stay at Banjara, book the tents/)).toBeTruthy();
+    expect(screen.getByText(/WHERE TO STAY\?/)).toBeTruthy();
+    expect(screen.getByText(/WHERE TO EAT OR DRINK\?/)).toBeTruthy();
+    expect(screen.getByText(/ONE THING TO DO\?/)).toBeTruthy();
+    expect(screen.getByText(/ONE THING THAT'S GOOD TO KNOW\?/)).toBeTruthy();
+    expect(screen.getByText(/ANYTHING TO SKIP\?/)).toBeTruthy();
   });
 
-  it('keeps Find-the-tips disabled (no extraction) until destination and note are present', () => {
-    renderWithProviders(<TripComposerScreen />);
-    // The CTA is disabled while fields are empty, so pressing it is a no-op.
-    fireEvent.press(screen.getByLabelText('Find the tips'));
-    expect(mockExtract).not.toHaveBeenCalled();
-  });
-
-  it('extracts then shows the review phase with the extracted tips', async () => {
-    mockExtract.mockResolvedValueOnce({
-      destination_text: 'Spiti',
-      original_note: 'Stay at Banjara, book the tents.',
-      tips: [
-        { text: 'Stay at Banjara', advice_type: 'stay', area_text: null, confidence: 0.82 },
-        { text: 'Book the tents', advice_type: 'book', area_text: null, confidence: 0.68 },
-      ],
-    });
+  it('does not save when no vouch has been entered', () => {
     renderWithProviders(<TripComposerScreen />);
     fireEvent.changeText(screen.getByLabelText('Destination'), 'Spiti');
-    fireEvent.changeText(
-      screen.getByLabelText("The one thing you'd tell a friend"),
-      'Stay at Banjara, book the tents.',
-    );
-    fireEvent.press(screen.getByLabelText('Find the tips'));
-    await waitFor(() => {
-      expect(screen.getByText('Confirm your tips.')).toBeTruthy();
-      expect(screen.getByDisplayValue('Stay at Banjara')).toBeTruthy();
-      expect(screen.getByDisplayValue('Book the tents')).toBeTruthy();
-    });
+    // Save is disabled with zero vouches → pressing is a no-op.
+    fireEvent.press(screen.getByLabelText('Save and share'));
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it('shows the zero-tip nudge when extraction finds nothing specific', async () => {
-    mockExtract.mockResolvedValueOnce({
-      destination_text: 'Goa',
-      original_note: 'It was nice.',
-      tips: [],
-    });
-    renderWithProviders(<TripComposerScreen />);
-    fireEvent.changeText(screen.getByLabelText('Destination'), 'Goa');
-    fireEvent.changeText(screen.getByLabelText("The one thing you'd tell a friend"), 'It was nice.');
-    fireEvent.press(screen.getByLabelText('Find the tips'));
-    await waitFor(() => {
-      expect(screen.getByText('No specific tip in there yet.')).toBeTruthy();
-    });
-  });
-
-  it('saves the log with confirmed tips and routes to the book', async () => {
-    mockExtract.mockResolvedValueOnce({
-      destination_text: 'Spiti',
-      original_note: 'Stay at Banjara.',
-      tips: [{ text: 'Stay at Banjara', advice_type: 'stay', area_text: null, confidence: 0.82 }],
-    });
-    mockCreate.mockResolvedValueOnce({ tripId: 't1', tipCount: 1 });
+  it('banks a vouch from a single category and saves it typed', async () => {
+    mockCreate.mockResolvedValueOnce({ tripId: 't1', vouchCount: 1 });
     renderWithProviders(<TripComposerScreen />);
     fireEvent.changeText(screen.getByLabelText('Destination'), 'Spiti');
-    fireEvent.changeText(
-      screen.getByLabelText("The one thing you'd tell a friend"),
-      'Stay at Banjara.',
-    );
-    fireEvent.press(screen.getByLabelText('Find the tips'));
-    await waitFor(() => screen.getByLabelText('Save and share'));
+    fireEvent.changeText(screen.getByLabelText('Where to stay?'), 'Banjara, book the tents');
     fireEvent.press(screen.getByLabelText('Save and share'));
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          form: expect.objectContaining({ destination_text: 'Spiti', verdict: 'love' }),
-          tips: expect.arrayContaining([
-            expect.objectContaining({ text: 'Stay at Banjara', advice_type: 'stay' }),
-          ]),
+          destination_text: 'Spiti',
+          verdict: 'love',
+          vouches: [{ vouch_type: 'stay', text: 'Banjara, book the tents' }],
         }),
       );
       expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
     });
+  });
+
+  it('banks multiple typed vouches from different slots', async () => {
+    mockCreate.mockResolvedValueOnce({ tripId: 't1', vouchCount: 2 });
+    renderWithProviders(<TripComposerScreen />);
+    fireEvent.changeText(screen.getByLabelText('Destination'), 'Spiti');
+    fireEvent.changeText(screen.getByLabelText('Where to stay?'), 'Banjara, book the tents');
+    fireEvent.changeText(screen.getByLabelText('Anything to skip?'), 'Skip Kaza unless you need supplies');
+    fireEvent.press(screen.getByLabelText('Save and share'));
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          vouches: [
+            { vouch_type: 'stay', text: 'Banjara, book the tents' },
+            { vouch_type: 'skip', text: 'Skip Kaza unless you need supplies' },
+          ],
+        }),
+      );
+    });
+  });
+
+  it('shows a soft specificity nudge on a one-word vouch (never blocks)', () => {
+    renderWithProviders(<TripComposerScreen />);
+    fireEvent.changeText(screen.getByLabelText('Where to eat or drink?'), 'nice');
+    expect(screen.getByText('One place, dish, or specific thing?')).toBeTruthy();
   });
 });

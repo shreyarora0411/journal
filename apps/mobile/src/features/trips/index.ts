@@ -21,5 +21,4 @@ export { useUploadVenuePhoto } from './api/use-upload-venue-photo';
 export { useMyAtomicLogs, useAtomicLogFeed, type AtomicLogRow } from './api/use-atomic-logs';
 export { useDeleteAtomicLog } from './api/use-delete-atomic-log';
 export { useFirstVoucherForPlace, type FirstVoucher } from './api/use-first-voucher';
-export { useExtractTips } from './api/use-extract-tips';
-export { useCreateTripLog } from './api/use-create-trip-log';
+export { useCreateVouchedTrip } from './api/use-create-vouched-trip';

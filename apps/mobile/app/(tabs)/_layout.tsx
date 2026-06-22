@@ -34,6 +34,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="house-rules" options={{ href: null }} />
       <Tabs.Screen name="wishlist" options={{ href: null }} />
       <Tabs.Screen name="trip-notebook/[id]" options={{ href: null }} />
+      <Tabs.Screen name="ask/index" options={{ href: null }} />
+      <Tabs.Screen name="ask/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

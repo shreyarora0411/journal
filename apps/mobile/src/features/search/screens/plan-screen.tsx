@@ -123,7 +123,7 @@ export function PlanScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Ask your circle"
-              onPress={() => router.push('/(tabs)/friends' as never)}
+              onPress={() => router.push('/(tabs)/ask' as never)}
               style={styles.askBtn}
             >
               <Text style={styles.askLabel}>Ask your circle</Text>

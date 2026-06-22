@@ -35,29 +35,34 @@ const ADVICE_TYPES = [
   'other',
 ] as const;
 
-const SYSTEM_PROMPT = `You read a short travel note one person wrote for their friends, and pull out the atomic, action-shaped tips inside it.
+const SYSTEM_PROMPT = `You read a short travel note one person wrote for their friends, and pull out the atomic tips inside it.
 
-The note is casual — how someone texts a friend who asked "I'm going there, what should I know?" Your job is to surface each separable piece of advice as its own tip, preserving the author's original wording.
+The note is casual — how someone texts a friend who asked "I'm going there, what should I know?" Your job is to surface each separable recommendation as its own tip, keeping the author's own words.
 
-A good tip is action-shaped: it contains a verb (stay, book, eat, order, go, walk, ask, message, reserve, skip, avoid) and usually a named place, area, person, dish, route, or timing. Contrasts ("skip X unless Y", "go early not late") are high-signal — keep them intact.
+CRITICAL: real notes are mostly DESCRIPTIVE and PAST-TENSE, not commands. People write "Lub'd Hostel was the only affordable beach property" and "Chwang beach was the best to chill all day" — NOT "stay at Lub'd" or "go to Chwang beach". A named, praised place IS a tip even with no command verb — the recommendation is implicit. Convert it to a tip and keep the author's phrasing.
+  - "Lub'd Hostel was the only affordable beach property"  → text: "Lub'd Hostel — the affordable beach property", advice_type: "stay", place_candidate: "Lub'd Hostel"
+  - "Chwang beach was the best one to chill all day"        → text: "Chwang beach was the best to chill all day", advice_type: "do", area_text: "Chwang beach"
+  - "mostly foreign student crowds in may-june"             → text: "Mostly foreign student crowds in May–June", advice_type: "other", confidence: 0.5
+
+Only return NOTHING when a line is truly contentless — no named place, dish, area, person, or activity ("it was nice", "had a great time", "loved it"). Those aren't tips.
 
 advice_type is the SHAPE of the advice, not a place category:
-- stay: where to sleep
-- eat_drink: a restaurant, dish, bar, cafe, coffee
+- stay: where to sleep (hostel, hotel, homestay, where they stayed)
+- eat_drink: a restaurant, dish, bar, cafe, coffee, what to order
 - book: something to reserve ahead
-- do: an activity, sight, walk, experience
+- do: an activity, sight, beach, walk, experience
 - ask_contact: a person to contact ("ask for Tashi")
 - shop: where to buy something
 - skip: a thing to deliberately not do
-- avoid: a warning
+- avoid: a warning / heads-up (crowds, timing, scams)
 - area: a neighbourhood or zone worth knowing
 - other: advice that fits none of the above
 
 Rules:
-1. Preserve the author's literal wording in "text" wherever possible. Lightly trim filler, never paraphrase the substance.
-2. Extract place_candidate (a named venue/hotel) or area_text (a neighbourhood/town) when the tip references one. Leave both null for placeless tips (skip/avoid/ask_contact often have no formal place).
-3. confidence (0-1): how clearly this is a specific, actionable tip. A vague line ("it was nice") is low; "Stay at Banjara, book the tents" is high.
-4. Return 0 to 12 tips. If the note has no specific tip, return an EMPTY array — that is valid and expected for vague notes.
+1. Keep the author's wording in "text". You may lightly normalize tense/grammar so it reads as a standalone tip (e.g. "was the best" → "was the best" is fine; turning a fragment into a clean line is fine). Never invent detail or paraphrase away their voice.
+2. Extract place_candidate (a named venue/hotel) or area_text (a neighbourhood/beach/town) when referenced. Leave both null for placeless tips.
+3. confidence (0-1): how clearly this is a specific, useful tip. A named place with a reason = high (0.8+). A soft observation ("nice activities") = medium (0.4–0.6).
+4. Return 1 to 12 tips. Prefer extracting a descriptive recommendation over returning nothing. Only return an EMPTY array if the note genuinely names nothing specific.
 5. Do not invent advice the author didn't give.`;
 
 const TOOL = {

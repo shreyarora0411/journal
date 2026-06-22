@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  TripComposerSchema,
   VOUCH_CATEGORIES,
+  VouchComposerSchema,
   VouchInputSchema,
   VouchTypeSchema,
   looksSpecific,
@@ -36,40 +36,44 @@ describe('VOUCH_CATEGORIES', () => {
   });
 });
 
-describe('TripComposerSchema', () => {
-  it('accepts a trip with one vouch (a user with only a hotel rec)', () => {
-    const out = TripComposerSchema.parse({
+describe('VouchComposerSchema (single vouch → list)', () => {
+  it('accepts a single vouch with a destination (default list applied later)', () => {
+    const out = VouchComposerSchema.parse({
+      vouch_type: 'stay',
+      text: 'Banjara, book the tents',
       destination_text: 'Spiti',
-      verdict: 'love',
-      vouches: [{ vouch_type: 'stay', text: 'Banjara, book the tents' }],
     });
-    expect(out.vouches).toHaveLength(1);
+    expect(out.list_id).toBeUndefined();
     expect(out.visibility).toBe('friends_of_friends'); // default
   });
 
-  it('rejects a trip with zero vouches (helps no one)', () => {
+  it('rejects an empty vouch text', () => {
     expect(() =>
-      TripComposerSchema.parse({ destination_text: 'Goa', verdict: 'love', vouches: [] }),
-    ).toThrow();
-  });
-
-  it('requires a verdict', () => {
-    expect(() =>
-      TripComposerSchema.parse({
-        destination_text: 'Goa',
-        vouches: [{ vouch_type: 'stay', text: 'x place' }],
-      }),
+      VouchComposerSchema.parse({ vouch_type: 'stay', text: '  ', destination_text: 'Spiti' }),
     ).toThrow();
   });
 
   it('requires a destination', () => {
     expect(() =>
-      TripComposerSchema.parse({
-        destination_text: '  ',
-        verdict: 'mid',
-        vouches: [{ vouch_type: 'do', text: 'Key Monastery at sunrise' }],
-      }),
+      VouchComposerSchema.parse({ vouch_type: 'do', text: 'Key Monastery at sunrise', destination_text: '  ' }),
     ).toThrow();
+  });
+
+  it('accepts an explicit target list or a new list name', () => {
+    const a = VouchComposerSchema.parse({
+      vouch_type: 'do',
+      text: 'Bar Palladio, go early',
+      destination_text: 'Jaipur',
+      list_id: '00000000-0000-0000-0000-000000000abc',
+    });
+    expect(a.list_id).toBe('00000000-0000-0000-0000-000000000abc');
+    const b = VouchComposerSchema.parse({
+      vouch_type: 'stay',
+      text: '28 Kothi',
+      destination_text: 'Jaipur',
+      new_list_name: 'Best heritage stays',
+    });
+    expect(b.new_list_name).toBe('Best heritage stays');
   });
 });
 

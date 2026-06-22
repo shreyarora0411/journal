@@ -74,18 +74,23 @@ export const VouchInputSchema = z.object({
 export type VouchInput = z.infer<typeof VouchInputSchema>;
 
 /**
- * The composer payload (v3 Screen B). destination + required verdict + the
- * vouches the user banked. At least one vouch is required to save — a trip
- * with zero vouches helps no one (v3 §9).
+ * The composer payload (v3.1 — Lists replace trips). One vouch at a time,
+ * dropped into a list. The floor is: category → one field → destination →
+ * accept the default destination list → save. `list_id` is optional: when
+ * omitted, the create flow finds-or-creates the destination list. No verdict
+ * (the voiced text carries the sentiment — "book the tents", "skip Kaza").
  */
-export const TripComposerSchema = z.object({
-  destination_text: z.string().trim().min(1, 'Where did you go?').max(120),
-  verdict: TripVerdictSchema,
-  trip_context: z.string().trim().max(2000).optional(),
+export const VouchComposerSchema = z.object({
+  vouch_type: VouchTypeSchema,
+  text: z.string().trim().min(1, "What's the one thing you'd tell a friend?").max(500),
+  destination_text: z.string().trim().min(1, 'Where is this?').max(120),
+  /** Target list. Omit to land in the auto-created destination list. */
+  list_id: z.string().uuid().nullable().optional(),
+  /** A custom list name to create instead of the destination default. */
+  new_list_name: z.string().trim().max(120).nullable().optional(),
   visibility: VisibilitySchema.default('friends_of_friends'),
-  vouches: z.array(VouchInputSchema).min(1, 'Add at least one vouch'),
 });
-export type TripComposer = z.infer<typeof TripComposerSchema>;
+export type VouchComposer = z.infer<typeof VouchComposerSchema>;
 
 /**
  * Soft specificity check (v3 §9): a one-word vouch is nudged at entry, never
@@ -103,10 +108,10 @@ export const looksSpecific = (text: string): boolean => {
   return words.length >= 2 || /[A-Z]/.test(t) || /\d/.test(t);
 };
 
-/** Persisted Vouch row shape (what queries return). */
+/** Persisted Vouch row shape (what queries return). Standalone — a vouch
+ *  links to lists via vouch_list_items, not a trip_id. */
 export type VouchRow = {
   id: string;
-  trip_id: string;
   user_id: string;
   text: string;
   vouch_type: VouchType;

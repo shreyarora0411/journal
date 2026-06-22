@@ -1,16 +1,11 @@
-import { Eyebrow, Page, StatusSpace, VerdictPicker, type Verdict } from '@/components';
+import { Eyebrow, Page, StatusSpace } from '@/components';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
-import {
-  VOUCH_CATEGORIES,
-  type VouchInput,
-  type VouchType,
-  looksSpecific,
-} from '@journal/shared';
+import { VOUCH_CATEGORIES, type VouchType, looksSpecific } from '@journal/shared';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useCreateVouchedTrip } from '../index';
+import { useCreateVouch } from '../index';
 
 const CORAL = '#FF4D2E';
 const INK = '#1A1410';
@@ -19,76 +14,53 @@ const FAINT = '#B7AE9F';
 const HAIR = '#EFEAE2';
 const TINT = '#FAF6F0';
 
-// One faded real seed vouch, register-setting (v3 §4B).
-const EXAMPLE = 'Banjara in Kaza, book the tents not the rooms.';
-
 /**
- * Vouch a trip (Vouched v3, Loop A) — the single most important screen.
+ * Add a vouch (Vouched v3.1 — Lists replace trips). One vouch at a time,
+ * dropped into a list. Floor: pick category → type one field → set
+ * destination → accept the default destination list → save.
  *
- * Verdict-first, then 5 atomic, category-slotted asks. Each answer the user
- * writes becomes one Vouch directly, typed by its slot — no prose blob, no
- * extraction, no review step. The category is the format-constraint that
- * forces specificity; it never constrains how the user phrases the answer.
- *
- * Every ask is optional and skippable. A user with only a hotel rec gives the
- * hotel and saves. The progress chip counts vouches BANKED, not fields
- * completed — it rewards contribution, never demands completion.
+ * The category tunes the prompt/placeholder but never constrains how the
+ * user phrases the answer. No verdict, no multi-step sequence. The list
+ * defaults hard to the destination list (one tap); a custom list name is
+ * available but never required.
  */
 export function TripComposerScreen() {
   const router = useRouter();
   const toast = useToast();
-  const createTrip = useCreateVouchedTrip();
+  const create = useCreateVouch();
 
+  const [vouchType, setVouchType] = useState<VouchType | null>(null);
+  const [text, setText] = useState('');
   const [destination, setDestination] = useState('');
-  const [verdict, setVerdict] = useState<Verdict>('love');
-  // One free-text answer per category slot, keyed by vouch_type.
-  const [answers, setAnswers] = useState<Record<VouchType, string>>({
-    stay: '',
-    eat_drink: '',
-    do: '',
-    good_to_know: '',
-    skip: '',
-  });
+  const [customList, setCustomList] = useState('');
+  const [showCustom, setShowCustom] = useState(false);
 
   useEffect(() => {
     log.event('composer.screen_entered');
   }, []);
 
-  const vouches: VouchInput[] = useMemo(
-    () =>
-      VOUCH_CATEGORIES.map((c) => ({ vouch_type: c.type, text: answers[c.type].trim() })).filter(
-        (v) => v.text.length > 0,
-      ),
-    [answers],
-  );
-  const bankedCount = vouches.length;
-  const canSave = destination.trim().length > 0 && bankedCount > 0;
+  const category = VOUCH_CATEGORIES.find((c) => c.type === vouchType) ?? null;
+  const canSave = Boolean(vouchType) && text.trim().length > 0 && destination.trim().length > 0;
+  const nudge = text.trim().length > 0 && !looksSpecific(text);
+  const defaultListLabel = destination.trim() || 'this destination';
 
   const onSave = async () => {
-    if (!canSave) {
-      toast.show({
-        message:
-          destination.trim().length === 0
-            ? 'Where did you go?'
-            : 'Add at least one vouch — a place, dish, or thing to do.',
-        variant: 'error',
-      });
+    if (!canSave || !vouchType) {
+      toast.show({ message: 'Pick a category, write the vouch, add where.', variant: 'error' });
       return;
     }
     try {
-      const res = await createTrip.mutateAsync({
+      const res = await create.mutateAsync({
+        vouch_type: vouchType,
+        text: text.trim(),
         destination_text: destination.trim(),
-        verdict,
+        new_list_name: showCustom && customList.trim() ? customList.trim() : null,
         visibility: 'friends_of_friends',
-        vouches,
       });
-      toast.show({
-        message: `Saved — ${res.vouchCount} vouch${res.vouchCount === 1 ? '' : 'es'} live for your circle.`,
-        variant: 'success',
-      });
-      router.replace('/(tabs)/book');
+      toast.show({ message: 'Vouch saved to your circle.', variant: 'success' });
+      router.replace(`/(tabs)/list/${res.listId}` as never);
     } catch (err) {
-      log.error('createVouchedTrip failed', err);
+      log.error('createVouch failed', err);
       toast.show({ message: 'Could not save. Try again.', variant: 'error' });
     }
   };
@@ -97,79 +69,127 @@ export function TripComposerScreen() {
     <Page>
       <StatusSpace />
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <Text style={styles.headline}>Vouch a trip.</Text>
-          {bankedCount > 0 ? (
-            <View style={styles.bankChip}>
-              <Text style={styles.bankChipLabel}>
-                {bankedCount} vouch{bankedCount === 1 ? '' : 'es'}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-        <Text style={styles.sub}>Like texting a friend who's about to go. Skip anything.</Text>
+        <Text style={styles.headline}>Add a vouch.</Text>
+        <Text style={styles.sub}>One thing you'd tell a friend who's going.</Text>
 
-        {/* Step 1 — the frame */}
+        {/* Step 1 — category */}
         <View style={styles.field}>
-          <Eyebrow>Where did you go?</Eyebrow>
-          <TextInput
-            accessibilityLabel="Destination"
-            placeholder="Spiti, Bangkok, Goa…"
-            placeholderTextColor={FAINT}
-            value={destination}
-            onChangeText={setDestination}
-            style={styles.input}
-            selectionColor={CORAL}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Eyebrow>Worth it?</Eyebrow>
-          <View style={{ marginTop: 8 }}>
-            <VerdictPicker value={verdict} onChange={setVerdict} />
+          <Eyebrow>What kind?</Eyebrow>
+          <View style={styles.catRow}>
+            {VOUCH_CATEGORIES.map((c) => {
+              const on = vouchType === c.type;
+              return (
+                <Pressable
+                  key={c.type}
+                  accessibilityRole="button"
+                  accessibilityLabel={c.prompt}
+                  onPress={() => setVouchType(c.type)}
+                  style={[styles.catChip, on ? styles.catChipOn : styles.catChipOff]}
+                >
+                  <Text style={[styles.catLabel, on ? styles.catLabelOn : styles.catLabelOff]}>
+                    {c.prompt.replace(/\?$/, '')}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
-        {/* Faded register-setting example */}
-        <Text style={styles.example}>e.g. “{EXAMPLE}”</Text>
-
-        {/* Step 2 — the atomic, category-slotted asks */}
-        {VOUCH_CATEGORIES.map((c) => {
-          const value = answers[c.type];
-          const nudge = value.trim().length > 0 && !looksSpecific(value);
-          return (
-            <View key={c.type} style={styles.field}>
-              <Eyebrow color={MUTE}>{c.hint ? `${c.prompt}  ·  ${c.hint}` : c.prompt}</Eyebrow>
-              <View style={styles.voiceCard}>
-                <TextInput
-                  accessibilityLabel={c.prompt}
-                  placeholder={c.placeholder}
-                  placeholderTextColor={FAINT}
-                  value={value}
-                  onChangeText={(v) => setAnswers((prev) => ({ ...prev, [c.type]: v.slice(0, 500) }))}
-                  multiline
-                  style={styles.voiceInput}
-                  selectionColor={CORAL}
-                />
-              </View>
-              {nudge ? (
-                <Text style={styles.nudge}>One place, dish, or specific thing?</Text>
-              ) : null}
+        {/* Step 2 — the one field, tuned to the category */}
+        {category ? (
+          <View style={styles.field}>
+            <Eyebrow>{category.hint ? `${category.prompt}  ·  ${category.hint}` : category.prompt}</Eyebrow>
+            <View style={styles.voiceCard}>
+              <TextInput
+                accessibilityLabel="The vouch"
+                placeholder={category.placeholder}
+                placeholderTextColor={FAINT}
+                value={text}
+                onChangeText={(v) => setText(v.slice(0, 500))}
+                multiline
+                style={styles.voiceInput}
+                selectionColor={CORAL}
+                autoFocus
+              />
             </View>
-          );
-        })}
+            {nudge ? <Text style={styles.nudge}>One place, dish, or specific thing?</Text> : null}
+          </View>
+        ) : null}
+
+        {/* Step 3 — destination */}
+        {category ? (
+          <View style={styles.field}>
+            <Eyebrow>Where is this?</Eyebrow>
+            <TextInput
+              accessibilityLabel="Destination"
+              placeholder="Spiti, Bangkok, Goa…"
+              placeholderTextColor={FAINT}
+              value={destination}
+              onChangeText={setDestination}
+              style={styles.input}
+              selectionColor={CORAL}
+            />
+          </View>
+        ) : null}
+
+        {/* Step 4 — list (defaults hard to the destination list) */}
+        {category && destination.trim().length > 0 ? (
+          <View style={styles.field}>
+            <Eyebrow color={MUTE}>Which list?</Eyebrow>
+            {!showCustom ? (
+              <View style={styles.listRow}>
+                <View style={styles.defaultListChip}>
+                  <Text style={styles.defaultListLabel}>{defaultListLabel}</Text>
+                  <Text style={styles.defaultListSub}>default</Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Use a different list"
+                  onPress={() => setShowCustom(true)}
+                  hitSlop={8}
+                >
+                  <Text style={styles.changeList}>+ New list</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.listRow}>
+                <TextInput
+                  accessibilityLabel="New list name"
+                  placeholder='e.g. "best mountain stays"'
+                  placeholderTextColor={FAINT}
+                  value={customList}
+                  onChangeText={(v) => setCustomList(v.slice(0, 120))}
+                  style={[styles.input, { flex: 1, marginTop: 0 }]}
+                  selectionColor={CORAL}
+                  autoFocus
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Use the default list"
+                  onPress={() => {
+                    setShowCustom(false);
+                    setCustomList('');
+                  }}
+                  hitSlop={8}
+                >
+                  <Text style={styles.changeList}>Default</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Save and share"
+          accessibilityLabel="Save vouch"
           onPress={onSave}
-          disabled={!canSave || createTrip.isPending}
-          style={[styles.cta, (!canSave || createTrip.isPending) && { opacity: 0.5 }]}
+          disabled={!canSave || create.isPending}
+          style={[styles.cta, (!canSave || create.isPending) && { opacity: 0.5 }]}
         >
-          {createTrip.isPending ? (
+          {create.isPending ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.ctaLabel}>Save & share ✦</Text>
+            <Text style={styles.ctaLabel}>Save vouch ✦</Text>
           )}
         </Pressable>
         <View style={{ height: 48 }} />
@@ -179,34 +199,23 @@ export function TripComposerScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
   headline: {
     fontFamily: 'PlayfairDisplay_500Medium',
     fontSize: 32,
     lineHeight: 36,
     color: INK,
     letterSpacing: -0.6,
+    marginTop: 12,
   },
-  bankChip: {
-    backgroundColor: CORAL,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  bankChipLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: '#FFFFFF' },
-  sub: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: MUTE,
-    marginTop: 6,
-  },
-  field: { marginTop: 22 },
+  sub: { fontFamily: 'DMSans_400Regular', fontSize: 14, lineHeight: 20, color: MUTE, marginTop: 6 },
+  field: { marginTop: 24 },
+  catRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  catChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999 },
+  catChipOn: { backgroundColor: INK },
+  catChipOff: { backgroundColor: TINT, borderWidth: 1, borderColor: HAIR },
+  catLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 13.5 },
+  catLabelOn: { color: '#FFFFFF' },
+  catLabelOff: { color: MUTE },
   input: {
     marginTop: 8,
     fontFamily: 'DMSans_400Regular',
@@ -216,36 +225,39 @@ const styles = StyleSheet.create({
     borderBottomColor: HAIR,
     paddingVertical: 8,
   },
-  example: {
-    fontFamily: 'PlayfairDisplay_500Medium_Italic',
-    fontSize: 13.5,
-    lineHeight: 20,
-    color: FAINT,
-    marginTop: 18,
-  },
   voiceCard: {
     marginTop: 8,
     backgroundColor: TINT,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: HAIR,
-    padding: 12,
-    minHeight: 56,
+    padding: 14,
+    minHeight: 96,
   },
   voiceInput: {
     fontFamily: 'DMSans_400Regular',
-    fontSize: 15.5,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 24,
     color: INK,
-    minHeight: 32,
+    minHeight: 70,
     textAlignVertical: 'top',
   },
-  nudge: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 12,
-    color: CORAL,
-    marginTop: 6,
+  nudge: { fontFamily: 'DMSans_400Regular', fontSize: 12, color: CORAL, marginTop: 6 },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
+  defaultListChip: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    backgroundColor: TINT,
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
+  defaultListLabel: { fontFamily: 'PlayfairDisplay_500Medium', fontSize: 16, color: INK },
+  defaultListSub: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 1, color: FAINT },
+  changeList: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: CORAL },
   cta: {
     backgroundColor: INK,
     borderRadius: 999,

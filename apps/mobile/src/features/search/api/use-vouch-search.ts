@@ -5,10 +5,12 @@ import type { VouchType } from '@journal/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounced } from './use-search';
 
-/** One ranked vouch row from the search_vouches RPC (migration 39). */
+/** One ranked vouch row from the search_vouches RPC (migration 42 — source
+ *  list, not trip). */
 export type VouchSearchResult = {
   vouch_id: string;
-  trip_id: string;
+  list_id: string | null;
+  list_title: string | null;
   vouch_text: string;
   vouch_type: VouchType;
   destination_text: string;
@@ -16,8 +18,6 @@ export type VouchSearchResult = {
   author_name: string | null;
   author_handle: string | null;
   author_avatar: string | null;
-  trip_title: string | null;
-  trip_verdict: 'love' | 'mid' | 'skip' | null;
   is_own: boolean;
   is_trusted: boolean;
   context_match: boolean;
@@ -71,6 +71,6 @@ export const vouchReason = (r: VouchSearchResult): string => {
       r.vouch_type === 'stay' ? 'stays' : r.vouch_type === 'eat_drink' ? 'food' : 'local know-how';
     return `You trust ${who} for ${ctx}`;
   }
-  if (r.trip_title) return `${who} vouched from ${r.trip_title}`;
+  if (r.list_title) return `${who} vouched in ${r.list_title}`;
   return `${who} vouched for this`;
 };

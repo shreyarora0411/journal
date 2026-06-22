@@ -3,27 +3,26 @@ import { getSupabase } from '@/lib/supabase';
 import type { VouchType } from '@journal/shared';
 import { useQuery } from '@tanstack/react-query';
 
-/** A circle vouch for the feed, joined with its author + source trip. */
+/** A circle vouch for the feed, joined with its author. Standalone — a
+ *  vouch belongs to lists (via vouch_list_items), not a trip; the feed card
+ *  uses the vouch's own destination for context. */
 export type FeedVouch = {
   id: string;
   text: string;
   vouch_type: VouchType;
   destination_text: string;
   created_at: string;
-  trip_id: string;
   author: {
     id: string;
     display_name: string | null;
     handle: string | null;
     avatar_url: string | null;
   } | null;
-  trip: { title: string; verdict: 'love' | 'mid' | 'skip' | null } | null;
 };
 
 const SELECT =
-  'id, text, vouch_type, destination_text, created_at, trip_id, ' +
-  'author:user_id(id, display_name, handle, avatar_url), ' +
-  'trip:trip_id(title, verdict)';
+  'id, text, vouch_type, destination_text, created_at, ' +
+  'author:user_id(id, display_name, handle, avatar_url)';
 
 /**
  * Recent vouches from the user's circle for the Book/home feed.

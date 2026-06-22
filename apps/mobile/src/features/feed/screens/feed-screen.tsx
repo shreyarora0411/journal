@@ -341,11 +341,7 @@ export function FeedScreen() {
             <View style={{ gap: 12 }}>
               <Text style={styles.eyebrow}>Vouches from your circle</Text>
               {vouchRows.map((v) => (
-                <VouchFeedCard
-                  key={`vouch-${v.id}`}
-                  vouch={v}
-                  onPress={() => router.push(`/(tabs)/trip/${v.trip_id}` as never)}
-                />
+                <VouchFeedCard key={`vouch-${v.id}`} vouch={v} />
               ))}
             </View>
           ) : null}
@@ -403,17 +399,14 @@ const VOUCH_PILL: Record<string, { label: string; fg: string; bg: string }> = {
   skip: { label: 'Skip', fg: '#7A3A20', bg: '#F2E2D2' },
 };
 
-function VouchFeedCard({ vouch, onPress }: { vouch: FeedVouch; onPress: () => void }) {
+function VouchFeedCard({ vouch }: { vouch: FeedVouch }) {
   const pill = VOUCH_PILL[vouch.vouch_type] ?? VOUCH_PILL.do!;
   const who = vouch.author?.display_name ?? vouch.author?.handle ?? 'Someone';
-  const reason = vouch.trip?.title
-    ? `${who} vouched from ${vouch.trip.title}`
-    : `${who} vouched for ${vouch.destination_text}`;
+  const reason = `${who} vouched · ${vouch.destination_text}`;
   return (
-    <Pressable
-      accessibilityRole="button"
+    <View
+      accessibilityRole="text"
       accessibilityLabel={`${pill.label}: ${vouch.text}`}
-      onPress={onPress}
       style={styles.card}
     >
       <View style={styles.cardBody}>
@@ -435,7 +428,7 @@ function VouchFeedCard({ vouch, onPress }: { vouch: FeedVouch; onPress: () => vo
         </Text>
         <Text style={styles.vouchReason}>{reason.toUpperCase()}</Text>
       </View>
-    </Pressable>
+    </View>
   );
 }
 

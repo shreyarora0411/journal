@@ -4,9 +4,9 @@ import { getSupabase } from '@/lib/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 /**
- * The set of vouch ids the current user has saved (across all their plans),
- * so search cards can render a filled "saved" state. One small query keyed
- * to the user; invalidated on save.
+ * The set of vouch ids the current user has saved into ANY of their lists,
+ * so search cards can render a filled "saved" state. (A "plan" is just a
+ * list filled with saved vouches — v3.1 §6 collapsed Plan into List.)
  */
 export const useSavedVouchIds = () => {
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
@@ -16,12 +16,14 @@ export const useSavedVouchIds = () => {
     queryFn: async (): Promise<Set<string>> => {
       if (!userId) return new Set();
       const supabase = getSupabase();
+      // Items this user added (added_by_user_id = me) — i.e. vouches they
+      // saved into their own lists, including others' vouches.
       const { data, error } = await supabase
-        .from('saved_vouches')
+        .from('vouch_list_items')
         .select('vouch_id')
-        .eq('saved_by_user_id', userId);
+        .eq('added_by_user_id', userId);
       if (error) {
-        if ((error as { code?: string }).code === '42P01') return new Set(); // table missing
+        if ((error as { code?: string }).code === '42P01') return new Set();
         throw error;
       }
       return new Set((data ?? []).map((r) => (r as { vouch_id: string }).vouch_id));
@@ -32,9 +34,10 @@ export const useSavedVouchIds = () => {
 type SaveVars = { vouchId: string; destinationText: string };
 
 /**
- * Save a vouch to the user's plan for that destination. v0 keeps it one-tap:
- * a single plan per destination, found-or-created on first save. The
- * saved_vouches unique(plan_id, vouch_id) makes re-saving a no-op.
+ * Save someone's vouch into the user's list for that destination. Finds-or-
+ * creates the destination list (a vouch saved while planning lands in your
+ * own list — which can mix your picks and saved ones, §6), then links via
+ * vouch_list_items.
  */
 export const useSaveVouch = () => {
   const qc = useQueryClient();
@@ -45,42 +48,42 @@ export const useSaveVouch = () => {
       if (!userId) throw new Error('Not signed in');
       const supabase = getSupabase();
 
-      // Find-or-create the plan for this destination.
+      // Find-or-create the user's list for this destination.
       const { data: existing, error: findErr } = await supabase
-        .from('plans')
+        .from('lists')
         .select('id')
-        .eq('user_id', userId)
-        .eq('destination_text', destinationText)
+        .eq('owner_id', userId)
+        .eq('title', destinationText)
         .is('deleted_at', null)
         .limit(1)
         .maybeSingle();
       if (findErr) throw findErr;
 
-      let planId = (existing as { id: string } | null)?.id ?? null;
-      if (!planId) {
+      let listId = (existing as { id: string } | null)?.id ?? null;
+      if (!listId) {
         const { data: created, error: createErr } = await supabase
-          .from('plans')
-          .insert({ user_id: userId, destination_text: destinationText, title: destinationText })
+          .from('lists')
+          .insert({ owner_id: userId, title: destinationText, destination_text: destinationText })
           .select('id')
           .single();
         if (createErr) throw createErr;
-        planId = (created as { id: string }).id;
+        listId = (created as { id: string }).id;
       }
 
-      const { error: saveErr } = await supabase
-        .from('saved_vouches')
+      const { error: linkErr } = await supabase
+        .from('vouch_list_items')
         .upsert(
-          { plan_id: planId, vouch_id: vouchId, saved_by_user_id: userId },
-          { onConflict: 'plan_id,vouch_id', ignoreDuplicates: true },
+          { vouch_id: vouchId, list_id: listId, added_by_user_id: userId },
+          { onConflict: 'vouch_id,list_id', ignoreDuplicates: true },
         );
-      if (saveErr) throw saveErr;
+      if (linkErr) throw linkErr;
 
-      log.event('vouch.saved', { destination_country: destinationText.slice(0, 0) });
+      log.event('vouch.saved');
       return { saved: true };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['saved-vouch-ids', userId] });
-      qc.invalidateQueries({ queryKey: ['plans', userId] });
+      qc.invalidateQueries({ queryKey: ['lists'] });
     },
   });
 };

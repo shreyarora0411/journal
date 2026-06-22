@@ -5,7 +5,7 @@ import type { VouchType } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSaveVouch, useSavedVouchIds } from '../api/use-plans';
+import { useSaveVouch, useSavedVouchIds } from '../api/use-save-vouch';
 import { type VouchSearchResult, useVouchSearch, vouchReason } from '../api/use-vouch-search';
 
 const CORAL = '#FF4D2E';
@@ -23,12 +23,12 @@ const TYPE_PILL: Record<VouchType, { label: string; fg: string; bg: string }> = 
   skip: { label: 'Skip', fg: '#7A3A20', bg: '#F2E2D2' },
 };
 
-type TripGroup = {
-  tripId: string;
+type ListGroup = {
+  key: string;
+  listId: string | null;
   who: string;
   avatar: string | null;
-  tripTitle: string | null;
-  verdict: VouchSearchResult['trip_verdict'];
+  listTitle: string | null;
   rows: VouchSearchResult[];
 };
 
@@ -57,20 +57,22 @@ export function PlanScreen() {
   const showHint = trimmed.length < 2;
   const showNoResults = !showHint && !q.isLoading && results.length === 0;
 
-  // Group ranked vouches by source trip, preserving rank order: a trip's
-  // position is set by its best-ranked vouch.
-  const groups = useMemo<TripGroup[]>(() => {
-    const map = new Map<string, TripGroup>();
+  // Group ranked vouches by source list, preserving rank order: a list's
+  // position is set by its best-ranked vouch. Vouches with no list fall
+  // under a per-author bucket keyed by author.
+  const groups = useMemo<ListGroup[]>(() => {
+    const map = new Map<string, ListGroup>();
     for (const r of results) {
-      const g = map.get(r.trip_id);
+      const key = r.list_id ?? `author:${r.author_id}`;
+      const g = map.get(key);
       if (g) g.rows.push(r);
       else
-        map.set(r.trip_id, {
-          tripId: r.trip_id,
+        map.set(key, {
+          key,
+          listId: r.list_id,
           who: r.is_own ? 'You' : (r.author_name ?? r.author_handle ?? 'Someone'),
           avatar: r.author_avatar,
-          tripTitle: r.trip_title,
-          verdict: r.trip_verdict,
+          listTitle: r.list_title,
           rows: [r],
         });
     }
@@ -135,16 +137,16 @@ export function PlanScreen() {
               {results.length} vouch{results.length === 1 ? '' : 'es'} for {trimmed}
             </Eyebrow>
             {groups.map((g) => (
-              <View key={g.tripId} style={{ gap: 10 }}>
-                {/* Trip header — the person whose trip these came from */}
+              <View key={g.key} style={{ gap: 10 }}>
+                {/* List header — the person + the list these came from */}
                 <View style={styles.tripHeader}>
                   <Face uri={g.avatar} initials={g.who.slice(0, 2).toUpperCase()} size="sm" />
                   <Text style={styles.tripWho}>{g.who}</Text>
-                  {g.tripTitle ? (
+                  {g.listTitle ? (
                     <>
                       <Text style={styles.dot}>·</Text>
                       <Text style={styles.tripTitle} numberOfLines={1}>
-                        {g.tripTitle}
+                        {g.listTitle}
                       </Text>
                     </>
                   ) : null}
@@ -171,7 +173,9 @@ export function PlanScreen() {
                       key={r.vouch_id}
                       accessibilityRole="button"
                       accessibilityLabel={`${pill.label}: ${r.vouch_text}`}
-                      onPress={() => router.push(`/(tabs)/trip/${r.trip_id}` as never)}
+                      onPress={() =>
+                        r.list_id ? router.push(`/(tabs)/list/${r.list_id}` as never) : undefined
+                      }
                       style={styles.vouchCard}
                     >
                       <View style={styles.vouchHead}>

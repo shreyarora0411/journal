@@ -21,7 +21,8 @@ beforeEach(() => {
 
 const row = (over: Partial<Record<string, unknown>> = {}) => ({
   vouch_id: 'v1',
-  trip_id: 't1',
+  list_id: 'l1',
+  list_title: 'Spiti',
   vouch_text: 'Banjara, book the tents',
   vouch_type: 'stay',
   destination_text: 'Spiti',
@@ -29,8 +30,6 @@ const row = (over: Partial<Record<string, unknown>> = {}) => ({
   author_name: 'Rhea',
   author_handle: 'rhea',
   author_avatar: null,
-  trip_title: 'Spiti in June',
-  trip_verdict: 'love',
   is_own: false,
   is_trusted: true,
   context_match: false,
@@ -53,7 +52,7 @@ describe('PlanScreen (Loop B trust-led search)', () => {
       expect(screen.getByText('Rhea')).toBeTruthy();
       expect(screen.getByText('"Banjara, book the tents"')).toBeTruthy();
       // Human-readable reason, never a score.
-      expect(screen.getByText('Rhea vouched from Spiti in June')).toBeTruthy();
+      expect(screen.getByText('Rhea vouched in Spiti')).toBeTruthy();
     });
   });
 

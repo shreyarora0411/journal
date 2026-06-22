@@ -97,7 +97,10 @@ export const looksSpecific = (text: string): boolean => {
   const t = text.trim();
   if (t.length === 0) return true; // empty = not yet answered, don't nag
   const words = t.split(/\s+/).filter(Boolean);
-  return words.length >= 2;
+  // Multi-word is specific. A single word also passes if it names something
+  // — a proper noun ("Banjara") or a number ("Room 412") is a real vouch;
+  // only a lone lowercase common word ("nice", "good") gets the nudge.
+  return words.length >= 2 || /[A-Z]/.test(t) || /\d/.test(t);
 };
 
 /** Persisted Vouch row shape (what queries return). */

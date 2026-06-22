@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/features/auth';
+import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
 import type { VouchType } from '@journal/shared';
 import { useQuery } from '@tanstack/react-query';
@@ -30,10 +31,13 @@ export type VouchSearchResult = {
  */
 export const useVouchSearch = (rawDestination: string, context?: string) => {
   const destination = useDebounced(rawDestination.trim());
+  // Debounce context too, or rapid edits to the context box thrash the query
+  // (the key changed on every keystroke while only destination was debounced).
+  const debouncedContext = useDebounced((context ?? '').trim());
   const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
 
   return useQuery({
-    queryKey: ['vouch-search', viewerId, destination, context ?? null],
+    queryKey: ['vouch-search', viewerId, destination, debouncedContext || null],
     enabled: Boolean(viewerId) && destination.length >= 2,
     staleTime: 30_000,
     queryFn: async (): Promise<VouchSearchResult[]> => {
@@ -41,12 +45,16 @@ export const useVouchSearch = (rawDestination: string, context?: string) => {
       const supabase = getSupabase();
       const { data, error } = await supabase.rpc('search_vouches', {
         p_destination: destination,
-        p_context: context?.trim() || null,
+        p_context: debouncedContext || null,
       });
       if (error) {
         // 42883 = function not deployed yet; fail soft so the screen shows
-        // its empty state rather than a crash.
-        if ((error as { code?: string }).code === '42883') return [];
+        // its empty state rather than crashing — but log it, or a missing
+        // migration silently looks like "your circle has nothing".
+        if ((error as { code?: string }).code === '42883') {
+          log.error('search_vouches RPC not found — migration 39 not applied?', error);
+          return [];
+        }
         throw error;
       }
       return (data ?? []) as VouchSearchResult[];

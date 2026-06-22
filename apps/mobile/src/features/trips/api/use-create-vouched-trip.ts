@@ -55,9 +55,12 @@ export const useCreateVouchedTrip = () => {
       }));
       const { error: vouchErr } = await supabase.from('vouches').insert(rows);
       if (vouchErr) {
-        // Trip saved, vouches didn't — surface it rather than a silent
-        // half-save. Caller offers a retry.
-        log.error('vouches insert failed after trip create', vouchErr);
+        // Trip saved, vouches didn't. A trip with zero vouches helps no one
+        // and would orphan in the feed/search — roll it back so a retry
+        // starts clean rather than leaving a dead trip behind. (No multi-
+        // statement transaction over the JS client, so we compensate.)
+        log.error('vouches insert failed after trip create — rolling back trip', vouchErr);
+        await supabase.from('trips').delete().eq('id', tripId);
         throw vouchErr;
       }
 

@@ -80,9 +80,14 @@ describe('VouchInputSchema', () => {
 });
 
 describe('looksSpecific (soft nudge, never a block)', () => {
-  it('flags one-word vouches', () => {
+  it('flags a lone lowercase common word', () => {
     expect(looksSpecific('nice')).toBe(false);
-    expect(looksSpecific('Banjara')).toBe(false);
+    expect(looksSpecific('good')).toBe(false);
+  });
+
+  it('passes a one-word named place or a number (a real vouch, not vague)', () => {
+    expect(looksSpecific('Banjara')).toBe(true); // proper noun
+    expect(looksSpecific('Room 412')).toBe(true); // has a number
   });
 
   it('passes multi-word voiced vouches', () => {

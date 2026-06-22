@@ -56,7 +56,15 @@ insert into public.lists (id, owner_id, title, destination_text, visibility) val
   ('50000000-0000-0000-0000-000000000005','d1000000-0000-0000-0000-000000000005','Jaipur','Jaipur','friends_of_friends')
 on conflict (id) do update set title = excluded.title, destination_text = excluded.destination_text;
 
--- 3. Standalone vouches (no trip_id). ON CONFLICT refreshes text on re-run.
+-- 3. Standalone vouches (no trip_id). First clear any prior seed vouches by
+-- these friends (e.g. orphans from the pre-list seed) so re-running is clean;
+-- vouch_list_items cascades on delete.
+delete from public.vouches where user_id in (
+  'd1000000-0000-0000-0000-000000000001','d1000000-0000-0000-0000-000000000002',
+  'd1000000-0000-0000-0000-000000000003','d1000000-0000-0000-0000-000000000004',
+  'd1000000-0000-0000-0000-000000000005'
+);
+
 insert into public.vouches (id, user_id, text, vouch_type, destination_text, source, visibility) values
   ('60000000-0000-0000-0000-000000000001','d1000000-0000-0000-0000-000000000001','Banjara in Kaza, book the tents not the rooms.','stay','Spiti','user_created','friends_of_friends'),
   ('60000000-0000-0000-0000-000000000002','d1000000-0000-0000-0000-000000000001','Skip Kaza unless you need supplies.','skip','Spiti','user_created','friends_of_friends'),

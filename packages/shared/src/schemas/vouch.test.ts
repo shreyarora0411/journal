@@ -8,8 +8,15 @@ import {
 } from './vouch';
 
 describe('VouchTypeSchema', () => {
-  it('is exactly the 5 composer categories', () => {
-    expect(VouchTypeSchema.options).toEqual(['stay', 'eat_drink', 'do', 'good_to_know', 'skip']);
+  it('is exactly the 6 composer categories (nightlife added)', () => {
+    expect(VouchTypeSchema.options).toEqual([
+      'stay',
+      'eat_drink',
+      'do',
+      'nightlife',
+      'good_to_know',
+      'skip',
+    ]);
   });
 
   it('rejects extraction-era advice types', () => {
@@ -24,6 +31,7 @@ describe('VOUCH_CATEGORIES', () => {
       'stay',
       'eat_drink',
       'do',
+      'nightlife',
       'good_to_know',
       'skip',
     ]);

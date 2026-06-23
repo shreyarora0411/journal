@@ -17,7 +17,14 @@ import { VisibilitySchema } from './index';
 // The 5 composer categories = the v0 vouch_type set. This IS the format
 // constraint that forces specificity: "where to stay? one place, worth it"
 // can't be answered with mush.
-export const VouchTypeSchema = z.enum(['stay', 'eat_drink', 'do', 'good_to_know', 'skip']);
+export const VouchTypeSchema = z.enum([
+  'stay',
+  'eat_drink',
+  'do',
+  'nightlife',
+  'good_to_know',
+  'skip',
+]);
 export type VouchType = z.infer<typeof VouchTypeSchema>;
 
 // Verdict was dropped in v3.1 (the voiced vouch text carries the sentiment —
@@ -50,6 +57,12 @@ export const VOUCH_CATEGORIES: ReadonlyArray<{
     prompt: 'One thing to do?',
     hint: '',
     placeholder: 'Key Monastery at sunrise, before the buses',
+  },
+  {
+    type: 'nightlife',
+    prompt: 'Where to go out?',
+    hint: 'bar, club, late-night',
+    placeholder: 'Bar crawl at Lub’d, quiz night is fun',
   },
   {
     type: 'good_to_know',

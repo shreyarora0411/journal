@@ -395,6 +395,7 @@ const VOUCH_PILL: Record<string, { label: string; fg: string; bg: string }> = {
   stay: { label: 'Stay', fg: '#4E6B45', bg: '#E6EEDF' },
   eat_drink: { label: 'Eat / Drink', fg: '#B23A14', bg: '#FBE6DC' },
   do: { label: 'Do', fg: '#1F5F5C', bg: '#D6E9E7' },
+  nightlife: { label: 'Nightlife', fg: '#4A1F40', bg: '#EFD8E8' },
   good_to_know: { label: 'Good to know', fg: '#2F5E6E', bg: '#DEEBEF' },
   skip: { label: 'Skip', fg: '#7A3A20', bg: '#F2E2D2' },
 };

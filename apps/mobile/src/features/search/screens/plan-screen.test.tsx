@@ -47,7 +47,7 @@ describe('PlanScreen (Loop B trust-led search)', () => {
   it('renders ranked vouches grouped under the source person, in their words', async () => {
     mockSearch.mockReturnValue({ data: [row()], isLoading: false });
     renderWithProviders(<PlanScreen />);
-    fireEvent.changeText(screen.getByLabelText('Destination'), 'Spiti');
+    fireEvent.changeText(screen.getByLabelText('Search'), 'Spiti');
     await waitFor(() => {
       expect(screen.getByText('Rhea')).toBeTruthy();
       expect(screen.getByText('"Banjara, book the tents"')).toBeTruthy();
@@ -59,7 +59,7 @@ describe('PlanScreen (Loop B trust-led search)', () => {
   it('offers Ask-your-circle when the circle has nothing for the destination', async () => {
     mockSearch.mockReturnValue({ data: [], isLoading: false });
     renderWithProviders(<PlanScreen />);
-    fireEvent.changeText(screen.getByLabelText('Destination'), 'Reykjavik');
+    fireEvent.changeText(screen.getByLabelText('Search'), 'Reykjavik');
     await waitFor(() => {
       expect(screen.getByText(/Nothing from your circle yet/)).toBeTruthy();
       expect(screen.getByLabelText('Ask your circle')).toBeTruthy();
@@ -72,7 +72,7 @@ describe('PlanScreen (Loop B trust-led search)', () => {
       isLoading: false,
     });
     renderWithProviders(<PlanScreen />);
-    fireEvent.changeText(screen.getByLabelText('Destination'), 'Spiti');
+    fireEvent.changeText(screen.getByLabelText('Search'), 'Spiti');
     await waitFor(() => {
       expect(screen.getByText('You trust Rhea for stays')).toBeTruthy();
     });

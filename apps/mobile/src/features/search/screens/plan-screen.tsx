@@ -84,13 +84,13 @@ export function PlanScreen() {
     <Page>
       <StatusSpace />
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Text style={styles.headline}>Where are you going?</Text>
+        <Text style={styles.headline}>What are you after?</Text>
 
         <View style={styles.searchPill}>
           <Text style={styles.searchGlyph}>⌕</Text>
           <TextInput
-            accessibilityLabel="Destination"
-            placeholder="Spiti, Bangkok, Goa…"
+            accessibilityLabel="Search"
+            placeholder="A place, a spot, a dish…"
             placeholderTextColor={FAINT}
             value={destination}
             onChangeText={setDestination}
@@ -113,7 +113,8 @@ export function PlanScreen() {
 
         {showHint ? (
           <Text style={styles.hint}>
-            Search a place. You'll see what your circle vouched for — in their words.
+            Search a place, a restaurant, or a dish — see what your circle vouched for, in their
+            words.
           </Text>
         ) : q.isLoading ? (
           <Text style={styles.hint}>Searching…</Text>

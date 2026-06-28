@@ -21,7 +21,15 @@ import { UuidSchema, VisibilitySchema } from './index';
 // late-night venues first-class. Keep the existing five so old rows
 // still parse. Any DB-side migration (check constraint, RPC validate)
 // must extend in lockstep.
-export const CategorySchema = z.enum(['stay', 'food', 'drinks', 'wander', 'buy', 'do', 'nightlife']);
+export const CategorySchema = z.enum([
+  'stay',
+  'food',
+  'drinks',
+  'wander',
+  'buy',
+  'do',
+  'nightlife',
+]);
 export type Category = z.infer<typeof CategorySchema>;
 
 /** The form state captured by AtomicLogForm before submit. */

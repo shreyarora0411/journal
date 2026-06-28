@@ -616,7 +616,8 @@ export function AtomicLogForm() {
                   </Text>
                 ) : (
                   <Text style={styles.newTripHint}>
-                    Will be seeded in {picked.locality ?? picked.region ?? picked.country ?? 'this city'}.
+                    Will be seeded in{' '}
+                    {picked.locality ?? picked.region ?? picked.country ?? 'this city'}.
                   </Text>
                 )}
                 <View style={{ flexDirection: 'row', gap: 8 }}>

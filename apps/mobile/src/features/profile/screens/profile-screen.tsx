@@ -104,7 +104,10 @@ export function ProfileScreen() {
     };
     if (Platform.OS === 'web') {
       // eslint-disable-next-line no-alert
-      if (typeof window !== 'undefined' && window.confirm('Sign out? You can sign back in with the same number.')) {
+      if (
+        typeof window !== 'undefined' &&
+        window.confirm('Sign out? You can sign back in with the same number.')
+      ) {
         void run();
       }
       return;
@@ -215,9 +218,8 @@ export function ProfileScreen() {
                         atomic-vs-trip-venue distinction needs a category
                         filter we can't do in the embedded count. */}
                     <Text style={styles.tripCounts}>
-                      {t.venues_count} venue{t.venues_count === 1 ? '' : 's'} ·{' '}
-                      {t.cities_count} cit{t.cities_count === 1 ? 'y' : 'ies'} ·{' '}
-                      {t.trip_photos_count} photo
+                      {t.venues_count} venue{t.venues_count === 1 ? '' : 's'} · {t.cities_count} cit
+                      {t.cities_count === 1 ? 'y' : 'ies'} · {t.trip_photos_count} photo
                       {t.trip_photos_count === 1 ? '' : 's'}
                     </Text>
                   </View>

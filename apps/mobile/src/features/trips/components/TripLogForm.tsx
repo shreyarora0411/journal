@@ -196,9 +196,7 @@ export function TripLogForm() {
         disabled={createTrip.isPending}
         style={styles.cta}
       >
-        <Text style={styles.ctaLabel}>
-          {createTrip.isPending ? 'Saving…' : 'Save & share ✦'}
-        </Text>
+        <Text style={styles.ctaLabel}>{createTrip.isPending ? 'Saving…' : 'Save & share ✦'}</Text>
       </Pressable>
 
       {savedTripId ? (

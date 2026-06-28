@@ -40,7 +40,9 @@ export const useListVouches = (listId: string | null | undefined) => {
         throw error;
       }
       type Row = { vouch: ListVouch | null };
-      return ((data ?? []) as unknown as Row[]).map((r) => r.vouch).filter((v): v is ListVouch => v != null);
+      return ((data ?? []) as unknown as Row[])
+        .map((r) => r.vouch)
+        .filter((v): v is ListVouch => v != null);
     },
   });
 };

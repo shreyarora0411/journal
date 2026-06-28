@@ -286,7 +286,6 @@ function ConnectorCard({
 }
 
 // Avoid the unused-import lint by using Face elsewhere (kept for visual parity).
-// biome-ignore lint/correctness/noUnusedVariables: Face is reserved for future single-face callouts inside Circle.
 const _faceReserved = Face;
 
 const styles = StyleSheet.create({

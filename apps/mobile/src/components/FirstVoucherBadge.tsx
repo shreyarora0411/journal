@@ -24,8 +24,8 @@ export function FirstVoucherBadge({ voucherName, placeName, monthsAhead }: Props
     <View style={styles.wrap}>
       <Text style={styles.glyph}>✦</Text>
       <Text style={styles.label}>
-        <Text style={styles.name}>{voucherName}</Text> was the first in your network to vouch
-        for <Text style={styles.name}>{placeName}</Text> — {monthsAhead} month
+        <Text style={styles.name}>{voucherName}</Text> was the first in your network to vouch for{' '}
+        <Text style={styles.name}>{placeName}</Text> — {monthsAhead} month
         {monthsAhead === 1 ? '' : 's'} before anyone else
       </Text>
     </View>

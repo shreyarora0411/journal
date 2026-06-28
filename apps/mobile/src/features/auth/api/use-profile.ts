@@ -51,8 +51,6 @@ const fetchSelf = async (userId: string): Promise<Profile | null> => {
   if (error && !FUNCTION_MISSING_CODES.has(error.code ?? '')) throw error;
 
   if (!warnedMissingMe) {
-    // biome-ignore lint/suspicious/noConsole: surfaced once so the
-    // migration-not-pushed state is obvious in dev.
     console.warn(
       '[lore] public.me() not found on the database. Apply migration 10 ' +
         '(users_rls_tighten). Falling back to legacy SELECT.',

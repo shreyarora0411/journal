@@ -4,7 +4,15 @@ import { log } from '@/lib/log';
 import { VOUCH_CATEGORIES, type VouchType, looksSpecific } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useCreateVouch } from '../index';
 
 const CORAL = '#FF4D2E';
@@ -33,7 +41,11 @@ export function TripComposerScreen() {
   const router = useRouter();
   const toast = useToast();
   const create = useCreateVouch();
-  const params = useLocalSearchParams<{ listId?: string; listTitle?: string; destination?: string }>();
+  const params = useLocalSearchParams<{
+    listId?: string;
+    listTitle?: string;
+    destination?: string;
+  }>();
 
   // The container, chosen once. If launched from a list, it's fixed.
   const lockedListId = typeof params.listId === 'string' ? params.listId : null;
@@ -57,12 +69,16 @@ export function TripComposerScreen() {
 
   const category = VOUCH_CATEGORIES.find((c) => c.type === vouchType) ?? null;
   const listChosen = lockedListId != null || listName.trim().length > 0;
-  const canSave = listChosen && Boolean(vouchType) && text.trim().length > 0 && destination.trim().length > 0;
+  const canSave =
+    listChosen && Boolean(vouchType) && text.trim().length > 0 && destination.trim().length > 0;
   const nudge = text.trim().length > 0 && !looksSpecific(text);
 
   const onSaveAndNext = async () => {
     if (!canSave || !vouchType) {
-      toast.show({ message: 'Pick a list, a category, write the vouch, add where.', variant: 'error' });
+      toast.show({
+        message: 'Pick a list, a category, write the vouch, add where.',
+        variant: 'error',
+      });
       return;
     }
     try {
@@ -103,7 +119,9 @@ export function TripComposerScreen() {
             </View>
           ) : null}
         </View>
-        <Text style={styles.sub}>Drop as many as you like into one list. They stay in their own voice.</Text>
+        <Text style={styles.sub}>
+          Drop as many as you like into one list. They stay in their own voice.
+        </Text>
 
         {/* The list — chosen once. Locked when launched from a list. */}
         <View style={styles.field}>
@@ -154,7 +172,9 @@ export function TripComposerScreen() {
         {category ? (
           <>
             <View style={styles.field}>
-              <Eyebrow>{category.hint ? `${category.prompt}  ·  ${category.hint}` : category.prompt}</Eyebrow>
+              <Eyebrow>
+                {category.hint ? `${category.prompt}  ·  ${category.hint}` : category.prompt}
+              </Eyebrow>
               <View style={styles.voiceCard}>
                 <TextInput
                   accessibilityLabel="The vouch"
@@ -230,7 +250,12 @@ const styles = StyleSheet.create({
     color: INK,
     letterSpacing: -0.6,
   },
-  bankChip: { backgroundColor: CORAL, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
+  bankChip: {
+    backgroundColor: CORAL,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
   bankChipLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: '#FFFFFF' },
   sub: { fontFamily: 'DMSans_400Regular', fontSize: 14, lineHeight: 20, color: MUTE, marginTop: 6 },
   field: { marginTop: 22 },

@@ -222,10 +222,10 @@ export const placeDetails = async (
     // then `administrative_area_level_2` (district). Never fall back to
     // admin_level_1 — that's the state (e.g. "Haryana"), not the city.
     const locality =
-      components.find((c) => c.types?.includes('locality'))?.longText
-      ?? components.find((c) => c.types?.includes('postal_town'))?.longText
-      ?? components.find((c) => c.types?.includes('administrative_area_level_2'))?.longText
-      ?? null;
+      components.find((c) => c.types?.includes('locality'))?.longText ??
+      components.find((c) => c.types?.includes('postal_town'))?.longText ??
+      components.find((c) => c.types?.includes('administrative_area_level_2'))?.longText ??
+      null;
 
     return {
       google_place_id: json.id,

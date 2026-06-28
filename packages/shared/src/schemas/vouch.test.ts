@@ -63,7 +63,11 @@ describe('VouchComposerSchema (single vouch → list)', () => {
 
   it('requires a destination', () => {
     expect(() =>
-      VouchComposerSchema.parse({ vouch_type: 'do', text: 'Key Monastery at sunrise', destination_text: '  ' }),
+      VouchComposerSchema.parse({
+        vouch_type: 'do',
+        text: 'Key Monastery at sunrise',
+        destination_text: '  ',
+      }),
     ).toThrow();
   });
 

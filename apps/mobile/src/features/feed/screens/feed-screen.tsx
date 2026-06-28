@@ -1,18 +1,18 @@
 import { Face, Page, StatusSpace } from '@/components';
 import { useFeed } from '@/features/feed';
-import { useVouchFeed, type FeedVouch } from '../api/use-vouch-feed';
-import { useAtomicLogFeed, type AtomicLogRow } from '@/features/trips';
+import { type AtomicLogRow, useAtomicLogFeed } from '@/features/trips';
 import { getPhotoUrl } from '@/features/trips/lib/photo-url';
 import { useWishlistRows } from '@/features/wishlist';
 import { formatVouchDate } from '@/lib/format-vouch-date';
 import { tryGooglePlacesPhoto } from '@/lib/hero-photo';
 import { log } from '@/lib/log';
 import { useQuery } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { type FeedVouch, useVouchFeed } from '../api/use-vouch-feed';
 
 const CORAL = '#FF4D2E';
 const INK = '#1A1410';
@@ -21,15 +21,7 @@ const FAINT = '#B7AE9F';
 const HAIR = '#EFEAE2';
 const CARD = '#FFFDF9';
 
-type FilterKey =
-  | 'all'
-  | 'food'
-  | 'drinks'
-  | 'nightlife'
-  | 'stay'
-  | 'wander'
-  | 'do'
-  | 'buy';
+type FilterKey = 'all' | 'food' | 'drinks' | 'nightlife' | 'stay' | 'wander' | 'do' | 'buy';
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'food', label: 'Food' },
@@ -44,28 +36,28 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 // Pill colors per category — match the reference's soft swatches so the
 // card's category badge reads at a glance.
 const CAT_PILL: Record<string, { fg: string; bg: string; label: string }> = {
-  food:      { fg: '#B23A14', bg: '#FBE6DC', label: 'Food' },
-  drinks:    { fg: '#7B3F5C', bg: '#F4E3EA', label: 'Drinks' },
+  food: { fg: '#B23A14', bg: '#FBE6DC', label: 'Food' },
+  drinks: { fg: '#7B3F5C', bg: '#F4E3EA', label: 'Drinks' },
   nightlife: { fg: '#4A1F40', bg: '#EFD8E8', label: 'Nightlife' },
-  stay:      { fg: '#4E6B45', bg: '#E6EEDF', label: 'Stays' },
-  wander:    { fg: '#2F5E6E', bg: '#DEEBEF', label: 'Wander' },
-  do:        { fg: '#1F5F5C', bg: '#D6E9E7', label: 'Do' },
-  buy:       { fg: '#7A3A20', bg: '#F2E2D2', label: 'Buy' },
+  stay: { fg: '#4E6B45', bg: '#E6EEDF', label: 'Stays' },
+  wander: { fg: '#2F5E6E', bg: '#DEEBEF', label: 'Wander' },
+  do: { fg: '#1F5F5C', bg: '#D6E9E7', label: 'Do' },
+  buy: { fg: '#7A3A20', bg: '#F2E2D2', label: 'Buy' },
 };
 
 // Duotone "photo" gradient per category — we don't ship real photos for
 // every venue, so the cover is a category-keyed gradient block. Matches
 // the reference's photo_grad concept.
 const CAT_GRAD: Record<string, [string, string]> = {
-  food:      ['#F2A65A', '#7A2E12'],
-  drinks:    ['#C77B9A', '#2B1726'],
+  food: ['#F2A65A', '#7A2E12'],
+  drinks: ['#C77B9A', '#2B1726'],
   // Nightlife — moodier, late-night purple-to-black gradient.
   nightlife: ['#8B3A6F', '#1A0E16'],
-  stay:      ['#9DBE8A', '#2E3D2A'],
-  wander:    ['#F5B05C', '#6E2A5A'],
+  stay: ['#9DBE8A', '#2E3D2A'],
+  wander: ['#F5B05C', '#6E2A5A'],
   // Do — active/outdoor; teal-to-deep-sea gradient.
-  do:        ['#5DA8A4', '#1F3F46'],
-  buy:       ['#E8A765', '#7A3A20'],
+  do: ['#5DA8A4', '#1F3F46'],
+  buy: ['#E8A765', '#7A3A20'],
 };
 
 const DEFAULT_GRAD: [string, string] = ['#D9A441', '#8A5A1B'];
@@ -110,7 +102,20 @@ function useVenuePhoto(storagePath?: string | null, googlePlaceId?: string | nul
 
 function tripRange(start?: string | null, end?: string | null): string | null {
   if (!start) return null;
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MONTHS = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   const a = new Date(start);
   const b = end ? new Date(end) : null;
   const aLabel = `${MONTHS[a.getMonth()]} ${a.getDate()}`;
@@ -203,9 +208,7 @@ export function FeedScreen() {
               style={styles.savedCounter}
             >
               <Text style={[styles.bookmarkGlyph, savedCount > 0 && { color: CORAL }]}>🔖</Text>
-              <Text
-                style={[styles.savedCount, savedCount > 0 && { color: CORAL }]}
-              >
+              <Text style={[styles.savedCount, savedCount > 0 && { color: CORAL }]}>
                 {savedCount}
               </Text>
             </Pressable>
@@ -237,10 +240,7 @@ export function FeedScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Filter: ${f.label}`}
               onPress={() => setFilter(f.key)}
-              style={[
-                styles.filterPill,
-                on ? styles.filterPillOn : styles.filterPillOff,
-              ]}
+              style={[styles.filterPill, on ? styles.filterPillOn : styles.filterPillOff]}
             >
               <Text style={[styles.filterLabel, on ? styles.filterLabelOn : styles.filterLabelOff]}>
                 {f.label}
@@ -420,7 +420,18 @@ function VouchFeedCard({ vouch }: { vouch: FeedVouch }) {
           <Text style={styles.friendName} numberOfLines={1}>
             {who}
           </Text>
-          <View style={[styles.catPill, { backgroundColor: pill.bg, position: 'relative', top: 0, left: 0, marginLeft: 'auto' }]}>
+          <View
+            style={[
+              styles.catPill,
+              {
+                backgroundColor: pill.bg,
+                position: 'relative',
+                top: 0,
+                left: 0,
+                marginLeft: 'auto',
+              },
+            ]}
+          >
             <Text style={[styles.catPillLabel, { color: pill.fg }]}>{pill.label}</Text>
           </View>
         </View>
@@ -505,9 +516,7 @@ function TipCard({
           {(() => {
             const d = formatVouchDate(new Date(row.created_at));
             return (
-              <Text
-                style={[styles.friendWhen, d.freshness === 'stale' && styles.friendWhenStale]}
-              >
+              <Text style={[styles.friendWhen, d.freshness === 'stale' && styles.friendWhenStale]}>
                 {d.display}
               </Text>
             );
@@ -563,13 +572,7 @@ function DetailSheet({ row, onClose }: { row: AtomicLogRow | null; onClose: () =
   const cityLabel = cityName && country ? `${cityName}, ${country}` : cityName;
 
   return (
-    <Modal
-      visible
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
+    <Modal visible transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.sheetBackdrop} onPress={onClose} />
       <View style={styles.sheet}>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -627,12 +630,8 @@ function DetailSheet({ row, onClose }: { row: AtomicLogRow | null; onClose: () =
               </View>
             </View>
 
-            {row.one_line ? (
-              <Text style={styles.sheetQuote}>“{row.one_line}”</Text>
-            ) : null}
-            {row.prose ? (
-              <Text style={styles.sheetProse}>{row.prose}</Text>
-            ) : null}
+            {row.one_line ? <Text style={styles.sheetQuote}>“{row.one_line}”</Text> : null}
+            {row.prose ? <Text style={styles.sheetProse}>{row.prose}</Text> : null}
           </View>
         </ScrollView>
       </View>

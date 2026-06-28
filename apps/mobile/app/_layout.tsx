@@ -6,16 +6,16 @@ import { initSentry } from '@/lib/sentry';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { theme } from '@/theme';
 import {
-  Fraunces_400Regular,
-  Fraunces_400Regular_Italic,
-  Fraunces_500Medium,
-} from '@expo-google-fonts/fraunces';
-import {
   DMSans_400Regular,
   DMSans_500Medium,
   DMSans_600SemiBold,
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
+import {
+  Fraunces_400Regular,
+  Fraunces_400Regular_Italic,
+  Fraunces_500Medium,
+} from '@expo-google-fonts/fraunces';
 import { Geist_400Regular, Geist_500Medium } from '@expo-google-fonts/geist';
 import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';

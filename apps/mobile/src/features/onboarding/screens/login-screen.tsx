@@ -1,8 +1,8 @@
-import { fetchSelf } from '@/features/auth/api/use-profile';
 import { useAuthStore, useStartSession } from '@/features/auth';
+import { fetchSelf } from '@/features/auth/api/use-profile';
 import { useToast } from '@/hooks/use-toast';
-import { getSupabase } from '@/lib/supabase';
 import { log } from '@/lib/log';
+import { getSupabase } from '@/lib/supabase';
 import { isLikelyValidPhone } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';

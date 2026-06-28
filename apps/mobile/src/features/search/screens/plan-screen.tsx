@@ -164,7 +164,10 @@ export function PlanScreen() {
                         vouchId: r.vouch_id,
                         destinationText: r.destination_text,
                       });
-                      toast.show({ message: `Saved to your ${r.destination_text} plan.`, variant: 'success' });
+                      toast.show({
+                        message: `Saved to your ${r.destination_text} plan.`,
+                        variant: 'success',
+                      });
                     } catch (err) {
                       log.error('save vouch failed', err);
                       toast.show({ message: 'Could not save. Try again.', variant: 'error' });
@@ -231,7 +234,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   searchGlyph: { fontSize: 18, color: MUTE },
-  searchInput: { flex: 1, fontFamily: 'DMSans_400Regular', fontSize: 15, color: INK, paddingVertical: 2 },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 15,
+    color: INK,
+    paddingVertical: 2,
+  },
   contextInput: {
     marginTop: 10,
     backgroundColor: '#FFFFFF',
@@ -259,8 +268,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
   },
-  emptyTitle: { fontFamily: 'PlayfairDisplay_500Medium', fontSize: 22, color: INK, letterSpacing: -0.4 },
-  emptyBody: { fontFamily: 'DMSans_400Regular', fontSize: 13, lineHeight: 20, color: MUTE, marginTop: 8 },
+  emptyTitle: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 22,
+    color: INK,
+    letterSpacing: -0.4,
+  },
+  emptyBody: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: MUTE,
+    marginTop: 8,
+  },
   askBtn: {
     marginTop: 16,
     backgroundColor: CORAL,

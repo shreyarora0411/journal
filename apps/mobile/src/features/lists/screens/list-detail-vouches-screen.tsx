@@ -1,12 +1,12 @@
-import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { Face, Page, StatusSpace } from '@/components';
 import { useAuthStore } from '@/features/auth';
 import { log } from '@/lib/log';
 import type { VouchType } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useList } from '../api/use-lists';
 import { type ListVouch, useListVouches } from '../api/use-list-vouches';
+import { useList } from '../api/use-lists';
 
 const INK = '#1A1410';
 const MUTE = '#7A716A';
@@ -72,7 +72,11 @@ export function ListDetailScreen() {
     });
   }, [vouches]);
 
-  const list = listQ.data as { title?: string; owner_id?: string; destination_text?: string } | null;
+  const list = listQ.data as {
+    title?: string;
+    owner_id?: string;
+    destination_text?: string;
+  } | null;
   const isMine = meId === list?.owner_id;
 
   const onAddVouch = () =>
@@ -89,7 +93,12 @@ export function ListDetailScreen() {
     <Page>
       <StatusSpace />
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          onPress={() => router.back()}
+          hitSlop={8}
+        >
           <Text style={styles.back}>‹ Back</Text>
         </Pressable>
 
@@ -148,10 +157,16 @@ export function ListDetailScreen() {
                               <View key={v.id} style={styles.vouchCard}>
                                 <Text style={styles.vouchText}>"{v.text}"</Text>
                                 <View style={styles.byRow}>
-                                  <Face uri={v.author?.avatar_url ?? null} initials={who.slice(0, 2).toUpperCase()} size="sm" />
+                                  <Face
+                                    uri={v.author?.avatar_url ?? null}
+                                    initials={who.slice(0, 2).toUpperCase()}
+                                    size="sm"
+                                  />
                                   <Text style={styles.byWho}>
                                     {who}
-                                    {!g.multiDest && v.destination_text ? ` · ${v.destination_text}` : ''}
+                                    {!g.multiDest && v.destination_text
+                                      ? ` · ${v.destination_text}`
+                                      : ''}
                                   </Text>
                                 </View>
                               </View>
@@ -204,7 +219,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   emptyTitle: { fontFamily: 'PlayfairDisplay_500Medium', fontSize: 20, color: INK },
-  emptyBody: { fontFamily: 'DMSans_400Regular', fontSize: 13, lineHeight: 20, color: MUTE, marginTop: 6 },
+  emptyBody: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: MUTE,
+    marginTop: 6,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,7 +249,13 @@ const styles = StyleSheet.create({
     color: MUTE,
     marginTop: 2,
   },
-  vouchCard: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: HAIR, padding: 14 },
+  vouchCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    padding: 14,
+  },
   vouchText: {
     fontFamily: 'PlayfairDisplay_500Medium_Italic',
     fontSize: 17,

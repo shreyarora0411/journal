@@ -81,11 +81,7 @@ export function SearchScreen() {
           </Eyebrow>
           <View style={{ gap: 8, marginTop: 12 }}>
             {results.map((r) => {
-              const area = [
-                r.kind.toUpperCase(),
-                r.country_name,
-                r.trip_title,
-              ]
+              const area = [r.kind.toUpperCase(), r.country_name, r.trip_title]
                 .filter(Boolean)
                 .join(' · ');
               // Search RPC returns trip_user_id but not the voucher's

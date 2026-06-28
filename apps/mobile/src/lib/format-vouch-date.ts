@@ -64,7 +64,8 @@ function monthsBetween(now: Date, then: Date): number {
 export function formatVouchDate(date: Date, relativeTo: Date = new Date()): VouchDateLabel {
   const months = monthsBetween(relativeTo, date);
   if (months < 1) return { display: 'This month', freshness: 'recent' };
-  if (months < 3) return { display: `${months} month${months === 1 ? '' : 's'} ago`, freshness: 'recent' };
+  if (months < 3)
+    return { display: `${months} month${months === 1 ? '' : 's'} ago`, freshness: 'recent' };
   const monthLabel = `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
   if (months < 12) return { display: monthLabel, freshness: 'current' };
   return { display: monthLabel, freshness: 'stale' };

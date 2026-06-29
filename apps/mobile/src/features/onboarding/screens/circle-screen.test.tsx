@@ -2,8 +2,11 @@ import { fireEvent, renderWithProviders, screen } from '@/test/render';
 import { CircleScreen } from './circle-screen';
 
 const mockReplace = jest.fn();
+const mockBack = jest.fn();
+let mockSearchParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: mockBack }),
+  useLocalSearchParams: () => mockSearchParams,
 }));
 
 const mockShow = jest.fn();
@@ -32,6 +35,8 @@ jest.mock('@/features/auth', () => ({
 
 beforeEach(() => {
   mockReplace.mockReset();
+  mockBack.mockReset();
+  mockSearchParams = {};
   mockShow.mockReset();
   mockMatched.mockReset();
   mockMatched.mockReturnValue({ data: [], refetch: jest.fn() });
@@ -98,5 +103,18 @@ describe('CircleScreen', () => {
       expect.objectContaining({ onboarding_completed: true }),
     );
     expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
+  });
+
+  it('in re-entry mode, shows the Find friends eyebrow and does NOT re-stamp onboarding', async () => {
+    mockSearchParams = { reentry: '1' };
+    renderWithProviders(<CircleScreen />);
+    expect(screen.getByText('FIND FRIENDS')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Continue'));
+    await new Promise((r) => setTimeout(r, 0));
+    // Re-entry must not touch onboarding completion or hard-route to the feed —
+    // it just pops back to wherever the user came from.
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockBack).toHaveBeenCalled();
   });
 });

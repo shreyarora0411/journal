@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/features/auth';
 import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
+import type { VouchType } from '@journal/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export type AskRequest = {
@@ -10,7 +11,11 @@ export type AskRequest = {
   request_text: string;
   status: 'open' | 'closed';
   created_at: string;
-  requester: { display_name: string | null; handle: string | null; avatar_url: string | null } | null;
+  requester: {
+    display_name: string | null;
+    handle: string | null;
+    avatar_url: string | null;
+  } | null;
 };
 
 export type AskResponse = {
@@ -21,7 +26,25 @@ export type AskResponse = {
   vouch_id: string | null;
   trip_id: string | null;
   created_at: string;
-  responder: { display_name: string | null; handle: string | null; avatar_url: string | null } | null;
+  responder: {
+    display_name: string | null;
+    handle: string | null;
+    avatar_url: string | null;
+  } | null;
+  // The vouch the responder attached, embedded via the vouch_id FK. Null for a
+  // free-text-only reply, or if the requester can't see it under the vouches
+  // circle-read policy — so the thread must fall back to free text gracefully.
+  vouch: { id: string; text: string; vouch_type: VouchType; destination_text: string } | null;
+};
+
+/** A vouch the current user authored — the pool a responder draws from when
+ *  attaching one of their own vouches to an Ask reply. */
+export type MyVouch = {
+  id: string;
+  text: string;
+  vouch_type: VouchType;
+  destination_text: string;
+  created_at: string;
 };
 
 const REQ_SELECT =
@@ -92,7 +115,8 @@ export const useRequestResponses = (requestId: string | null) => {
         .from('recommendation_responses')
         .select(
           'id, request_id, responder_user_id, text, vouch_id, trip_id, created_at, ' +
-            'responder:responder_user_id(display_name, handle, avatar_url)',
+            'responder:responder_user_id(display_name, handle, avatar_url), ' +
+            'vouch:vouch_id(id, text, vouch_type, destination_text)',
         )
         .eq('request_id', requestId)
         .order('created_at', { ascending: true });
@@ -101,6 +125,32 @@ export const useRequestResponses = (requestId: string | null) => {
         throw error;
       }
       return (data ?? []) as unknown as AskResponse[];
+    },
+  });
+};
+
+/** The current user's own vouches, newest first — the set a responder can
+ *  attach to an Ask reply. Small per-user; the screen filters it to the
+ *  request's destination before showing the picker. */
+export const useMyVouches = () => {
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  return useQuery({
+    queryKey: ['ask', 'my-vouches', userId],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<MyVouch[]> => {
+      if (!userId) return [];
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from('vouches')
+        .select('id, text, vouch_type, destination_text, created_at')
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+      if (error) {
+        if ((error as { code?: string }).code === '42P01') return [];
+        throw error;
+      }
+      return (data ?? []) as unknown as MyVouch[];
     },
   });
 };
@@ -135,7 +185,12 @@ export const useRespondToRequest = () => {
   const qc = useQueryClient();
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
   return useMutation({
-    mutationFn: async (vars: { requestId: string; text?: string; vouchId?: string; tripId?: string }) => {
+    mutationFn: async (vars: {
+      requestId: string;
+      text?: string;
+      vouchId?: string;
+      tripId?: string;
+    }) => {
       if (!userId) throw new Error('Not signed in');
       const supabase = getSupabase();
       const { error } = await supabase.from('recommendation_responses').insert({

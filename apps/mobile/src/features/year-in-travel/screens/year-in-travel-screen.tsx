@@ -1,6 +1,6 @@
 import { Avatar, Box, Button, Text } from '@/components';
 import { useAuthStore } from '@/features/auth';
-import { buildWhatsAppLink } from '@/features/invite';
+import { appendInviteLink, buildWhatsAppLink } from '@/features/invite';
 import { useToast } from '@/hooks/use-toast';
 import { getSupabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -144,7 +144,9 @@ export default function YearInTravelScreen() {
   const onShare = async () => {
     const r = recap.data;
     if (!r) return;
-    const text = `My ${r.year} in travel — ${r.tripCount} trips, ${r.cityCount} cities${r.topDestination ? `, most asked about ${r.topDestination}` : ''}. On lore.`;
+    const text = appendInviteLink(
+      `My ${r.year} in travel — ${r.tripCount} trips, ${r.cityCount} cities${r.topDestination ? `, most asked about ${r.topDestination}` : ''}. On lore.`,
+    );
     try {
       await Linking.openURL(buildWhatsAppLink(text));
     } catch {

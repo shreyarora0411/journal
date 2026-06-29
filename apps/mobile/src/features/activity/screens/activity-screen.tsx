@@ -1,22 +1,21 @@
 import { Avatar, Box, Text } from '@/components';
-import { Link } from 'expo-router';
+import { useAuthStore } from '@/features/auth';
+import { buildPersonalInviteText } from '@/features/invite';
+import { Link, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Linking, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { type ActivityEvent, useActivity } from '../api/use-activity';
 
-const INVITE_TEXT =
-  "i'm on lore — friends-only travel notes, no reviews, no strangers. try it: https://lore.app";
-
-const inviteViaWhatsApp = async () => {
-  const url = `whatsapp://send?text=${encodeURIComponent(INVITE_TEXT)}`;
+const inviteViaWhatsApp = async (text: string) => {
+  const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
   const can = await Linking.canOpenURL(url).catch(() => false);
   if (can) {
     await Linking.openURL(url);
     return;
   }
   // Fallback to the share-only universal URL when WhatsApp isn't installed.
-  await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(INVITE_TEXT)}`).catch(() => null);
+  await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`).catch(() => null);
 };
 
 const bucketLabel = (b: ActivityEvent['bucket']): string => {
@@ -35,6 +34,16 @@ const verbLine = (e: ActivityEvent) => {
 
 export function ActivityScreen() {
   const q = useActivity();
+  const router = useRouter();
+  const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
+
+  // Personal invite carries ?id=<me> so installed friends / QR scans land
+  // already following the inviter. Falls back to link-free copy when signed out.
+  const inviteText = useMemo(() => buildPersonalInviteText(viewerId), [viewerId]);
+
+  // Re-enter the build-your-circle flow post-onboarding (contact matching lives
+  // there). `reentry=1` tells the screen not to re-stamp onboarding.
+  const goFindFriends = () => router.push('/(auth)/circle?reentry=1');
 
   const groups = useMemo(() => {
     const out: Record<ActivityEvent['bucket'], ActivityEvent[]> = {
@@ -52,9 +61,24 @@ export function ActivityScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
-        <Text variant="headline" marginBottom="m">
-          Activity
-        </Text>
+        <Box
+          flexDirection="row"
+          alignItems="center"
+          justifyContent="space-between"
+          marginBottom="m"
+        >
+          <Text variant="headline">Activity</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Find friends"
+            onPress={goFindFriends}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text variant="caption" style={{ color: '#FF4D2E' }}>
+              Find friends →
+            </Text>
+          </Pressable>
+        </Box>
 
         {q.isLoading ? (
           <Text variant="caption">Loading…</Text>
@@ -65,10 +89,19 @@ export function ActivityScreen() {
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Invite a friend via WhatsApp"
-              onPress={inviteViaWhatsApp}
+              accessibilityLabel="Build your circle"
+              onPress={goFindFriends}
             >
               <Text variant="caption" marginTop="m" style={{ color: '#FF4D2E' }}>
+                Build your circle →
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Invite a friend via WhatsApp"
+              onPress={() => inviteViaWhatsApp(inviteText)}
+            >
+              <Text variant="caption" marginTop="s" style={{ color: '#FF4D2E' }}>
                 Invite a friend →
               </Text>
             </Pressable>

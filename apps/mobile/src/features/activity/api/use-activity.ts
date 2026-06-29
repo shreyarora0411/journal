@@ -53,6 +53,23 @@ export const useActivity = () => {
       if (!viewerId) return [];
       const supabase = getSupabase();
 
+      // The viewer's CIRCLE — accepted follows of the viewer. The follows
+      // table is world-readable (no circle RLS gate), so any event we derive
+      // from it must be filtered to this set client-side; otherwise strangers'
+      // follow events leak into the feed, breaking the "no strangers" promise.
+      // Mirrors the accepted-follow scoping the rest of the app uses.
+      const circleRes = await supabase
+        .from('follows')
+        .select('followed_id')
+        .eq('follower_id', viewerId)
+        .eq('status', 'accepted');
+      if (circleRes.error) throw circleRes.error;
+      const circleIds = new Set(
+        ((circleRes.data ?? []) as unknown as { followed_id: string }[]).map((r) => r.followed_id),
+      );
+      // The viewer is always in their own circle.
+      circleIds.add(viewerId);
+
       // Recent friend trips (RLS-filtered).
       const tripsRes = await supabase
         .from('trips')
@@ -65,15 +82,22 @@ export const useActivity = () => {
         .limit(40);
       if (tripsRes.error) throw tripsRes.error;
 
-      // Recent follows TO friends I can see (anyone authenticated can read follows).
-      const followsRes = await supabase
-        .from('follows')
-        .select(
-          'created_at, follower_id, followed_id, follower:follower_id(id, display_name, handle, avatar_url), followed:followed_id(id, display_name, handle)',
-        )
-        .neq('follower_id', viewerId)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      // Recent follow events — but ONLY where the follower is in the viewer's
+      // circle. The follows table is world-readable, so without this gate the
+      // feed would surface arbitrary strangers' follow events. We scope the
+      // query to circle followers (the row author is `follower`, line below)
+      // and defensively re-filter the result against `circleIds`.
+      const circleActorIds = [...circleIds].filter((id) => id !== viewerId);
+      const followsRes = circleActorIds.length
+        ? await supabase
+            .from('follows')
+            .select(
+              'created_at, follower_id, followed_id, follower:follower_id(id, display_name, handle, avatar_url), followed:followed_id(id, display_name, handle)',
+            )
+            .in('follower_id', circleActorIds)
+            .order('created_at', { ascending: false })
+            .limit(20)
+        : { data: [], error: null };
 
       // Lists table only exists after migration 0005 — tolerate the 42P01 error
       // ("relation does not exist") so the screen works mid-rollout.
@@ -113,11 +137,16 @@ export const useActivity = () => {
 
       type FollowRow = {
         created_at: string;
+        follower_id: string;
         follower: ActivityEvent['user'] | null;
         followed: { id: string; display_name: string | null; handle: string | null } | null;
       };
       for (const f of (followsRes.data ?? []) as unknown as FollowRow[]) {
         if (!f.follower || !f.followed) continue;
+        // Circle gate: only follow events authored by someone in the viewer's
+        // accepted circle. Defends against any world-readable rows that slip
+        // past the query-level `.in(...)` filter (e.g. stale cache).
+        if (!circleIds.has(f.follower_id)) continue;
         events.push({
           id: `follow-${f.follower.id}-${f.followed.id}-${f.created_at}`,
           kind: 'follow_started',

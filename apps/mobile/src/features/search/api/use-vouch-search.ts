@@ -23,6 +23,18 @@ export type VouchSearchResult = {
   context_match: boolean;
   score: number;
   created_at: string;
+  /** Author is a friend-of-a-friend (two accepted hops), not a direct follow.
+   *  The product's weak-tie discovery supply — surfaced, but read differently
+   *  from a direct friend on the card (migration 49). */
+  is_fof: boolean;
+  /** Resolved canonical venue (LEFT JOIN canonical_places on vch.place_id).
+   *  Null until the background place-resolution links this vouch to a real
+   *  Google place. When set, "Open in Maps" can drop an exact pin via
+   *  query_place_id instead of the lead-phrase heuristic. */
+  place_google_id: string | null;
+  place_lat: number | null;
+  place_lng: number | null;
+  place_name: string | null;
 };
 
 /**
@@ -62,7 +74,11 @@ export const useVouchSearch = (rawDestination: string, context?: string) => {
   });
 };
 
-/** Human-readable ranking reason (v3 §7 — never a score). */
+/** Human-readable ranking reason (v3 §7 — never a score). Distinguishes a
+ *  direct friend ("you trust {who}" / "{who} vouched") from a friend-of-a-
+ *  friend ("{who} — a friend of a friend"), the weak-tie discovery supply.
+ *  Trust beats FoF: a direct-trust author is phrased as a friend even if they
+ *  also happen to appear in the FoF set. */
 export const vouchReason = (r: VouchSearchResult): string => {
   if (r.is_own) return 'Your vouch';
   const who = r.author_name ?? r.author_handle ?? 'Someone';
@@ -71,6 +87,18 @@ export const vouchReason = (r: VouchSearchResult): string => {
       r.vouch_type === 'stay' ? 'stays' : r.vouch_type === 'eat_drink' ? 'food' : 'local know-how';
     return `You trust ${who} for ${ctx}`;
   }
+  if (r.is_trusted) {
+    return r.list_title ? `${who} vouched in ${r.list_title}` : `${who} vouched`;
+  }
+  if (r.is_fof) return `${who} — a friend of a friend`;
   if (r.list_title) return `${who} vouched in ${r.list_title}`;
   return `${who} vouched for this`;
+};
+
+/** Short tier label for the card/header badge — direct circle vs the wider
+ *  friend-of-a-friend network. Returns null when there's nothing to flag
+ *  (your own vouch, or a direct friend with no special cue needed). */
+export const vouchTier = (r: VouchSearchResult): 'fof' | null => {
+  if (r.is_own || r.is_trusted) return null;
+  return r.is_fof ? 'fof' : null;
 };

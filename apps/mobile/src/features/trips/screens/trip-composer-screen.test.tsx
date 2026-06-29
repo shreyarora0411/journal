@@ -32,73 +32,88 @@ const fillVouch = (category: string, vouch: string, dest: string) => {
   fireEvent.changeText(screen.getByLabelText('Destination'), dest);
 };
 
-describe('TripComposerScreen (v3.1 batch composer)', () => {
-  it('renders the list field and all six category chips incl Nightlife', () => {
-    renderWithProviders(<TripComposerScreen />);
-    expect(screen.getByText('TO WHICH LIST?')).toBeTruthy();
-    expect(screen.getByLabelText('Where to stay?')).toBeTruthy();
-    expect(screen.getByLabelText('Where to go out?')).toBeTruthy(); // nightlife
-    expect(screen.getByLabelText('Anything to skip?')).toBeTruthy();
-  });
+describe('TripComposerScreen (fast door + curate)', () => {
+  describe('FAST mode (fresh Add tab, no listId)', () => {
+    it('renders the category chips and NO "which list?" field', () => {
+      renderWithProviders(<TripComposerScreen />);
+      // The list wall is gone in fast mode — no list name input, no eyebrow.
+      expect(screen.queryByLabelText('List name')).toBeNull();
+      expect(screen.queryByText('TO WHICH LIST?')).toBeNull();
+      // Category chips still render.
+      expect(screen.getByLabelText('Where to stay?')).toBeTruthy();
+      expect(screen.getByLabelText('Where to go out?')).toBeTruthy(); // nightlife
+      expect(screen.getByLabelText('Anything to skip?')).toBeTruthy();
+    });
 
-  it('does not save until list, category, text, and destination are present', () => {
-    renderWithProviders(<TripComposerScreen />);
-    // list empty → even with a category+text it won't save
-    fillVouch('Where to stay?', 'Banjara, book the tents', 'Spiti');
-    fireEvent.press(screen.getByLabelText('Save and add another'));
-    expect(mockCreate).not.toHaveBeenCalled();
-  });
+    it('does not save until category, text, and destination are present', () => {
+      renderWithProviders(<TripComposerScreen />);
+      fireEvent.press(screen.getByLabelText('Where to stay?'));
+      // No text / destination yet → save is a no-op.
+      fireEvent.press(screen.getByLabelText('Save and add another'));
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
 
-  it('banks a vouch without routing away, retains the list, increments the count', async () => {
-    mockCreate.mockResolvedValue({ vouchId: 'v1', listId: 'l1' });
-    renderWithProviders(<TripComposerScreen />);
-    fireEvent.changeText(screen.getByLabelText('List name'), 'Koh Samui');
-    fillVouch('Where to stay?', 'Lub’d Samui, beach-facing', 'Koh Samui');
-    fireEvent.press(screen.getByLabelText('Save and add another'));
-    await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ vouch_type: 'stay', new_list_name: 'Koh Samui', list_id: null }),
-      );
-      // stayed on the composer (no route), banked count shows
-      expect(mockReplace).not.toHaveBeenCalled();
-      expect(screen.getByText('1 banked')).toBeTruthy();
+    it('banks a STANDALONE vouch — no list_id, no new_list_name', async () => {
+      mockCreate.mockResolvedValue({ vouchId: 'v1', listId: null });
+      renderWithProviders(<TripComposerScreen />);
+      fillVouch('Where to stay?', 'Lub’d Samui, beach-facing', 'Koh Samui');
+      fireEvent.press(screen.getByLabelText('Save and add another'));
+      await waitFor(() => {
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            vouch_type: 'stay',
+            list_id: null,
+            new_list_name: null,
+          }),
+        );
+        // Stayed on the composer (no route), banked count shows.
+        expect(mockReplace).not.toHaveBeenCalled();
+        expect(screen.getByText('1 banked')).toBeTruthy();
+      });
+    });
+
+    it('Done routes to the profile (your vouches)', async () => {
+      mockCreate.mockResolvedValue({ vouchId: 'v1', listId: null });
+      renderWithProviders(<TripComposerScreen />);
+      fillVouch('Where to stay?', 'Lub’d Samui', 'Koh Samui');
+      fireEvent.press(screen.getByLabelText('Save and add another'));
+      await waitFor(() => screen.getByLabelText('Done'));
+      fireEvent.press(screen.getByLabelText('Done'));
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/you');
     });
   });
 
-  it('second vouch reuses the resolved list id (one list per session)', async () => {
-    mockCreate.mockResolvedValueOnce({ vouchId: 'v1', listId: 'l1' });
-    mockCreate.mockResolvedValueOnce({ vouchId: 'v2', listId: 'l1' });
-    renderWithProviders(<TripComposerScreen />);
-    fireEvent.changeText(screen.getByLabelText('List name'), 'Koh Samui');
-    fillVouch('Where to stay?', 'Lub’d Samui', 'Koh Samui');
-    fireEvent.press(screen.getByLabelText('Save and add another'));
-    await waitFor(() => screen.getByText('1 banked'));
-    fillVouch('Anything to skip?', 'Skip Evergreen, only the fish is good', 'Koh Samui');
-    fireEvent.press(screen.getByLabelText('Save and add another'));
-    await waitFor(() => {
-      expect(mockCreate).toHaveBeenLastCalledWith(
-        expect.objectContaining({ vouch_type: 'skip', list_id: 'l1' }),
-      );
-      expect(screen.getByText('2 banked')).toBeTruthy();
+  describe('CURATE mode (launched from a list)', () => {
+    it('locks the list and shows it — no editable list input', () => {
+      mockParams = { listId: 'l9', listTitle: 'best mountain stays', destination: 'Spiti' };
+      renderWithProviders(<TripComposerScreen />);
+      expect(screen.getByText('best mountain stays')).toBeTruthy();
+      expect(screen.queryByLabelText('List name')).toBeNull();
     });
-  });
 
-  it('Done routes to the resolved list', async () => {
-    mockCreate.mockResolvedValue({ vouchId: 'v1', listId: 'l1' });
-    renderWithProviders(<TripComposerScreen />);
-    fireEvent.changeText(screen.getByLabelText('List name'), 'Koh Samui');
-    fillVouch('Where to stay?', 'Lub’d Samui', 'Koh Samui');
-    fireEvent.press(screen.getByLabelText('Save and add another'));
-    await waitFor(() => screen.getByLabelText('Done'));
-    fireEvent.press(screen.getByLabelText('Done'));
-    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/list/l1');
-  });
+    it('batches every vouch into the locked list', async () => {
+      mockParams = { listId: 'l9', listTitle: 'best mountain stays', destination: 'Spiti' };
+      mockCreate.mockResolvedValue({ vouchId: 'v1', listId: 'l9' });
+      renderWithProviders(<TripComposerScreen />);
+      fillVouch('Where to stay?', 'Banjara, book the tents', 'Spiti');
+      fireEvent.press(screen.getByLabelText('Save and add another'));
+      await waitFor(() => {
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ vouch_type: 'stay', list_id: 'l9', new_list_name: null }),
+        );
+        expect(screen.getByText('1 banked')).toBeTruthy();
+      });
+    });
 
-  it('locks the list when launched from a list (params prefill)', () => {
-    mockParams = { listId: 'l9', listTitle: 'best mountain stays', destination: 'Spiti' };
-    renderWithProviders(<TripComposerScreen />);
-    // locked label, no editable list input
-    expect(screen.getByText('best mountain stays')).toBeTruthy();
-    expect(screen.queryByLabelText('List name')).toBeNull();
+    it('Done routes to the locked list', async () => {
+      mockParams = { listId: 'l9', listTitle: 'best mountain stays', destination: 'Spiti' };
+      mockCreate.mockResolvedValue({ vouchId: 'v1', listId: 'l9' });
+      renderWithProviders(<TripComposerScreen />);
+      fillVouch('Where to stay?', 'Banjara', 'Spiti');
+      fireEvent.press(screen.getByLabelText('Save and add another'));
+      await waitFor(() => screen.getByLabelText('Done'));
+      fireEvent.press(screen.getByLabelText('Done'));
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/list/l9');
+    });
   });
 });

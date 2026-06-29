@@ -90,3 +90,29 @@ export const useCreateList = () => {
     },
   });
 };
+
+/** Rename a list (owner-only). Lets a logger fix a list-name typo that the
+ *  composer used to lock in permanently. */
+export const useRenameList = () => {
+  const qc = useQueryClient();
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  return useMutation({
+    mutationFn: async ({ id, title }: { id: string; title: string }): Promise<void> => {
+      if (!userId) throw new Error('Not signed in');
+      const trimmed = title.trim();
+      if (trimmed.length === 0) throw new Error('A list needs a name.');
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .from('lists')
+        .update({ title: trimmed.slice(0, 120) })
+        .eq('id', id)
+        .eq('owner_id', userId);
+      if (error) throw error;
+      log.event('list.renamed');
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: listKeys.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: listKeys.mine(userId) });
+    },
+  });
+};

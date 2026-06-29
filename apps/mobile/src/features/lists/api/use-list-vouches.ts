@@ -3,13 +3,16 @@ import { getSupabase } from '@/lib/supabase';
 import type { VouchType } from '@journal/shared';
 import { useQuery } from '@tanstack/react-query';
 
-/** A vouch inside a list (via vouch_list_items), with its author. */
+/** A vouch inside a list (via vouch_list_items), with its author. `user_id`
+ *  is the author's id, so a screen can gate edit/delete to the viewer's own
+ *  vouches. */
 export type ListVouch = {
   id: string;
   text: string;
   vouch_type: VouchType;
   destination_text: string;
   created_at: string;
+  user_id: string;
   author: { display_name: string | null; handle: string | null; avatar_url: string | null } | null;
 };
 
@@ -31,7 +34,7 @@ export const useListVouches = (listId: string | null | undefined) => {
         .from('vouch_list_items')
         .select(
           'added_at, vouch:vouch_id(id, text, vouch_type, destination_text, created_at, ' +
-            'author:user_id(display_name, handle, avatar_url))',
+            'user_id, deleted_at, author:user_id(display_name, handle, avatar_url))',
         )
         .eq('list_id', listId)
         .order('added_at', { ascending: true });
@@ -39,10 +42,17 @@ export const useListVouches = (listId: string | null | undefined) => {
         if ((error as { code?: string }).code === '42P01') return [];
         throw error;
       }
-      type Row = { vouch: ListVouch | null };
-      return ((data ?? []) as unknown as Row[])
-        .map((r) => r.vouch)
-        .filter((v): v is ListVouch => v != null);
+      type Row = { vouch: (ListVouch & { deleted_at: string | null }) | null };
+      return (
+        ((data ?? []) as unknown as Row[])
+          .map((r) => r.vouch)
+          // Hide soft-deleted vouches — the list query doesn't filter them at the
+          // join, so drop them here.
+          .filter(
+            (v): v is ListVouch & { deleted_at: string | null } =>
+              v != null && v.deleted_at == null,
+          )
+      );
     },
   });
 };

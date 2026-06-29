@@ -4,9 +4,24 @@ import { log } from '@/lib/log';
 import type { VouchType } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useRecordInteraction } from '../api/use-record-interaction';
 import { useSaveVouch, useSavedVouchIds } from '../api/use-save-vouch';
-import { type VouchSearchResult, useVouchSearch, vouchReason } from '../api/use-vouch-search';
+import {
+  type VouchSearchResult,
+  useVouchSearch,
+  vouchReason,
+  vouchTier,
+} from '../api/use-vouch-search';
 
 const CORAL = '#FF4D2E';
 const INK = '#1A1410';
@@ -24,12 +39,19 @@ const TYPE_PILL: Record<VouchType, { label: string; fg: string; bg: string }> = 
   skip: { label: 'Skip', fg: '#7A3A20', bg: '#F2E2D2' },
 };
 
+// Vouch types that map to a physical place worth opening in Maps. A
+// good_to_know / skip note has no single pin, so it gets Share only.
+const PLACE_TYPES = new Set<VouchType>(['stay', 'eat_drink', 'do', 'nightlife']);
+
 type ListGroup = {
   key: string;
   listId: string | null;
   who: string;
   avatar: string | null;
   listTitle: string | null;
+  // Relationship tier for this author's vouches. 'fof' => a friend of a
+  // friend (weak-tie discovery supply); null => your own / a direct friend.
+  tier: 'fof' | null;
   rows: VouchSearchResult[];
 };
 
@@ -44,14 +66,48 @@ export function PlanScreen() {
   const router = useRouter();
   const toast = useToast();
   const [destination, setDestination] = useState('');
-  const [context, setContext] = useState('');
-  const q = useVouchSearch(destination, context);
+  const q = useVouchSearch(destination);
   const savedIds = useSavedVouchIds();
   const saveVouch = useSaveVouch();
+  const recordInteraction = useRecordInteraction();
 
   useEffect(() => {
     log.event('plan.screen_entered');
   }, []);
+
+  // Outbound "act on it" — open the spot in Maps, or hand the voiced line to
+  // the OS share sheet (WhatsApp, copy, Messages…). Closes the gap where a
+  // trusted answer was delivered but the user had to leave to use it.
+  const openMaps = (r: VouchSearchResult) => {
+    // Acting on someone's rec is a revealed-preference signal — record it so we
+    // can learn "you trust them for {category}". Fire-and-forget; the RPC no-ops
+    // on your own vouches, so no need to pre-filter here.
+    recordInteraction.mutate({ vouchId: r.vouch_id, kind: 'maps' });
+    // Lead phrase before the first dash/comma is usually the venue name
+    // ("Lub'd Samui — private 2-bed" -> "Lub'd Samui"); pair it with the city.
+    const lead = r.vouch_text.split(/[—–\-,.]/)[0]?.trim() || r.vouch_text;
+    // When background resolution has linked a canonical place, deep-link to the
+    // exact venue via query_place_id so the pin is precise — not the fuzzy
+    // text search. Falls back to the lead-phrase heuristic when unresolved.
+    const url = r.place_google_id
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          r.place_name || `${lead}, ${r.destination_text}`,
+        )}&query_place_id=${r.place_google_id}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          `${lead}, ${r.destination_text}`,
+        )}`;
+    Linking.openURL(url).catch((err) => {
+      log.error('open maps failed', err);
+      toast.show({ message: 'Could not open Maps.', variant: 'error' });
+    });
+  };
+  const shareVouch = (r: VouchSearchResult) => {
+    recordInteraction.mutate({ vouchId: r.vouch_id, kind: 'share' });
+    const who = r.is_own ? 'I' : (r.author_name ?? r.author_handle ?? 'A friend');
+    Share.share({
+      message: `"${r.vouch_text}" — ${who} vouched · ${r.destination_text}`,
+    }).catch((err) => log.error('share vouch failed', err));
+  };
 
   const results = q.data ?? [];
   const trimmed = destination.trim();
@@ -74,6 +130,8 @@ export function PlanScreen() {
           who: r.is_own ? 'You' : (r.author_name ?? r.author_handle ?? 'Someone'),
           avatar: r.author_avatar,
           listTitle: r.list_title,
+          // A group is one author's vouches, so the tier is shared across rows.
+          tier: vouchTier(r),
           rows: [r],
         });
     }
@@ -99,17 +157,23 @@ export function PlanScreen() {
           />
         </View>
 
-        {!showHint ? (
-          <TextInput
-            accessibilityLabel="Trip context"
-            placeholder="couple, 4 nights, food and neighbourhoods (optional)"
-            placeholderTextColor={FAINT}
-            value={context}
-            onChangeText={setContext}
-            style={styles.contextInput}
-            selectionColor={CORAL}
-          />
-        ) : null}
+        {/* Persistent path to Ask (Loop C) — on-demand supply. Previously this
+            was only reachable from the no-results empty state, so Ask was
+            effectively invisible whenever search returned anything. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ask your circle"
+          onPress={() =>
+            router.push({
+              pathname: '/(tabs)/ask',
+              params: trimmed ? { destination: trimmed } : {},
+            } as never)
+          }
+          hitSlop={6}
+          style={styles.askRow}
+        >
+          <Text style={styles.askRowLabel}>Going somewhere? Ask your circle →</Text>
+        </Pressable>
 
         {showHint ? (
           <Text style={styles.hint}>
@@ -127,7 +191,9 @@ export function PlanScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Ask your circle"
-              onPress={() => router.push('/(tabs)/ask' as never)}
+              onPress={() =>
+                router.push({ pathname: '/(tabs)/ask', params: { destination: trimmed } } as never)
+              }
               style={styles.askBtn}
             >
               <Text style={styles.askLabel}>Ask your circle</Text>
@@ -144,6 +210,11 @@ export function PlanScreen() {
                 <View style={styles.tripHeader}>
                   <Face uri={g.avatar} initials={g.who.slice(0, 2).toUpperCase()} size="sm" />
                   <Text style={styles.tripWho}>{g.who}</Text>
+                  {g.tier === 'fof' ? (
+                    <View style={styles.fofBadge}>
+                      <Text style={styles.fofBadgeLabel}>Friend of a friend</Text>
+                    </View>
+                  ) : null}
                   {g.listTitle ? (
                     <>
                       <Text style={styles.dot}>·</Text>
@@ -164,6 +235,10 @@ export function PlanScreen() {
                         vouchId: r.vouch_id,
                         destinationText: r.destination_text,
                       });
+                      // Saving someone's vouch is the strongest revealed-trust
+                      // signal — record it (single-fire here, not in the save
+                      // hook, so it logs once per user save action).
+                      recordInteraction.mutate({ vouchId: r.vouch_id, kind: 'save' });
                       toast.show({
                         message: `Saved to your ${r.destination_text} plan.`,
                         variant: 'success',
@@ -195,12 +270,39 @@ export function PlanScreen() {
                           style={styles.saveBtn}
                         >
                           <Text style={[styles.saveGlyph, isSaved && styles.saveGlyphOn]}>
-                            {isSaved ? '🔖' : '+ Save'}
+                            {isSaved ? 'Saved' : '+ Save'}
                           </Text>
                         </Pressable>
                       </View>
                       <Text style={styles.vouchText}>"{r.vouch_text}"</Text>
                       <Text style={styles.reason}>{vouchReason(r)}</Text>
+                      <View style={styles.actions}>
+                        {PLACE_TYPES.has(r.vouch_type) ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Open in Maps"
+                            onPress={() => openMaps(r)}
+                            hitSlop={6}
+                            style={styles.actionBtn}
+                          >
+                            {/* A resolved vouch drops a precise pin (query_place_id
+                                in openMaps). Label stays glyph-safe — emoji don't
+                                render in the custom font (they show as a "?" box). */}
+                            <Text style={styles.actionLabel}>
+                              {r.place_google_id ? '↗ Maps · pinned' : '↗ Maps'}
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Share this vouch"
+                          onPress={() => shareVouch(r)}
+                          hitSlop={6}
+                          style={styles.actionBtn}
+                        >
+                          <Text style={styles.actionLabel}>Share</Text>
+                        </Pressable>
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -241,18 +343,6 @@ const styles = StyleSheet.create({
     color: INK,
     paddingVertical: 2,
   },
-  contextInput: {
-    marginTop: 10,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: HAIR,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 13.5,
-    color: INK,
-  },
   hint: {
     marginTop: 20,
     fontFamily: 'DMSans_400Regular',
@@ -289,10 +379,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   askLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: '#FFFFFF' },
+  askRow: { marginTop: 12, alignSelf: 'flex-start' },
+  askRowLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: CORAL },
   tripHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   tripWho: { fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: INK },
   dot: { color: FAINT },
   tripTitle: { fontFamily: 'DMSans_400Regular', fontSize: 13, color: MUTE, flexShrink: 1 },
+  // Weak-tie cue: a quiet outlined chip, not a coral accent — a FoF is supply
+  // to surface, not something to shout. Reads differently from a direct friend.
+  fofBadge: {
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: TINT,
+  },
+  fofBadgeLabel: {
+    fontFamily: 'DMSans_600SemiBold',
+    fontSize: 10,
+    letterSpacing: 0.3,
+    color: MUTE,
+  },
   vouchCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
@@ -321,4 +429,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: 10,
   },
+  actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  actionBtn: {
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  actionLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 12.5, color: INK },
 });

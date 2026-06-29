@@ -4,20 +4,21 @@ import { getSupabase } from '@/lib/supabase';
 import { type VouchComposer, VouchComposerSchema } from '@journal/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-type Result = { vouchId: string; listId: string };
+type Result = { vouchId: string; listId: string | null };
 
 /**
- * Vouched v3.1 save: create one standalone vouch and drop it into a list.
+ * Vouched v3.1 save: create one standalone vouch, optionally dropping it into
+ * a list.
  *
- * List resolution (composer step 5):
- *   - explicit list_id   → use it
- *   - new_list_name      → create a list with that name (place-anchored to
- *                          the destination)
- *   - neither (default)  → find-or-create the destination list, so the
- *                          common case is one tap
+ * List resolution:
+ *   - explicit list_id   → link to it (the curate door — "+ Add a vouch")
+ *   - new_list_name      → find-or-create a list with that name, then link
+ *   - neither            → STANDALONE. No list link, no auto-minted destination
+ *                          list. The vouch still surfaces in search, the circle
+ *                          feed, and the author's profile (the fast door).
  *
- * No trip, no verdict. The vouch stands alone; membership lives in
- * vouch_list_items (a vouch can later be added to more lists).
+ * No trip, no verdict. The vouch is the atom; list membership is optional and
+ * lives in vouch_list_items (a vouch can be added to more lists later).
  */
 export const useCreateVouch = () => {
   const qc = useQueryClient();
@@ -46,17 +47,18 @@ export const useCreateVouch = () => {
       if (vouchErr) throw vouchErr;
       const vouchId = (vouch as { id: string }).id;
 
-      // 2. Resolve the target list.
+      // 2. Resolve a target list ONLY when one is requested. A vouch with no
+      //    list_id and no new_list_name stays standalone — we no longer mint a
+      //    junk one-item destination list for every fast log.
       let listId = parsed.list_id ?? null;
-      if (!listId) {
-        const wantedTitle = parsed.new_list_name?.trim() || parsed.destination_text;
-        // Find an existing list with this title owned by the user (the
-        // destination list, if it was auto-created on a previous vouch).
+      if (!listId && parsed.new_list_name?.trim()) {
+        const wantedTitle = parsed.new_list_name.trim();
+        // Case-insensitive find-or-create so "Goa"/"goa" resolve to one list.
         const { data: existing, error: findErr } = await supabase
           .from('lists')
           .select('id')
           .eq('owner_id', userId)
-          .eq('title', wantedTitle)
+          .ilike('title', wantedTitle)
           .is('deleted_at', null)
           .limit(1)
           .maybeSingle();
@@ -82,20 +84,22 @@ export const useCreateVouch = () => {
         }
       }
 
-      // 3. Link vouch → list.
-      const { error: linkErr } = await supabase
-        .from('vouch_list_items')
-        .upsert(
-          { vouch_id: vouchId, list_id: listId, added_by_user_id: userId },
-          { onConflict: 'vouch_id,list_id', ignoreDuplicates: true },
-        );
-      if (linkErr) {
-        log.error('vouch_list_items link failed after vouch create', linkErr);
-        await supabase.from('vouches').delete().eq('id', vouchId);
-        throw linkErr;
+      // 3. Link vouch → list, only when there is one.
+      if (listId) {
+        const { error: linkErr } = await supabase
+          .from('vouch_list_items')
+          .upsert(
+            { vouch_id: vouchId, list_id: listId, added_by_user_id: userId },
+            { onConflict: 'vouch_id,list_id', ignoreDuplicates: true },
+          );
+        if (linkErr) {
+          log.error('vouch_list_items link failed after vouch create', linkErr);
+          await supabase.from('vouches').delete().eq('id', vouchId);
+          throw linkErr;
+        }
       }
 
-      log.event('vouch.created', { vouch_type: parsed.vouch_type });
+      log.event('vouch.created', { vouch_type: parsed.vouch_type, standalone: listId == null });
       return { vouchId, listId };
     },
     onSuccess: () => {

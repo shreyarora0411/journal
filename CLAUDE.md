@@ -1,7 +1,22 @@
 # CLAUDE.md
 This file is the constitution for this repository. Claude Code reads it on every session. It defines what we are building, how the code is organised, what the conventions are, and what is out of scope. When in doubt, this document wins. When this document is silent, ask before deciding.
 ---
-## 1. What we are building
+## 0. CURRENT MODEL — v3.1 (READ FIRST; this supersedes the trip-era text below)
+The product pivoted from "log trips → an LLM extracts entities" to a **no-LLM, voice-first VOUCH model**. Wherever §1/§4/§5 below describe trips, entity extraction, Instagram import, venues/areas/tips, Twilio WhatsApp OTP, or Newsreader/Inter fonts, treat **this section as canonical** — those are historical. Full current state, decisions, and the next build live in the persistent memory (`~/.claude/.../memory/MEMORY.md`): consumer-psych principles, MVP priorities (shipped + open), and the profile/friends design.
+
+- **Working name:** "Vouched" (codename `journal`). iOS-first via Expo; audience unchanged (affluent metro-India, 25–40).
+- **The atom is the VOUCH, not the trip.** A vouch = a friend's voiced free-text rec + `vouch_type` (`stay`/`eat_drink`/`do`/`nightlife`/`good_to_know`/`skip`) + `destination_text` + optional `place_id`. The user typed it into a category slot — **no LLM extraction**. Quotes are immutable (voice is the moat). **No stars/scores ever. No generic place photos.**
+- **Lists are optional containers** — vouch ↔ list is M2M via `vouch_list_items`; a vouch can be standalone. The composer "fast door" (Add tab) logs standalone vouches with no list; lists are a curation layer created from Profile.
+- **Places:** vouches link to canonical venues — `canonical_places` (keyed on `google_place_id` + lat/lng), resolved in the background client-side via `apps/mobile/src/lib/google-places.ts`. "Open in Maps" drops a precise pin. The Places key must have *Places API (New)* + billing; `EXPO_PUBLIC_GOOGLE_PLACES_KEY_*` is client-exposed — restrict before prod.
+- **Trust graph IS relevance (no taste-similarity engine, by design).** `follows` carry `status` (`pending`/`accepted`/`blocked`) + `trust_contexts[]` (domain-specific trust, learned behaviorally from saves + act-on-it). `search_vouches` ranks: relationship tier (own 1.00 / trusted+context 0.95 / direct 0.85 / friend-of-a-friend 0.60 / stranger 0.40) ×.55 + query-fit ×.25 + specificity ×.15 + freshness ×.05; `skip` de-ranked ×0.70.
+- **Auth:** Supabase **anonymous + phone-keyed recovery** (NOT Twilio WhatsApp OTP). `users.phone_hash` is unique. **No push (v0)** — payoff/return is pull-based.
+- **Fonts:** **Playfair Display** (serif; italic for quotes) + **DM Sans** (sans). NOT Newsreader/Inter. Note: emoji (🔖/📍) render as a "?" box in these custom fonts — use plain text / the `↗` arrow.
+- **Tabs:** Book (home — an intent desk: payoff banner, contextual log CTA, resurfacing, demoted "lately" feed) · Search · Add (`+`, composer) · Friends · You (profile). Ask-your-circle (Loop C) is reachable from Search and (per the design) belongs on Friends.
+- **Loops:** log (POST-trip) · search/discover (PRE) · ask-your-circle (on-demand supply) · payoff ("a friend used your vouch", `get_vouch_uses`).
+- **DB:** core tables are `vouches`, `lists`, `vouch_list_items`, `canonical_places`, `follows`, `vouch_interactions`, `users`. `trips`/`venues`/`cities` are LEGACY (trip-era). Migrations are append-only, numbered, through `0000000000005x`.
+- **Still out of scope:** in-app map *view* (post-v0; the precise Open-in-Maps deep-link is fine), web app, dark mode, push, comments/DMs.
+---
+## 1. What we are building (HISTORICAL — see §0 for the current model)
 A friends-graph travel journal for affluent urban Indians. Users log trips in their own voice; the platform extracts structured entities (places, stays, restaurants, cafés, nightlife venues, areas, tips) and makes them searchable across the user's trusted friend network. The product replaces the WhatsApp-ask-a-friend behaviour that currently dominates Indian travel discovery.
 **Working name:** TBD — codename `journal` in the codebase.
 **Platforms:** iOS and Android only. No web app in v0.

@@ -1,24 +1,42 @@
 import { CategoryPill, CityHero, Eyebrow, Face, Page, StatusSpace, VenueThumb } from '@/components';
 import { useAuthStore, useProfile, useSignOut } from '@/features/auth';
 import { useDeleteList, useMyLists } from '@/features/lists';
-import { useDeleteAtomicLog, useMyAtomicLogs } from '@/features/trips';
+import {
+  useDeleteAtomicLog,
+  useDeleteVouch,
+  useMyAtomicLogs,
+  useMyVouches,
+  useUpdateVouch,
+  useVouchUses,
+} from '@/features/trips';
 import { useWishlistRows } from '@/features/wishlist';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import type { Category } from '@/theme';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useMeStats } from '../api/use-me-stats';
 import { useUserTrips } from '../api/use-user-trips';
 
 const CORAL = '#FF4D2E';
-const GOLD = '#FFB300';
 const INK = '#1A1410';
 const MUTE = '#7A716A';
+const FAINT = '#B7AE9F';
 const TINT = '#FAF6F0';
 const HAIR = '#EFEAE2';
+
+// Short type labels for the user's own vouches — match the composer/search/feed
+// surfaces so a vouch reads the same everywhere. No stars, no score — just the
+// kind of thing it is.
+const VOUCH_TYPE_LABEL: Record<string, string> = {
+  stay: 'Stay',
+  eat_drink: 'Eat / Drink',
+  do: 'Do',
+  nightlife: 'Nightlife',
+  good_to_know: 'Good to know',
+  skip: 'Skip',
+};
 
 /**
  * Profile · Travel book.
@@ -41,11 +59,58 @@ export function ProfileScreen() {
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
   const tripsQ = useUserTrips(userId);
   const tipsQ = useMyAtomicLogs(12);
+  const vouchesQ = useMyVouches();
+  const usesQ = useVouchUses();
   const listsQ = useMyLists();
   const wishlistQ = useWishlistRows();
   const deleteTip = useDeleteAtomicLog();
   const deleteList = useDeleteList();
+  const updateVouch = useUpdateVouch();
+  const deleteVouch = useDeleteVouch();
   const toast = useToast();
+
+  // Inline vouch edit — mirrors list-detail-vouches-screen.tsx. These are
+  // always the viewer's own vouches (useMyVouches), so the affordances always
+  // show; the hooks also enforce owner-only server-side.
+  const [editingVouchId, setEditingVouchId] = useState<string | null>(null);
+  const [vouchDraft, setVouchDraft] = useState('');
+
+  const startEditVouch = (id: string, text: string) => {
+    setEditingVouchId(id);
+    setVouchDraft(text);
+  };
+  const cancelEditVouch = () => {
+    setEditingVouchId(null);
+    setVouchDraft('');
+  };
+  const onSaveVouchEdit = async (vouchId: string) => {
+    try {
+      await updateVouch.mutateAsync({ vouchId, text: vouchDraft });
+      cancelEditVouch();
+      toast.show({ message: 'Updated.', variant: 'success' });
+    } catch (err) {
+      log.error('update vouch failed', err);
+      toast.show({ message: 'Could not update. Try again.', variant: 'error' });
+    }
+  };
+  const onDeleteVouch = (vouchId: string) =>
+    // The hooks invalidate ['vouches'], so on delete the card disappears.
+    Alert.alert('Delete this vouch?', 'It will be removed from your book and search.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteVouch.mutateAsync({ vouchId });
+            toast.show({ message: 'Deleted.', variant: 'success' });
+          } catch (err) {
+            log.error('delete vouch failed', err);
+            toast.show({ message: 'Could not delete. Try again.', variant: 'error' });
+          }
+        },
+      },
+    ]);
 
   /** Long-press confirmation pattern. Used for both tips and lists. */
   const confirmDelete = (kind: 'tip' | 'list', name: string, onDelete: () => Promise<void>) => {
@@ -84,7 +149,6 @@ export function ProfileScreen() {
   const tripsLabel = fmt(trips);
   const countriesLabel = fmt(countries);
   const tipsLabel = fmt(tips);
-  const hasAnyContent = (trips ?? 0) > 0 || (countries ?? 0) > 0 || (tips ?? 0) > 0;
 
   const displayName = profile.data?.display_name ?? '—';
   const handle = profile.data?.handle ? `@${profile.data.handle}` : '';
@@ -151,30 +215,39 @@ export function ProfileScreen() {
         </View>
       </View>
 
-      {/* Wrapped teaser only when there's something to wrap. */}
-      {hasAnyContent ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open my Wrapped"
-          onPress={() => router.push('/wrapped' as never)}
-          style={{ marginTop: 20 }}
-        >
-          <LinearGradient
-            colors={[CORAL, GOLD]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.wrappedCard}
-          >
-            <View>
-              <Text style={styles.wrappedEyebrow}>MY YEAR, SO FAR</Text>
-              <Text style={styles.wrappedHeadline}>I really{'\n'}moved this year.</Text>
-              <Text style={styles.wrappedFooter}>
-                {tripsLabel} trips · {countriesLabel} countries · {tipsLabel} tips
-              </Text>
-            </View>
-            <Text style={styles.wrappedChevron}>›</Text>
-          </LinearGradient>
-        </Pressable>
+      {/* Wrapped teaser removed — the /wrapped screen renders fabricated
+          fixture stats (WRAPPED_2026), which violates the no-fake-data
+          thesis. Re-add only when backed by real me_stats()-derived data. */}
+
+      {/* =====================================================
+          USED BY YOUR CIRCLE — the payoff loop. Someone you know
+          saved a vouch YOU wrote, to act on later. PULL-only (no
+          push): the author sees it on their own profile. The reward
+          is the social signal itself (concern-for-others) — no count,
+          no score, no points. Only renders when there are real saves.
+          ===================================================== */}
+      {(usesQ.data ?? []).length > 0 ? (
+        <View style={{ marginTop: 28 }}>
+          <Eyebrow>Used by your circle</Eyebrow>
+          <View style={{ gap: 10, marginTop: 12 }}>
+            {(usesQ.data ?? []).map((u) => {
+              const who = u.saver_name ?? (u.saver_handle ? `@${u.saver_handle}` : 'Someone');
+              const initials = who.replace(/^@/, '').slice(0, 2).toUpperCase();
+              const short =
+                u.vouch_text.length > 80 ? `${u.vouch_text.slice(0, 80)}…` : u.vouch_text;
+              return (
+                <View key={`${u.vouch_id}-${u.saver_id}`} style={styles.useCard}>
+                  <Face uri={u.saver_avatar} initials={initials} size="sm" />
+                  <Text style={styles.useLine}>
+                    <Text style={styles.useWho}>{who}</Text>
+                    <Text style={styles.useVerb}> saved your </Text>
+                    <Text style={styles.useQuote}>"{short}"</Text>
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
       ) : null}
 
       {/* =====================================================
@@ -225,6 +298,105 @@ export function ProfileScreen() {
                   </View>
                 </Pressable>
               ))}
+            </View>
+          )}
+        </View>
+
+        {/* Your vouches — every vouch the user authored, list-bound or
+            standalone. This is what makes fast-door logging not a void: a
+            listless vouch still lands here, in the author's own voice. Voice-
+            forward cards (italic Playfair quote), no stars/photos. */}
+        <View style={{ marginTop: 22 }}>
+          <Text style={styles.subEyebrow}>Your vouches</Text>
+          {vouchesQ.isLoading ? (
+            <Text style={styles.empty}>Loading…</Text>
+          ) : (vouchesQ.data ?? []).length === 0 ? (
+            <View style={styles.emptyInline}>
+              <Text style={styles.emptyInlineBody}>
+                Log a place and your vouch shows up here — in your own words.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10, marginTop: 8 }}>
+              {(vouchesQ.data ?? []).map((v) => {
+                const editing = editingVouchId === v.id;
+                return (
+                  <View key={v.id} style={styles.vouchCard}>
+                    <View style={styles.vouchMetaRow}>
+                      <Text style={styles.vouchType}>
+                        {VOUCH_TYPE_LABEL[v.vouch_type] ?? v.vouch_type}
+                      </Text>
+                      {v.destination_text ? (
+                        <>
+                          <Text style={styles.vouchDot}>·</Text>
+                          <Text style={styles.vouchDest} numberOfLines={1}>
+                            {v.destination_text}
+                          </Text>
+                        </>
+                      ) : null}
+                    </View>
+                    {editing ? (
+                      <>
+                        <TextInput
+                          accessibilityLabel="Edit vouch"
+                          value={vouchDraft}
+                          onChangeText={(t) => setVouchDraft(t.slice(0, 500))}
+                          multiline
+                          autoFocus
+                          style={styles.vouchEditInput}
+                          selectionColor={CORAL}
+                        />
+                        <View style={styles.vouchActions}>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Save edit"
+                            onPress={() => onSaveVouchEdit(v.id)}
+                            disabled={updateVouch.isPending}
+                            hitSlop={6}
+                            style={styles.vouchActionBtn}
+                          >
+                            <Text style={styles.vouchActionPrimary}>Save</Text>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Cancel edit"
+                            onPress={cancelEditVouch}
+                            hitSlop={6}
+                            style={styles.vouchActionBtn}
+                          >
+                            <Text style={styles.vouchActionLabel}>Cancel</Text>
+                          </Pressable>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.vouchQuote}>"{v.text}"</Text>
+                        <View style={styles.vouchActions}>
+                          <View style={{ flex: 1 }} />
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Edit vouch"
+                            onPress={() => startEditVouch(v.id, v.text)}
+                            hitSlop={6}
+                            style={styles.vouchActionBtn}
+                          >
+                            <Text style={styles.vouchActionLabel}>Edit</Text>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Delete vouch"
+                            onPress={() => onDeleteVouch(v.id)}
+                            hitSlop={6}
+                            style={styles.vouchActionBtn}
+                          >
+                            <Text style={styles.vouchActionDanger}>Delete</Text>
+                          </Pressable>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>
@@ -377,16 +549,32 @@ export function ProfileScreen() {
           LISTS — curated groupings, neither pure authored nor saved.
           ===================================================== */}
       <View style={{ marginTop: 32, marginBottom: 80 }}>
-        <Eyebrow>Lists I made</Eyebrow>
+        <View style={styles.listsHeader}>
+          <Eyebrow>Lists I made</Eyebrow>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="New list"
+            onPress={() => router.push('/(tabs)/list/new' as never)}
+            hitSlop={8}
+          >
+            <Text style={styles.newListLink}>+ New list</Text>
+          </Pressable>
+        </View>
         {listsQ.isLoading ? (
           <Text style={styles.empty}>Loading…</Text>
         ) : (listsQ.data ?? []).length === 0 ? (
-          <View style={styles.emptyCard}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Make your first list"
+            onPress={() => router.push('/(tabs)/list/new' as never)}
+            style={styles.emptyCard}
+          >
             <Text style={styles.emptyTitle}>No lists yet.</Text>
             <Text style={styles.emptyBody}>
-              Group your favorite places — make a Tokyo list, a Goa list, a Mira list.
+              Group your favorite places — make a Tokyo list, a Goa list, a Mira list. Tap to start
+              one.
             </Text>
-          </View>
+          </Pressable>
         ) : (
           <View style={{ gap: 8, marginTop: 12 }}>
             {(listsQ.data ?? []).map((l) => (
@@ -524,6 +712,80 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: '#FFFFFF',
   },
+  // Your-vouches card — voice-forward, no stars/photos. The voiced line is the
+  // hero (italic Playfair pull-quote); type + destination are the quiet meta.
+  vouchCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: '#FFFFFF',
+  },
+  vouchMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  vouchType: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: CORAL,
+    textTransform: 'uppercase',
+  },
+  vouchDot: { color: FAINT, fontSize: 11 },
+  vouchDest: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: MUTE,
+    textTransform: 'uppercase',
+    flexShrink: 1,
+  },
+  vouchQuote: {
+    fontFamily: 'PlayfairDisplay_500Medium_Italic',
+    fontSize: 16,
+    lineHeight: 24,
+    color: INK,
+    marginTop: 8,
+  },
+  // Inline edit + owner actions on a profile vouch card — mirrors
+  // list-detail-vouches-screen.tsx so a vouch reads/edits the same everywhere.
+  vouchEditInput: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 16,
+    lineHeight: 24,
+    color: INK,
+    minHeight: 60,
+    textAlignVertical: 'top',
+    marginTop: 8,
+  },
+  vouchActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  vouchActionBtn: {
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  vouchActionLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: INK },
+  vouchActionPrimary: { fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: CORAL },
+  vouchActionDanger: { fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: '#B23A14' },
+  // "Used by your circle" — the payoff line. Voice-forward, no count/score.
+  useCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: '#FFFFFF',
+  },
+  useLine: { flex: 1 },
+  useWho: { fontFamily: 'DMSans_700Bold', fontSize: 14, color: INK },
+  useVerb: { fontFamily: 'DMSans_400Regular', fontSize: 14, color: MUTE },
+  useQuote: {
+    fontFamily: 'PlayfairDisplay_500Medium_Italic',
+    fontSize: 14,
+    color: INK,
+  },
   tipHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -551,6 +813,8 @@ const styles = StyleSheet.create({
     color: INK,
     marginTop: 8,
   },
+  listsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  newListLink: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: CORAL },
   listCard: {
     padding: 14,
     borderRadius: 12,

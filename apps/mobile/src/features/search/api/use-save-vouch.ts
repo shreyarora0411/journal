@@ -48,12 +48,13 @@ export const useSaveVouch = () => {
       if (!userId) throw new Error('Not signed in');
       const supabase = getSupabase();
 
-      // Find-or-create the user's list for this destination.
+      // Find-or-create the user's list for this destination. Case-insensitive
+      // match so saving "Goa" and "goa" land in one list, not two.
       const { data: existing, error: findErr } = await supabase
         .from('lists')
         .select('id')
         .eq('owner_id', userId)
-        .eq('title', destinationText)
+        .ilike('title', destinationText.trim())
         .is('deleted_at', null)
         .limit(1)
         .maybeSingle();

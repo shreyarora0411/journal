@@ -7,93 +7,227 @@ jest.mock('expo-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-const mockUseFeed = jest.fn();
+// useCirclePulse is exported from '@/features/feed' by another agent — it
+// isn't in the real barrel yet, so the mock supplies it explicitly (alongside
+// the actual FeedScreen under test).
+const mockCirclePulse = jest.fn();
 jest.mock('@/features/feed', () => {
   const actual = jest.requireActual('@/features/feed');
   return {
     ...actual,
-    useFeed: () => mockUseFeed(),
+    useCirclePulse: () => mockCirclePulse(),
     FeedScreen: actual.FeedScreen,
   };
 });
 
-const mockAtomicLogFeed = jest.fn();
-const mockMyAtomicLogs = jest.fn();
+const mockVouchUses = jest.fn();
+const mockMyVouches = jest.fn();
 jest.mock('@/features/trips', () => ({
-  useAtomicLogFeed: () => mockAtomicLogFeed(),
-  useMyAtomicLogs: () => mockMyAtomicLogs(),
+  useVouchUses: () => mockVouchUses(),
+  useMyVouches: () => mockMyVouches(),
+}));
+
+const mockWishlistRows = jest.fn();
+jest.mock('@/features/wishlist', () => ({
+  useWishlistRows: () => mockWishlistRows(),
+}));
+
+const mockVouchSearch = jest.fn();
+const mockRecordInteraction = jest.fn();
+jest.mock('@/features/search', () => ({
+  useVouchSearch: () => mockVouchSearch(),
+  useRecordInteraction: () => ({ mutate: mockRecordInteraction }),
+}));
+
+const mockVouchFeed = jest.fn();
+jest.mock('../api/use-vouch-feed', () => ({
+  useVouchFeed: () => mockVouchFeed(),
 }));
 
 beforeEach(() => {
   mockPush.mockReset();
-  mockUseFeed.mockReset();
-  mockUseFeed.mockReturnValue({
-    data: { pages: [{ rows: [], nextCursor: null }] },
-    isLoading: false,
-  });
-  mockAtomicLogFeed.mockReset();
-  mockMyAtomicLogs.mockReset();
-  mockAtomicLogFeed.mockReturnValue({ data: [], isLoading: false });
-  mockMyAtomicLogs.mockReturnValue({ data: [], isLoading: false });
+  mockVouchUses.mockReset();
+  mockMyVouches.mockReset();
+  mockWishlistRows.mockReset();
+  mockVouchSearch.mockReset();
+  mockVouchFeed.mockReset();
+  mockCirclePulse.mockReset();
+  mockRecordInteraction.mockReset();
+
+  // Default: a brand-new user — every section empty.
+  mockVouchUses.mockReturnValue({ data: [], isLoading: false });
+  mockMyVouches.mockReturnValue({ data: [], isLoading: false });
+  mockWishlistRows.mockReturnValue({ data: [], isLoading: false });
+  mockVouchSearch.mockReturnValue({ data: [], isLoading: false });
+  mockVouchFeed.mockReturnValue({ data: [], isLoading: false });
+  mockCirclePulse.mockReturnValue({ data: { newThisWeek: 0, myVouchCount: 0, topCity: null } });
 });
 
 describe('FeedScreen', () => {
-  it('renders the wordmark + empty state for a new user with no rows', () => {
+  it('renders the wordmark + two-step activation for a new user with no rows', () => {
     renderWithProviders(<FeedScreen />);
     expect(screen.getByLabelText('lore.')).toBeTruthy();
-    expect(screen.getByText('Quiet here.')).toBeTruthy();
-    expect(screen.getByLabelText('Add your first tip')).toBeTruthy();
+    expect(screen.getByText('Start your circle.')).toBeTruthy();
+    // Two-step activation: log a place, then invite the circle.
+    expect(screen.getByLabelText('Log one place')).toBeTruthy();
+    expect(screen.getByLabelText('Invite your circle')).toBeTruthy();
   });
 
-  it('does NOT render the "Right now" live-status strip', () => {
-    renderWithProviders(<FeedScreen />);
-    expect(screen.queryByText('RIGHT NOW')).toBeNull();
-  });
-
-  it('does NOT render fake heart counts or fixture friend cards', () => {
-    renderWithProviders(<FeedScreen />);
-    expect(screen.queryByText('12')).toBeNull();
-    expect(screen.queryByText('28')).toBeNull();
-    expect(screen.queryByText('Hotel K5')).toBeNull();
-    expect(screen.queryByText('Cervejaria Ramiro')).toBeNull();
-  });
-
-  it('renders a friend trip card when useFeed returns rows', () => {
-    mockUseFeed.mockReturnValue({
-      data: {
-        pages: [
-          {
-            rows: [
-              {
-                id: 'trip-1',
-                user_id: 'user-tara',
-                title: 'Tokyo, October',
-                start_date: null,
-                end_date: null,
-                note: 'Walked the river at sunset.',
-                cover_photo_id: null,
-                visibility: 'friends_of_friends',
-                imported_from: null,
-                created_at: '2026-01-15T10:00:00Z',
-                updated_at: '2026-01-15T10:00:00Z',
-                deleted_at: null,
-                author: { id: 'user-tara', display_name: 'Tara', handle: 'tara', avatar_url: null },
-                cover_photo_path: null,
-                love_count: 0,
-              },
-            ],
-            nextCursor: null,
-          },
-        ],
-      },
+  it('does NOT render the removed filter pills or trips carousel', () => {
+    // The home is an intent desk now — search lives in Search, and the
+    // Instagram-shaped trips carousel is gone.
+    mockVouchFeed.mockReturnValue({
+      data: [
+        {
+          id: 'v-1',
+          text: 'Order the hand drip',
+          vouch_type: 'eat_drink',
+          destination_text: 'Tokyo',
+          author: { display_name: 'Tara', handle: 'tara', avatar_url: null },
+        },
+      ],
       isLoading: false,
     });
     renderWithProviders(<FeedScreen />);
-    expect(screen.getByText('Tokyo, October')).toBeTruthy();
+    expect(screen.queryByLabelText('Filter: Eat / Drink')).toBeNull();
+    expect(screen.queryByText('Trips from your circle')).toBeNull();
+  });
+
+  it('renders the payoff banner when someone saved my vouch', () => {
+    mockVouchUses.mockReturnValue({
+      data: [
+        {
+          vouch_id: 'vouch-1',
+          vouch_text: 'Order the hand drip at the back counter',
+          vouch_type: 'eat_drink',
+          destination_text: 'Tokyo',
+          saver_id: 'user-mira',
+          saver_name: 'Mira',
+          saver_handle: 'mira',
+          saver_avatar: null,
+          saved_at: '2026-06-20T10:00:00Z',
+        },
+      ],
+      isLoading: false,
+    });
+    renderWithProviders(<FeedScreen />);
+    expect(screen.getByText('Mira')).toBeTruthy();
+    // Voice-forward, truncated to ~40 chars with an ellipsis — no counts.
+    expect(screen.getByText(/saved your/)).toBeTruthy();
+  });
+
+  it('uses the most recent vouched destination in the supply CTA', () => {
+    mockMyVouches.mockReturnValue({
+      data: [
+        {
+          id: 'm-1',
+          text: 'Stay lakeside',
+          vouch_type: 'stay',
+          destination_text: 'Udaipur',
+          created_at: '2026-06-01T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+    });
+    // Give the home some content so it's past the empty state.
+    mockVouchFeed.mockReturnValue({
+      data: [
+        {
+          id: 'v-1',
+          text: 'Order the hand drip',
+          vouch_type: 'eat_drink',
+          destination_text: 'Tokyo',
+          author: { display_name: 'Tara', handle: 'tara', avatar_url: null },
+        },
+      ],
+      isLoading: false,
+    });
+    renderWithProviders(<FeedScreen />);
+    expect(screen.getByText('Back from Udaipur?')).toBeTruthy();
+  });
+
+  it('renders the resurfacing card for the first saved destination', () => {
+    mockWishlistRows.mockReturnValue({
+      data: [
+        {
+          id: 'w-1',
+          parent_wishlist_item_id: null,
+          target_external_id: 'ext-1',
+          target_label: 'Lisbon',
+        },
+      ],
+      isLoading: false,
+    });
+    mockVouchSearch.mockReturnValue({
+      data: [
+        {
+          vouch_id: 'sv-1',
+          list_id: null,
+          list_title: null,
+          vouch_text: 'Cervejaria Ramiro for the prawns',
+          vouch_type: 'eat_drink',
+          destination_text: 'Lisbon',
+          author_id: 'user-ben',
+          author_name: 'Ben',
+          author_handle: 'ben',
+          author_avatar: null,
+          is_own: false,
+          is_trusted: true,
+          context_match: false,
+          score: 1,
+          created_at: '2026-05-01T00:00:00Z',
+          is_fof: false,
+          place_google_id: null,
+          place_lat: null,
+          place_lng: null,
+          place_name: null,
+        },
+      ],
+      isLoading: false,
+    });
+    renderWithProviders(<FeedScreen />);
+    expect(screen.getByText('Lisbon — your circle vouched for 1')).toBeTruthy();
+    expect(screen.getByText('"Cervejaria Ramiro for the prawns"')).toBeTruthy();
+    expect(screen.getByText('See all ›')).toBeTruthy();
+  });
+
+  it('renders the liveness line and belonging nudge from circle pulse', () => {
+    mockCirclePulse.mockReturnValue({ data: { newThisWeek: 3, myVouchCount: 8, topCity: 'Goa' } });
+    mockVouchFeed.mockReturnValue({
+      data: [
+        {
+          id: 'v-1',
+          text: 'Order the hand drip',
+          vouch_type: 'eat_drink',
+          destination_text: 'Tokyo',
+          author: { display_name: 'Tara', handle: 'tara', avatar_url: null },
+        },
+      ],
+      isLoading: false,
+    });
+    renderWithProviders(<FeedScreen />);
+    expect(screen.getByText('3 new vouches from your circle this week.')).toBeTruthy();
+    expect(
+      screen.getByText('You’ve left 8 vouches — your circle leans on you for Goa.'),
+    ).toBeTruthy();
+  });
+
+  it('renders the demoted Lately feed with a vouch card', () => {
+    mockVouchFeed.mockReturnValue({
+      data: [
+        {
+          id: 'v-1',
+          text: 'Order the hand drip',
+          vouch_type: 'eat_drink',
+          destination_text: 'Tokyo',
+          author: { display_name: 'Tara', handle: 'tara', avatar_url: null },
+        },
+      ],
+      isLoading: false,
+    });
+    renderWithProviders(<FeedScreen />);
+    expect(screen.getByText('Lately from your circle')).toBeTruthy();
+    expect(screen.getByText('"Order the hand drip"')).toBeTruthy();
     expect(screen.getByText('Tara')).toBeTruthy();
-    // The redesigned carousel renders title + author + date, not the note
-    // body — note is reserved for the trip detail view.
-    expect(screen.queryByText('Walked the river at sunset.')).toBeNull();
-    expect(screen.getByText('Trips from your circle')).toBeTruthy();
   });
 });

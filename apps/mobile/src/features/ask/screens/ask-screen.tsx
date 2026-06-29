@@ -1,16 +1,40 @@
 import { Eyebrow, Face, Page, StatusSpace } from '@/components';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import {
   type AskRequest,
   useCreateRequest,
   useInboxRequests,
+  useMyVouches,
   useRespondToRequest,
   useSentRequests,
 } from '../api/use-ask';
+
+// Punctuation-insensitive destination compare, mirroring the DB's norm_search
+// (migration 46): lowercase, fold non-alphanumeric runs to a space, trim. A
+// vouch is "for" a request's destination if either name contains the other,
+// so "Bangkok" matches a vouch stored as "Bangkok, Thailand".
+const norm = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+const destMatches = (a: string, b: string) => {
+  const na = norm(a);
+  const nb = norm(b);
+  return na.length > 0 && nb.length > 0 && (na.includes(nb) || nb.includes(na));
+};
 
 const CORAL = '#FF4D2E';
 const INK = '#1A1410';
@@ -34,11 +58,17 @@ export function AskScreen() {
   const respond = useRespondToRequest();
   const sent = useSentRequests();
   const inbox = useInboxRequests();
+  const myVouches = useMyVouches();
 
-  const [destination, setDestination] = useState('');
+  // Seed the destination from the search screen's empty-state CTA, so a
+  // searcher who found nothing doesn't have to re-type the place.
+  const params = useLocalSearchParams<{ destination?: string }>();
+  const [destination, setDestination] = useState(params.destination ?? '');
   const [text, setText] = useState('');
   // Per-inbox-request draft answer, keyed by request id.
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Per-inbox-request attached vouch id (optional), keyed by request id.
+  const [pickedVouch, setPickedVouch] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     log.event('ask.screen_entered');
@@ -64,10 +94,17 @@ export function AskScreen() {
 
   const onRespond = async (req: AskRequest) => {
     const body = (answers[req.id] ?? '').trim();
-    if (body.length === 0) return;
+    const vouchId = pickedVouch[req.id] ?? undefined;
+    // A reply needs voiced words or an attached vouch (mirrors the DB's
+    // rec_resp_has_content check). Text stays the primary signal.
+    if (body.length === 0 && !vouchId) {
+      toast.show({ message: 'Say something, or attach a vouch.', variant: 'error' });
+      return;
+    }
     try {
-      await respond.mutateAsync({ requestId: req.id, text: body });
+      await respond.mutateAsync({ requestId: req.id, text: body || undefined, vouchId });
       setAnswers((p) => ({ ...p, [req.id]: '' }));
+      setPickedVouch((p) => ({ ...p, [req.id]: null }));
       toast.show({ message: 'Sent your vouch.', variant: 'success' });
     } catch (err) {
       log.error('respond failed', err);
@@ -79,7 +116,12 @@ export function AskScreen() {
     <Page>
       <StatusSpace />
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          onPress={() => router.back()}
+          hitSlop={8}
+        >
           <Text style={styles.back}>‹ Back</Text>
         </Pressable>
         <Text style={styles.headline}>Ask your circle.</Text>
@@ -133,10 +175,19 @@ export function AskScreen() {
             <Eyebrow>Asks for you</Eyebrow>
             {(inbox.data ?? []).map((req) => {
               const who = req.requester?.display_name ?? req.requester?.handle ?? 'Someone';
+              // Your own vouches that match where they're asking about — the
+              // optional pool to attach. Free text stays the primary answer.
+              const mine = (myVouches.data ?? []).filter((v) =>
+                destMatches(v.destination_text, req.destination_text),
+              );
               return (
                 <View key={req.id} style={styles.askCard}>
                   <View style={styles.askHead}>
-                    <Face uri={req.requester?.avatar_url ?? null} initials={who.slice(0, 2).toUpperCase()} size="sm" />
+                    <Face
+                      uri={req.requester?.avatar_url ?? null}
+                      initials={who.slice(0, 2).toUpperCase()}
+                      size="sm"
+                    />
                     <Text style={styles.askWho}>
                       {who} · {req.destination_text}
                     </Text>
@@ -161,6 +212,36 @@ export function AskScreen() {
                       <Text style={styles.answerSendLabel}>Send</Text>
                     </Pressable>
                   </View>
+                  {mine.length > 0 ? (
+                    <View style={styles.attachWrap}>
+                      <Text style={styles.attachLabel}>Attach one of your vouches (optional)</Text>
+                      <View style={styles.chipRow}>
+                        {mine.map((v) => {
+                          const on = pickedVouch[req.id] === v.id;
+                          return (
+                            <Pressable
+                              key={v.id}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: on }}
+                              accessibilityLabel={`${on ? 'Remove attached vouch' : 'Attach vouch'}: ${v.text}`}
+                              onPress={() =>
+                                setPickedVouch((p) => ({ ...p, [req.id]: on ? null : v.id }))
+                              }
+                              style={[styles.chip, on && styles.chipOn]}
+                            >
+                              <Text
+                                style={[styles.chipText, on && styles.chipTextOn]}
+                                numberOfLines={1}
+                              >
+                                {on ? '✓ ' : ''}
+                                {v.text}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
               );
             })}
@@ -241,7 +322,13 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   ctaLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 16, color: '#FFFFFF' },
-  askCard: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: HAIR, padding: 14 },
+  askCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    padding: 14,
+  },
   askHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   askWho: { fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: INK },
   askText: {
@@ -264,10 +351,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: INK,
   },
-  answerSend: { backgroundColor: CORAL, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11 },
+  answerSend: {
+    backgroundColor: CORAL,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+  },
   answerSendLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: '#FFFFFF' },
-  sentCard: { backgroundColor: TINT, borderRadius: 14, borderWidth: 1, borderColor: HAIR, padding: 14 },
-  sentDest: { fontFamily: 'PlayfairDisplay_500Medium', fontSize: 18, color: INK, letterSpacing: -0.4 },
-  sentText: { fontFamily: 'DMSans_400Regular', fontSize: 14, lineHeight: 20, color: MUTE, marginTop: 4 },
-  sentMeta: { fontFamily: 'DMSans_700Bold', fontSize: 10, letterSpacing: 1, color: FAINT, marginTop: 10 },
+  attachWrap: { marginTop: 12, gap: 8 },
+  attachLabel: {
+    fontFamily: 'DMSans_600SemiBold',
+    fontSize: 11,
+    letterSpacing: 0.3,
+    color: FAINT,
+    textTransform: 'uppercase',
+  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    maxWidth: '100%',
+    backgroundColor: TINT,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: HAIR,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  chipOn: { backgroundColor: 'rgba(255, 77, 46, 0.10)', borderColor: CORAL },
+  chipText: { fontFamily: 'DMSans_400Regular', fontSize: 13, color: MUTE },
+  chipTextOn: { fontFamily: 'DMSans_600SemiBold', color: CORAL },
+  sentCard: {
+    backgroundColor: TINT,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    padding: 14,
+  },
+  sentDest: {
+    fontFamily: 'PlayfairDisplay_500Medium',
+    fontSize: 18,
+    color: INK,
+    letterSpacing: -0.4,
+  },
+  sentText: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: MUTE,
+    marginTop: 4,
+  },
+  sentMeta: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 10,
+    letterSpacing: 1,
+    color: FAINT,
+    marginTop: 10,
+  },
 });

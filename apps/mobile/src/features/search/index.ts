@@ -5,5 +5,6 @@ export {
   type VouchSearchResult,
 } from './api/use-vouch-search';
 export { useSaveVouch, useSavedVouchIds } from './api/use-save-vouch';
+export { useRecordInteraction, type InteractionKind } from './api/use-record-interaction';
 export { SearchScreen } from './screens/search-screen';
 export { PlanScreen } from './screens/plan-screen';

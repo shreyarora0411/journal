@@ -1,3 +1,4 @@
+import { applyPendingFollow } from '@/features/invite';
 import { log } from '@/lib/log';
 import { hashPhone } from '@/lib/phone-hash';
 import { getSupabase } from '@/lib/supabase';
@@ -35,10 +36,6 @@ export const useStartSession = () =>
       const normalized = PhoneSchema.parse(phone);
       const clientHashHex = await hashPhone(normalized);
       const supabase = getSupabase();
-      // TEMP probe — surface what recovery actually returns so we can
-      // see why the same phone keeps minting fresh anon users. Remove
-      // once the recovery flow is verified stable.
-      log.debug('RECOVER_PROBE_REQ', { normalized, clientHashHex });
 
       // ---- Path A: try to recover an existing user by phone -------------
       try {
@@ -48,13 +45,6 @@ export const useStartSession = () =>
           emailOtp?: string;
           hashedToken?: string;
         }>('recover-session', { body: { client_hash: clientHashHex } });
-        log.debug('RECOVER_PROBE_RES', {
-          recoverErr: recoverErr ? String(recoverErr) : null,
-          found: recoverData?.found ?? null,
-          hasEmail: !!recoverData?.email,
-          hasOtp: !!recoverData?.emailOtp,
-          hasToken: !!recoverData?.hashedToken,
-        });
 
         if (!recoverErr && recoverData?.found && recoverData.email && recoverData.emailOtp) {
           // Use the 6-digit email_otp returned by admin.generateLink with
@@ -67,26 +57,47 @@ export const useStartSession = () =>
             token: recoverData.emailOtp,
             type: 'email',
           });
-          log.debug('RECOVER_PROBE_VERIFY', {
-            verifyErr: verifyErr?.message ?? null,
-            verifyUserId: verifyData?.user?.id ?? null,
-            hasSession: !!verifyData?.session,
-          });
           if (verifyErr) {
-            log.warn('recover-session verifyOtp failed; falling through to new signup', {
+            // The phone IS recognized but recovery failed. Do NOT fall
+            // through to anonymous signup — that would mint a SECOND
+            // account for a known phone, corrupting contact-matching and
+            // orphaning the user's existing circle/vouches. Surface a
+            // retryable error instead.
+            log.warn('recover-session verifyOtp failed for a known phone', {
               error: verifyErr.message,
             });
-          } else if (verifyData.session) {
+            throw new Error('We could not sign you back in. Please try again.');
+          }
+          if (verifyData.session) {
             log.event('auth.session_recovered', {
               phone_country: normalized.slice(0, 3),
             });
+            // Apply any follow captured from a lore://follow link the user
+            // opened before they had a session. Best-effort, non-blocking.
+            await applyPendingFollow();
             return verifyData;
           }
         }
+
+        // Recovery returned found===true but without a usable email/OTP —
+        // the phone is still known, so refuse to mint a duplicate account.
+        if (!recoverErr && recoverData?.found) {
+          log.warn('recover-session matched a known phone but returned no usable token');
+          throw new Error('We could not sign you back in. Please try again.');
+        }
       } catch (err) {
-        // Edge function not deployed, network glitch, etc. Fall through
-        // to the new-user signup path — recovery is a best-effort
-        // optimization, not a hard dependency.
+        // A known-phone recovery failure rethrows above with this exact
+        // message — propagate it rather than minting a duplicate account.
+        if (
+          err instanceof Error &&
+          err.message === 'We could not sign you back in. Please try again.'
+        ) {
+          throw err;
+        }
+        // Otherwise: edge function not deployed, network glitch, etc.,
+        // for a phone that was NOT recognized. Fall through to the
+        // new-user signup path — recovery is a best-effort optimization
+        // for new phones, not a hard dependency.
         log.warn('recover-session threw; falling through to new signup', {
           error: String(err),
         });
@@ -110,6 +121,9 @@ export const useStartSession = () =>
       }
 
       log.event('auth.session_started', { phone_country: normalized.slice(0, 3) });
+      // Apply any follow captured from a lore://follow link the user opened
+      // before they had a session. Best-effort, non-blocking.
+      await applyPendingFollow();
       return data;
     },
   });

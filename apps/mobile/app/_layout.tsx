@@ -1,5 +1,6 @@
 import { ToastProvider } from '@/components';
 import { useAuthSession, useAuthStore, useProfile } from '@/features/auth';
+import { applyPendingFollow, handleFollowUrl } from '@/features/invite';
 import { onboardingNextRoute } from '@/features/onboarding';
 import { initPostHog } from '@/lib/posthog';
 import { initSentry } from '@/lib/sentry';
@@ -28,6 +29,7 @@ import {
 import { ThemeProvider } from '@shopify/restyle';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Font from 'expo-font';
+import * as Linking from 'expo-linking';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -49,12 +51,47 @@ function AuthGate() {
   const router = useRouter();
   const profileQ = useProfile();
 
+  // Deep-link auto-follow: opening lore://follow?id=<userId> follows that user
+  // once the viewer has a session. Captures both the cold-open URL
+  // (getInitialURL) and warm-open URLs (addEventListener). If the link arrives
+  // before a session exists it's stashed and replayed here when `session`
+  // flips truthy (and again by use-start-session for the just-signed-in path).
+  // See features/invite/lib/pending-follow.ts for the cold-install caveat.
+  useEffect(() => {
+    let cancelled = false;
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (!cancelled) return handleFollowUrl(url);
+      })
+      .catch(() => undefined);
+
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      handleFollowUrl(url).catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, []);
+
+  // When a session appears (sign-in completes), drain any follow that was
+  // stashed before we had one.
+  useEffect(() => {
+    if (session) applyPendingFollow().catch(() => undefined);
+  }, [session]);
+
   useEffect(() => {
     if (initializing) return;
     if (!isSupabaseConfigured()) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inDevGroup = segments[0] === 'dev';
+    // The circle/build-your-circle screen is reachable AFTER onboarding too
+    // (re-entry from the Friends tab), so an already-onboarded user must be
+    // allowed to sit on it without being bounced back to the feed.
+    const onCircleScreen = inAuthGroup && segments[1] === 'circle';
 
     if (!session) {
       // Unauthenticated users enter via the Cover screen (#01 in design pack).
@@ -67,7 +104,7 @@ function AuthGate() {
     const onboarded = profileQ.data?.onboarding_completed_at != null;
 
     if (onboarded) {
-      if (inAuthGroup) router.replace('/(tabs)/book');
+      if (inAuthGroup && !onCircleScreen) router.replace('/(tabs)/book');
       return;
     }
 

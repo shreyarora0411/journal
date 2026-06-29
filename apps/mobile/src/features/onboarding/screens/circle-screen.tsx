@@ -4,7 +4,7 @@ import { useFollow } from '@/features/follows';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import * as Contacts from 'expo-contacts';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMatchContacts } from '../api/use-match-contacts';
@@ -33,6 +33,12 @@ export function CircleScreen() {
   const matched = useMatchedFriends();
   const follow = useFollow();
   const updateProfile = useUpdateProfile();
+  // Re-entry mode: the same screen is reachable AFTER onboarding from the
+  // Friends tab ("Find friends"). In that mode we must NOT (re-)stamp
+  // onboarding completion or hard-route to the feed — we just return the user
+  // to where they came from. `?reentry=1` flags this.
+  const { reentry } = useLocalSearchParams<{ reentry?: string }>();
+  const isReentry = reentry === '1';
   const [adding, setAdding] = useState(false);
   /** Once the user has actually run a contacts match in this session,
    *  we render an inline result line — "5 friends found" or "No one
@@ -42,8 +48,8 @@ export function CircleScreen() {
   );
 
   useEffect(() => {
-    log.event('onboarding.screen_entered', { screen: 'circle' });
-  }, []);
+    log.event(isReentry ? 'circle.reentered' : 'onboarding.screen_entered', { screen: 'circle' });
+  }, [isReentry]);
 
   const friends = useMemo(() => matched.data ?? [], [matched.data]);
   const hasMatches = friends.length > 0;
@@ -98,8 +104,17 @@ export function CircleScreen() {
 
   /** Mark onboarding complete and route to the feed. Used by both
    *  Continue and Skip — Circle is the last gated step in the pilot
-   *  flow regardless of match outcome. */
+   *  flow regardless of match outcome.
+   *
+   *  In re-entry mode (reached after onboarding) this neither re-stamps
+   *  completion nor hard-routes to the feed; it just returns the user to
+   *  wherever they opened the flow from. */
   const finish = async (choice: 'continue' | 'skip' | 'no-matches') => {
+    if (isReentry) {
+      log.event('circle.reentry_done', { choice });
+      router.back();
+      return;
+    }
     log.event('onboarding.screen_completed', { screen: 'circle', choice });
     try {
       await updateProfile.mutateAsync({ onboarding_completed: true });
@@ -125,8 +140,10 @@ export function CircleScreen() {
         <Text style={styles.backGlyph}>‹</Text>
       </Pressable>
       <View style={{ paddingTop: 8, gap: 16 }}>
-        <Eyebrow>Step 2 of 2</Eyebrow>
-        <Text style={styles.headline}>Bring{'\n'}your circle.</Text>
+        <Eyebrow>{isReentry ? 'Find friends' : 'Step 2 of 2'}</Eyebrow>
+        <Text style={styles.headline}>
+          {isReentry ? 'Grow\nyour circle.' : 'Bring\nyour circle.'}
+        </Text>
         <Text style={styles.sub}>
           Lore only works when the people you trust are on it. Pick one source — we'll match the
           rest.
@@ -218,7 +235,7 @@ export function CircleScreen() {
           onPress={onContinue}
           style={styles.cta}
         >
-          <Text style={styles.ctaLabel}>Continue</Text>
+          <Text style={styles.ctaLabel}>{isReentry ? 'Done' : 'Continue'}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -226,7 +243,7 @@ export function CircleScreen() {
           onPress={onSkip}
           style={styles.skip}
         >
-          <Text style={styles.skipLabel}>Skip for now</Text>
+          <Text style={styles.skipLabel}>{isReentry ? 'Close' : 'Skip for now'}</Text>
         </Pressable>
       </View>
     </Page>

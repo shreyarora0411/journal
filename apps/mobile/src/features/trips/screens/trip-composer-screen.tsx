@@ -1,18 +1,11 @@
 import { Eyebrow, Page, StatusSpace } from '@/components';
+import { useBackfillMyPlaces, useResolveVouchPlace } from '@/features/places';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { VOUCH_CATEGORIES, type VouchType, looksSpecific } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useCreateVouch } from '../index';
 
 const CORAL = '#FF4D2E';
@@ -22,39 +15,51 @@ const FAINT = '#B7AE9F';
 const HAIR = '#EFEAE2';
 const TINT = '#FAF6F0';
 
+// Short chip labels — the full category prompts ("Where to eat or drink?") wrap
+// awkwardly; these scan in one glance and match the list/search surfaces.
+const SHORT_LABEL: Record<VouchType, string> = {
+  stay: 'Stay',
+  eat_drink: 'Eat / Drink',
+  do: 'Do',
+  nightlife: 'Nightlife',
+  good_to_know: 'Good to know',
+  skip: 'Skip',
+};
+
 /**
- * Add vouches (Vouched v3.1 — batch composer). Pick the list ONCE, then
- * rapid-fire vouches into it without routing away. This kills the friction
- * of the old one-at-a-time flow (a real 25-vouch trip is now one session,
- * not 25 trips through the composer).
+ * Add vouches (Vouched v3.1 — batch composer). The VOUCH is the atom; a LIST
+ * is an optional folder. Two doors:
  *
- * Launchable two ways:
- *   - Add tab (fresh): you name the list (defaults to the destination).
- *   - "+ Add a vouch" from a list: listId/listTitle params prefill + lock
- *     the list, so everything lands in that list.
+ *   - FAST (Add tab, no listId): log STANDALONE vouches — no "which list?"
+ *     wall at all. The vouch still surfaces in search, the circle feed, and
+ *     your profile. This is the wedge: log a place in seconds.
+ *   - CURATE ("+ Add a vouch" from a list): listId/listTitle params prefill +
+ *     lock the list, so everything batches into that list.
  *
  * Per vouch: category → one tuned field → destination (defaults to the
  * last one used, so a multi-stop trip rarely retypes). "Save & add another"
  * banks it and stays put. No verdict (the voiced text carries sentiment).
+ *
+ * There's no find-or-create-by-name anymore (curate already has a list id;
+ * fast has no list), so every save is optimistic-with-rollback.
  */
 export function TripComposerScreen() {
   const router = useRouter();
   const toast = useToast();
   const create = useCreateVouch();
+  const resolveVouchPlace = useResolveVouchPlace();
+  const backfillMyPlaces = useBackfillMyPlaces();
   const params = useLocalSearchParams<{
     listId?: string;
     listTitle?: string;
     destination?: string;
   }>();
 
-  // The container, chosen once. If launched from a list, it's fixed.
+  // CURATE mode is keyed entirely off the listId param. When set, the list is
+  // shown + locked and every vouch batches into it. When absent, we're in FAST
+  // mode: no list field, standalone vouches.
   const lockedListId = typeof params.listId === 'string' ? params.listId : null;
-  const [listName, setListName] = useState(
-    typeof params.listTitle === 'string' ? params.listTitle : '',
-  );
-  // After the first save we have a concrete list id; route all subsequent
-  // vouches there explicitly (avoids re-resolving by title each time).
-  const [resolvedListId, setResolvedListId] = useState<string | null>(lockedListId);
+  const lockedListTitle = typeof params.listTitle === 'string' ? params.listTitle : '';
 
   const [vouchType, setVouchType] = useState<VouchType | null>(null);
   const [text, setText] = useState('');
@@ -64,47 +69,81 @@ export function TripComposerScreen() {
   const [banked, setBanked] = useState(0);
 
   useEffect(() => {
-    log.event('composer.screen_entered', { batch: true });
+    log.event('composer.screen_entered', { batch: true, mode: lockedListId ? 'curate' : 'fast' });
+  }, [lockedListId]);
+
+  // Kick the place backfill once on mount, in the background — existing
+  // place-type vouches with no link get a precise pin without any UI or
+  // blocking. Fire-and-forget: the hook swallows its own errors. Run once;
+  // backfillMyPlaces is a stable callback keyed only off the user id.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional once-on-mount kick
+  useEffect(() => {
+    void backfillMyPlaces();
   }, []);
 
   const category = VOUCH_CATEGORIES.find((c) => c.type === vouchType) ?? null;
-  const listChosen = lockedListId != null || listName.trim().length > 0;
-  const canSave =
-    listChosen && Boolean(vouchType) && text.trim().length > 0 && destination.trim().length > 0;
+  // Fast mode needs only category + text + destination; curate adds nothing for
+  // the user (the locked list is implicit), so the gate is the same shape.
+  const canSave = Boolean(vouchType) && text.trim().length > 0 && destination.trim().length > 0;
   const nudge = text.trim().length > 0 && !looksSpecific(text);
+  // What's still missing — shown inline so the disabled CTA isn't a silent wall.
+  // (vouchType is always set wherever the CTA renders, so it's omitted here.)
+  const missing = [
+    text.trim().length === 0 && 'the vouch',
+    destination.trim().length === 0 && 'where',
+  ].filter(Boolean) as string[];
 
-  const onSaveAndNext = async () => {
-    if (!canSave || !vouchType) {
-      toast.show({
-        message: 'Pick a list, a category, write the vouch, add where.',
-        variant: 'error',
-      });
-      return;
-    }
-    try {
-      const res = await create.mutateAsync({
-        vouch_type: vouchType,
-        text: text.trim(),
-        destination_text: destination.trim(),
-        list_id: resolvedListId,
-        new_list_name: resolvedListId ? null : listName.trim() || null,
+  const onSaveAndNext = () => {
+    if (!canSave || !vouchType) return; // guarded by the disabled CTA + inline hint
+    const snap = { vouchType, text: text.trim(), destination: destination.trim() };
+
+    // Optimistic in both modes: bank + clear instantly so the next vouch can be
+    // typed now; persist in the background, roll back on error. CURATE links to
+    // the locked list; FAST stays standalone (list_id AND new_list_name null).
+    // Destination is intentionally retained between saves (next stop is usually
+    // the same).
+    setBanked((n) => n + 1);
+    setText('');
+    setVouchType(null);
+    create
+      .mutateAsync({
+        vouch_type: snap.vouchType,
+        text: snap.text,
+        destination_text: snap.destination,
+        list_id: lockedListId,
+        new_list_name: null,
         visibility: 'friends_of_friends',
+      })
+      .then((res) => {
+        // Background: link this vouch to a precise venue. Fire-and-forget —
+        // do NOT await, never blocks the next vouch, swallows its own errors.
+        resolveVouchPlace.mutate({
+          vouchId: res.vouchId,
+          text: snap.text,
+          destinationText: snap.destination,
+          vouchType: snap.vouchType,
+        });
+      })
+      .catch((err) => {
+        log.error('createVouch failed', err);
+        setBanked((n) => Math.max(0, n - 1));
+        setText(snap.text);
+        setVouchType(snap.vouchType);
+        toast.show({ message: 'Could not save that one — restored it.', variant: 'error' });
       });
-      setResolvedListId(res.listId); // lock the list for the rest of the session
-      setBanked((n) => n + 1);
-      setText('');
-      setVouchType(null);
-      // destination intentionally retained — next stop is usually the same place
-      toast.show({ message: 'Banked. Add another or tap Done.', variant: 'success' });
-    } catch (err) {
-      log.error('createVouch failed', err);
-      toast.show({ message: 'Could not save. Try again.', variant: 'error' });
-    }
   };
 
   const onDone = () => {
-    if (resolvedListId) router.replace(`/(tabs)/list/${resolvedListId}` as never);
-    else router.replace('/(tabs)/book' as never);
+    // End on a high: name the gift, not just "saved" (peak-end + concern-for-others).
+    if (banked > 0) {
+      toast.show({
+        message: `${banked} vouch${banked === 1 ? '' : 'es'} banked — the next friend headed here will find them.`,
+        variant: 'success',
+      });
+    }
+    // Curate → back to the list. Fast → your profile, where the vouches surface.
+    if (lockedListId) router.replace(`/(tabs)/list/${lockedListId}` as never);
+    else router.replace('/(tabs)/you' as never);
   };
 
   return (
@@ -120,31 +159,22 @@ export function TripComposerScreen() {
           ) : null}
         </View>
         <Text style={styles.sub}>
-          Drop as many as you like into one list. They stay in their own voice.
+          Leave notes for the next friend headed here — in your own words.
         </Text>
 
-        {/* The list — chosen once. Locked when launched from a list. */}
-        <View style={styles.field}>
-          <Eyebrow>To which list?</Eyebrow>
-          {lockedListId ? (
-            <View style={styles.lockedList}>
-              <Text style={styles.lockedListLabel}>{listName || 'This list'}</Text>
+        {/* CURATE mode only: show the locked list this batch lands in. FAST mode
+            (no listId) has no "which list?" wall — vouches are standalone. */}
+        {lockedListId ? (
+          <>
+            <View style={styles.field}>
+              <Eyebrow>Adding to</Eyebrow>
+              <View style={styles.lockedList}>
+                <Text style={styles.lockedListLabel}>{lockedListTitle || 'This list'}</Text>
+              </View>
             </View>
-          ) : (
-            <TextInput
-              accessibilityLabel="List name"
-              placeholder='e.g. "Koh Samui" or "best mountain stays"'
-              placeholderTextColor={FAINT}
-              value={listName}
-              onChangeText={setListName}
-              editable={resolvedListId == null /* lock after first save */}
-              style={[styles.input, resolvedListId != null && { color: MUTE }]}
-              selectionColor={CORAL}
-            />
-          )}
-        </View>
-
-        <View style={styles.divider} />
+            <View style={styles.divider} />
+          </>
+        ) : null}
 
         {/* Per-vouch: category → field → destination */}
         <View style={styles.field}>
@@ -161,7 +191,7 @@ export function TripComposerScreen() {
                   style={[styles.catChip, on ? styles.catChipOn : styles.catChipOff]}
                 >
                   <Text style={[styles.catLabel, on ? styles.catLabelOn : styles.catLabelOff]}>
-                    {c.prompt.replace(/\?$/, '')}
+                    {SHORT_LABEL[c.type]}
                   </Text>
                 </Pressable>
               );
@@ -208,15 +238,14 @@ export function TripComposerScreen() {
               accessibilityRole="button"
               accessibilityLabel="Save and add another"
               onPress={onSaveAndNext}
-              disabled={!canSave || create.isPending}
-              style={[styles.cta, (!canSave || create.isPending) && { opacity: 0.5 }]}
+              disabled={!canSave}
+              style={[styles.cta, !canSave && { opacity: 0.5 }]}
             >
-              {create.isPending ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.ctaLabel}>Save & add another</Text>
-              )}
+              <Text style={styles.ctaLabel}>Save & add another</Text>
             </Pressable>
+            {!canSave ? (
+              <Text style={styles.needHint}>Still need {missing.join(', ')}.</Text>
+            ) : null}
           </>
         ) : null}
 
@@ -227,7 +256,9 @@ export function TripComposerScreen() {
             onPress={onDone}
             style={styles.doneBtn}
           >
-            <Text style={styles.doneLabel}>Done — see the list ›</Text>
+            <Text style={styles.doneLabel}>
+              {lockedListId ? 'Done — see the list ›' : 'Done — see your vouches ›'}
+            </Text>
           </Pressable>
         ) : null}
         <View style={{ height: 48 }} />
@@ -305,6 +336,13 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   nudge: { fontFamily: 'DMSans_400Regular', fontSize: 12, color: CORAL, marginTop: 6 },
+  needHint: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 12,
+    color: FAINT,
+    textAlign: 'center',
+    marginTop: 10,
+  },
   cta: {
     backgroundColor: INK,
     borderRadius: 999,

@@ -81,6 +81,8 @@ MAX term = taste-led (best-matched lover), NOT popularity; log term = mild suppo
 
 **The 10-second loop:** Log place → one-tap loved/fine/skip → optional one-line voiced note → optional ≤3 tags → lands on Your Map + trains taste. Going out: pick area + occasion → taste-matched spots with who + why. Follow people whose maps you love.
 
+**Anti-gaming rule at the point of action (founder call, 2026-07-03):** the sentiment buttons carry NO algorithm hints ("trains your taste" etc. removed) — naming which tap feeds the formula invites performative logging. How signals work lives only on the how-it-works surface (see formula-transparency principle: ingredients, never coefficients, never at the moment of input).
+
 **Five screens only:**
 1. **Your Map** (home + identity): loved places + taste read-out ("substance-first, adventurous, splurges on food") + lists. **Make-or-break screen — must beat Notes/Google-saves as a personal artifact.**
 2. **Log**: place picker → sentiment → voice line → tags. Fast door; nothing required beyond place+sentiment.

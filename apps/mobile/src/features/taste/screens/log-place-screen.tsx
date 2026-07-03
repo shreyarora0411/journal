@@ -19,10 +19,12 @@ const SANS = 'HankenGrotesk_400Regular';
 const SANS_SEMI = 'HankenGrotesk_600SemiBold';
 const SANS_BOLD = 'HankenGrotesk_700Bold';
 
-const SENTIMENTS: { key: Sentiment; label: string; hint: string }[] = [
-  { key: 'loved', label: 'Loved it', hint: 'trains your taste' },
-  { key: 'fine', label: 'Fine', hint: 'noted, no signal' },
-  { key: 'skip', label: 'Skip', hint: 'private — never shown' },
+// No sublabels: naming which button feeds the algorithm invites performative
+// logging. How signals work lives on the how-it-works surface, not here.
+const SENTIMENTS: { key: Sentiment; label: string }[] = [
+  { key: 'loved', label: 'Loved it' },
+  { key: 'fine', label: 'Fine' },
+  { key: 'skip', label: 'Skip' },
 ];
 
 /**
@@ -144,9 +146,6 @@ export function LogPlaceScreen() {
                   >
                     <Text style={[styles.sentimentLabel, on && { color: '#FFFFFF' }]}>
                       {s.label}
-                    </Text>
-                    <Text style={[styles.sentimentHint, on && { color: '#FFFFFF', opacity: 0.85 }]}>
-                      {s.hint}
                     </Text>
                   </Pressable>
                 );
@@ -277,7 +276,6 @@ const styles = StyleSheet.create({
   sentimentFineOn: { backgroundColor: MUTE, borderColor: MUTE },
   sentimentSkipOn: { backgroundColor: INK, borderColor: INK },
   sentimentLabel: { fontFamily: SANS_SEMI, fontSize: 14, color: INK },
-  sentimentHint: { fontFamily: SANS, fontSize: 10.5, color: MUTE },
   noteInput: {
     fontFamily: SANS,
     fontSize: 16,

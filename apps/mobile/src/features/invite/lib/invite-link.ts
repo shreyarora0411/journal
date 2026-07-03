@@ -63,7 +63,7 @@ export const buildFollowLink = (userId: string): string => {
  * userId (e.g. not signed in yet).
  */
 export const buildPersonalInviteText = (userId?: string | null): string => {
-  const base = "i'm on lore — friends-only travel notes, no reviews, no strangers.";
+  const base = "i'm on Vouch — friends-only travel notes, no reviews, no strangers.";
   if (!userId) return appendInviteLink(base);
   return `${base}\n\n${buildFollowLink(userId)}`;
 };
@@ -74,5 +74,5 @@ export const buildPersonalInviteText = (userId?: string | null): string => {
  * every invite surface shares this exact copy.
  */
 export const INVITE_TEXT = appendInviteLink(
-  "i'm on lore — friends-only travel notes, no reviews, no strangers.",
+  "i'm on Vouch — friends-only travel notes, no reviews, no strangers.",
 );

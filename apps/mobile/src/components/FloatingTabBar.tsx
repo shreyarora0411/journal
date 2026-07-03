@@ -1,6 +1,7 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon } from './Icon';
 
 const INK = '#1A1410';
 const MUTE = '#7A716A';
@@ -10,21 +11,28 @@ const CORAL = '#FF4D2E';
 type IconKey = 'book' | 'search' | 'add' | 'friends' | 'you';
 
 const LABELS: Record<IconKey, string> = {
-  book: 'Book',
-  search: 'Search',
-  add: 'Add',
-  friends: 'Friends',
+  book: 'Map',
+  search: 'Go out',
+  add: 'Log',
+  friends: 'People',
   you: 'You',
 };
 
-const Glyph = ({ kind, active }: { kind: IconKey; active: boolean }) => {
-  const color = active ? INK : MUTE;
-  if (kind === 'book') return <Text style={[styles.icon, { color }]}>□</Text>;
-  if (kind === 'search') return <Text style={[styles.icon, { color }]}>⌕</Text>;
-  if (kind === 'friends') return <Text style={[styles.icon, { color }]}>◇</Text>;
-  if (kind === 'you') return <Text style={[styles.icon, { color }]}>○</Text>;
-  return <Text style={[styles.icon, { color }]}>＋</Text>;
-};
+// Real, universally-understood icons (Feather) — a square/diamond/circle don't
+// say "home/friends/you". 'book-open' for the travel Book home, 'users' for the
+// circle, 'user' for your profile. ('add' is rendered as the raised disc, never
+// via Glyph, but the map stays total.) Active = ink, inactive = muted.
+const TAB_ICON = {
+  book: 'map',
+  search: 'compass',
+  add: 'plus',
+  friends: 'users',
+  you: 'user',
+} as const;
+
+const Glyph = ({ kind, active }: { kind: IconKey; active: boolean }) => (
+  <Icon name={TAB_ICON[kind]} size={22} color={active ? INK : MUTE} />
+);
 
 /**
  * Floating pill tab bar. Five surfaces — Book / Search / Add / Friends /
@@ -87,7 +95,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
                 style={styles.addWrap}
               >
                 <View style={styles.addDisc}>
-                  <Text style={styles.addPlus}>＋</Text>
+                  <Icon name="plus" size={26} color={PAPER} />
                 </View>
               </Pressable>
             );
@@ -145,7 +153,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  icon: { fontSize: 22 },
   label: {
     fontFamily: 'DMSans_600SemiBold',
     fontSize: 12,
@@ -174,11 +181,5 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 6 },
     }),
-  },
-  addPlus: {
-    color: PAPER,
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 26,
-    lineHeight: 28,
   },
 });

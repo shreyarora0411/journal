@@ -18,6 +18,12 @@ import {
   Fraunces_500Medium,
 } from '@expo-google-fonts/fraunces';
 import { Geist_400Regular, Geist_500Medium } from '@expo-google-fonts/geist';
+import {
+  HankenGrotesk_400Regular,
+  HankenGrotesk_500Medium,
+  HankenGrotesk_600SemiBold,
+  HankenGrotesk_700Bold,
+} from '@expo-google-fonts/hanken-grotesk';
 import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
@@ -128,6 +134,14 @@ export default function RootLayout() {
     (async () => {
       try {
         await Font.loadAsync({
+          // Vouch identity type stack — Fraunces (display + voiced quotes) +
+          // Hanken Grotesk (UI/body). Chosen for the emotional-voice thesis:
+          // a warm characterful serif makes a friend's quote read human, the
+          // grotesque keeps the chrome clean. Rolling out screen by screen.
+          HankenGrotesk_400Regular,
+          HankenGrotesk_500Medium,
+          HankenGrotesk_600SemiBold,
+          HankenGrotesk_700Bold,
           // New lore-redesign type stack
           InstrumentSerif_400Italic: InstrumentSerif_400Regular_Italic,
           Geist_400Regular,

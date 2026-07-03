@@ -16,6 +16,7 @@ export { CityHero } from './CityHero';
 export { VenueThumb } from './VenueThumb';
 export { EntityCard } from './EntityCard';
 export { FirstVoucherBadge } from './FirstVoucherBadge';
+export { Icon } from './Icon';
 
 // Pre-existing primitives (kept; rebuilt or extended in place)
 export { Box } from './Box';

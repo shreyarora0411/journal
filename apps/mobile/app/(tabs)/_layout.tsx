@@ -14,10 +14,10 @@ import { Tabs } from 'expo-router';
 export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <FloatingTabBar {...props} />}>
-      <Tabs.Screen name="book" options={{ title: 'Book' }} />
-      <Tabs.Screen name="search" options={{ title: 'Search' }} />
-      <Tabs.Screen name="add" options={{ title: 'Add' }} />
-      <Tabs.Screen name="friends" options={{ title: 'Friends' }} />
+      <Tabs.Screen name="book" options={{ title: 'Map' }} />
+      <Tabs.Screen name="search" options={{ title: 'Go out' }} />
+      <Tabs.Screen name="add" options={{ title: 'Log' }} />
+      <Tabs.Screen name="friends" options={{ title: 'People' }} />
       <Tabs.Screen name="you" options={{ title: 'You' }} />
 
       {/* Hidden routes — kept inside (tabs) so the bar persists. */}
@@ -36,6 +36,9 @@ export default function TabsLayout() {
       <Tabs.Screen name="trip-notebook/[id]" options={{ href: null }} />
       <Tabs.Screen name="ask/index" options={{ href: null }} />
       <Tabs.Screen name="ask/[id]" options={{ href: null }} />
+      <Tabs.Screen name="spot/[id]" options={{ href: null }} />
+      <Tabs.Screen name="person/[id]" options={{ href: null }} />
+      <Tabs.Screen name="taste-setup" options={{ href: null }} />
     </Tabs>
   );
 }

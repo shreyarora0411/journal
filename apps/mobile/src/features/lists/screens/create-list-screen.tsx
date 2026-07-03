@@ -1,6 +1,7 @@
 import { Box, Button, DetailHeader, Input, Text, Textarea } from '@/components';
 import { useCreateList } from '@/features/lists';
 import { useToast } from '@/hooks/use-toast';
+import { log } from '@/lib/log';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
@@ -21,8 +22,10 @@ export default function CreateListScreen() {
     try {
       const list = await create.mutateAsync({ title, description: description || null });
       router.replace(`/list/${list.id}` as never);
-    } catch {
-      toast.show({ message: 'Could not create list.', variant: 'error' });
+    } catch (err) {
+      log.error('create list failed', err);
+      const msg = err instanceof Error ? err.message : 'Could not create list.';
+      toast.show({ message: msg, variant: 'error' });
     }
   };
 

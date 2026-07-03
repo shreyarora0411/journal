@@ -1,7 +1,5 @@
-// Add tab → Vouched v2 prose-first composer (Loop A).
-// The legacy Tip/Trip dispatcher (LogScreen + AtomicLogForm/TripLogForm)
-// stays in the codebase as the §17 fallback if extraction quality proves
-// weak in the seed cohort, but the composer is the default entry now.
-import { TripComposerScreen } from '@/features/trips';
+// Log tab → place-first log door (spec §3 screen 2). The old composer stays in
+// features/trips as reference until removed.
+import { LogPlaceScreen } from '@/features/taste';
 
-export default TripComposerScreen;
+export default LogPlaceScreen;

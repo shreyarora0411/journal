@@ -1,2 +1,2 @@
-export { ActivityScreen } from './screens/activity-screen';
-export { useActivity, type ActivityEvent, type ActivityKind } from './api/use-activity';
+export { FriendsScreen } from './screens/friends-screen';
+export { useCircle, type CircleMember } from './api/use-circle';

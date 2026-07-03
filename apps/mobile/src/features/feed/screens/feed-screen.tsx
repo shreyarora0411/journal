@@ -1,6 +1,11 @@
-import { Face, Page, StatusSpace } from '@/components';
+import { Face, Icon, Page, StatusSpace } from '@/components';
 import { useCirclePulse } from '@/features/feed';
-import { type VouchSearchResult, useRecordInteraction, useVouchSearch } from '@/features/search';
+import {
+  type VouchSearchResult,
+  useLatestDestinationSignal,
+  useRecordInteraction,
+  useVouchSearch,
+} from '@/features/search';
 import { useMyVouches, useVouchUses } from '@/features/trips';
 import { useWishlistRows } from '@/features/wishlist';
 import { log } from '@/lib/log';
@@ -50,13 +55,20 @@ export function FeedScreen() {
   //    for, so the log CTA is "back from {there}?" instead of a cold prompt.
   const recentDest = myVouchesQ.data?.[0]?.destination_text?.trim() || null;
 
-  // 3. RESURFACING — the moment-of-relevance engine. Take the first saved
-  //    destination as an upcoming trip and pull the circle's vouches for it.
-  //    Single top-level hook call (never in a loop): the first wishlist row.
-  const upcomingDest = (wishlistQ.data ?? [])
-    .map((w) => w.target_label?.trim())
-    .find((label): label is string => Boolean(label));
-  const resurfaceQ = useVouchSearch(upcomingDest ?? '');
+  // 3. RESURFACING — the moment-of-relevance engine, now driven by a REAL
+  //    private signal: the destination the viewer actually SEARCHED (migration
+  //    54), not the old heuristic that relabelled the first wishlist row an
+  //    "upcoming trip" (a fabricated claim). Falls back to a saved destination
+  //    only when they haven't searched anything yet. Either way we never assert
+  //    a travel date — just "here's your circle on the place you were looking at".
+  const consideredSignal = useLatestDestinationSignal();
+  const consideredDest = consideredSignal.data?.destination_text?.trim() || null;
+  const savedDest =
+    (wishlistQ.data ?? [])
+      .map((w) => w.target_label?.trim())
+      .find((label): label is string => Boolean(label)) ?? null;
+  const resurfaceDest = consideredDest ?? savedDest;
+  const resurfaceQ = useVouchSearch(resurfaceDest ?? '');
   const resurfaced = (resurfaceQ.data ?? []).slice(0, 3);
 
   // 5. LATELY — the circle's recent vouches, demoted below the hooks.
@@ -72,8 +84,8 @@ export function FeedScreen() {
 
       {/* Header — wordmark, saved counter, search, own avatar */}
       <View style={styles.header}>
-        <Text accessibilityLabel="lore." style={styles.wordmark}>
-          lore<Text style={styles.wordmarkDot}>.</Text>
+        <Text accessibilityLabel="Vouch." style={styles.wordmark}>
+          Vouch<Text style={styles.wordmarkDot}>.</Text>
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <Link href="/(tabs)/wishlist" asChild>
@@ -82,7 +94,7 @@ export function FeedScreen() {
               accessibilityLabel={`Saved: ${savedCount}`}
               style={styles.savedCounter}
             >
-              <Text style={[styles.bookmarkGlyph, savedCount > 0 && { color: CORAL }]}>🔖</Text>
+              <Icon name="bookmark" size={16} color={savedCount > 0 ? CORAL : INK} />
               <Text style={[styles.savedCount, savedCount > 0 && { color: CORAL }]}>
                 {savedCount}
               </Text>
@@ -119,7 +131,7 @@ export function FeedScreen() {
             onPress={() => router.push('/(tabs)/add' as never)}
             style={styles.emptyCta}
           >
-            <Text style={styles.emptyCtaLabel}>Log one place ✦</Text>
+            <Text style={styles.emptyCtaLabel}>Log one place</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -168,11 +180,11 @@ export function FeedScreen() {
             <View style={styles.supplyRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.supplyTitle}>
-                  {recentDest ? `Back from ${recentDest}?` : 'Been somewhere good?'}
+                  {recentDest ? `More from ${recentDest}?` : 'Been somewhere good?'}
                 </Text>
                 <Text style={styles.supplyBody}>
                   {recentDest
-                    ? 'Add what was worth it — the next friend headed there will find it.'
+                    ? 'Add another worth a vouch — the next friend headed there will find it.'
                     : 'Log a place you’d vouch for — the next friend headed there will find it.'}
                 </Text>
               </View>
@@ -186,23 +198,23 @@ export function FeedScreen() {
               </Pressable>
             </View>
 
-            {/* 3. RESURFACING CARD — the moment-of-relevance engine. The first
-                saved destination, with the circle's actual vouches for it. */}
-            {upcomingDest && resurfaced.length > 0 ? (
+            {/* 3. RESURFACING CARD — the circle's actual vouches for the place
+                the viewer was last looking at (their own private search signal,
+                or a saved destination). Honest framing: "your circle's picks for
+                {dest}" — no assertion that they're travelling there or when. */}
+            {resurfaceDest && resurfaced.length > 0 ? (
               <View style={{ gap: 12 }}>
-                <Text style={styles.eyebrow}>
-                  {upcomingDest} — your circle vouched for {resurfaced.length}
-                </Text>
+                <Text style={styles.eyebrow}>{resurfaceDest} — your circle’s picks</Text>
                 {resurfaced.map((r) => (
                   <ResurfaceVouch key={`resurface-${r.vouch_id}`} vouch={r} />
                 ))}
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`See all vouches for ${upcomingDest}`}
+                  accessibilityLabel={`See all vouches for ${resurfaceDest}`}
                   onPress={() =>
                     router.push({
                       pathname: '/(tabs)/search',
-                      params: { destination: upcomingDest },
+                      params: { destination: resurfaceDest },
                     } as never)
                   }
                   style={styles.seeAllRow}
@@ -315,11 +327,11 @@ function ResurfaceVouch({ vouch }: { vouch: VouchSearchResult }) {
               accessibilityRole="button"
               accessibilityLabel="Open in Maps"
               onPress={openMaps}
-              hitSlop={6}
+              hitSlop={12}
               style={styles.vouchActionBtn}
             >
               <Text style={styles.vouchActionLabel}>
-                {vouch.place_google_id ? '📍 Maps' : '↗ Maps'}
+                {vouch.place_google_id ? '↗ Maps · pinned' : '↗ Maps'}
               </Text>
             </Pressable>
           ) : null}
@@ -327,7 +339,7 @@ function ResurfaceVouch({ vouch }: { vouch: VouchSearchResult }) {
             accessibilityRole="button"
             accessibilityLabel="Share this vouch"
             onPress={shareVouch}
-            hitSlop={6}
+            hitSlop={12}
             style={styles.vouchActionBtn}
           >
             <Text style={styles.vouchActionLabel}>Share</Text>
@@ -396,7 +408,7 @@ function VouchFeedCard({ vouch }: { vouch: FeedVouch }) {
               accessibilityRole="button"
               accessibilityLabel="Open in Maps"
               onPress={openMaps}
-              hitSlop={6}
+              hitSlop={12}
               style={styles.vouchActionBtn}
             >
               <Text style={styles.vouchActionLabel}>↗ Maps</Text>
@@ -406,7 +418,7 @@ function VouchFeedCard({ vouch }: { vouch: FeedVouch }) {
             accessibilityRole="button"
             accessibilityLabel="Share this vouch"
             onPress={shareVouch}
-            hitSlop={6}
+            hitSlop={12}
             style={styles.vouchActionBtn}
           >
             <Text style={styles.vouchActionLabel}>Share</Text>
@@ -441,7 +453,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  bookmarkGlyph: { fontSize: 16, color: MUTE },
   savedCount: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: MUTE },
 
   // Empty (no content at all)

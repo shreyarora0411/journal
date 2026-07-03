@@ -1,4 +1,5 @@
 import { Eyebrow, Page, StatusSpace } from '@/components';
+import { useOpenAskForDestination } from '@/features/ask';
 import { useBackfillMyPlaces, useResolveVouchPlace } from '@/features/places';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
@@ -68,6 +69,11 @@ export function TripComposerScreen() {
   );
   const [banked, setBanked] = useState(0);
 
+  // A REAL beneficiary for the destination being logged: someone in the circle
+  // with an open ask about it. Powers an honest, concrete peak-end reward ("Mira
+  // asked about Goa — your vouch answers her") instead of a fabricated date.
+  const askForDest = useOpenAskForDestination(destination);
+
   useEffect(() => {
     log.event('composer.screen_entered', { batch: true, mode: lockedListId ? 'curate' : 'fast' });
   }, [lockedListId]);
@@ -134,12 +140,16 @@ export function TripComposerScreen() {
   };
 
   const onDone = () => {
-    // End on a high: name the gift, not just "saved" (peak-end + concern-for-others).
+    // End on a high: name the gift, not just "saved" (peak-end + concern-for-
+    // others). If a real circle member has an open ask for this place, name them
+    // — a true, concrete beneficiary beats a generic line. Never a fabricated
+    // "going in March": this fires only when someone actually asked.
     if (banked > 0) {
-      toast.show({
-        message: `${banked} vouch${banked === 1 ? '' : 'es'} banked — the next friend headed here will find them.`,
-        variant: 'success',
-      });
+      const beneficiary = askForDest.data;
+      const message = beneficiary
+        ? `${beneficiary.requester_name} asked your circle about ${beneficiary.destination_text} — your ${banked === 1 ? 'vouch answers' : 'vouches answer'} them.`
+        : `${banked} vouch${banked === 1 ? '' : 'es'} banked — the next friend headed here will find ${banked === 1 ? 'it' : 'them'}.`;
+      toast.show({ message, variant: 'success' });
     }
     // Curate → back to the list. Fast → your profile, where the vouches surface.
     if (lockedListId) router.replace(`/(tabs)/list/${lockedListId}` as never);

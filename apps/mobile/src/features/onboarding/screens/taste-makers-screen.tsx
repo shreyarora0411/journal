@@ -69,7 +69,7 @@ export function TasteMakersScreen() {
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>Coming soon</Text>
           <Text style={styles.emptyBody}>
-            We're curating a small group of travelers we vouch for. Once they're on lore, you'll be
+            We're curating a small group of travelers we vouch for. Once they're on Vouch, you'll be
             able to follow them here. For now, skip ahead — your friends carry the feed.
           </Text>
         </View>

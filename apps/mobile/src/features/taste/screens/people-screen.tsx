@@ -1,0 +1,183 @@
+import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { useFollow, useUnfollow } from '@/features/follows';
+import { log } from '@/lib/log';
+import { TASTE_TUNING } from '@journal/shared';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMyPlaces, useTasteTwins } from '../api/use-taste-data';
+
+const CORAL = '#FF4D2E';
+const INK = '#1B1714';
+const MUTE = '#8A8178';
+const HAIR = '#E7E1D7';
+const CARD = '#FFFDFA';
+
+const SERIF = 'Fraunces_500';
+const SANS = 'HankenGrotesk_400Regular';
+const SANS_SEMI = 'HankenGrotesk_600SemiBold';
+const SANS_BOLD = 'HankenGrotesk_700Bold';
+
+/**
+ * People — taste-twins (spec §3, screen 4). Ordered by proven taste-match,
+ * never by popularity. HONEST gate: below 8 loves the server returns nothing
+ * and this screen says exactly why, with the one action that fixes it.
+ */
+export function PeopleScreen() {
+  const router = useRouter();
+  const twinsQ = useTasteTwins();
+  const placesQ = useMyPlaces();
+  const follow = useFollow();
+  const unfollow = useUnfollow();
+
+  useEffect(() => {
+    log.event('taste.people_entered');
+  }, []);
+
+  const lovedCount = useMemo(
+    () => (placesQ.data ?? []).filter((p) => p.sentiment === 'loved').length,
+    [placesQ.data],
+  );
+  const gate = TASTE_TUNING.confidenceMinLoves;
+  const twins = twinsQ.data ?? [];
+  const gated = lovedCount < gate;
+
+  return (
+    <Page>
+      <StatusSpace />
+      <Text style={styles.headline}>Borrow better taste.</Text>
+      <Text style={styles.sub}>
+        These aren't matches to meet — they're maps to follow. When someone's taste overlaps yours,
+        their loved places become your answers.
+      </Text>
+
+      {twinsQ.isLoading || placesQ.isLoading ? (
+        <Text style={styles.empty}>Loading…</Text>
+      ) : gated ? (
+        <View style={styles.gateCard}>
+          <Text style={styles.gateTitle}>This unlocks at {gate} loves.</Text>
+          <Text style={styles.gateBody}>
+            You're at {lovedCount}. Log {gate - lovedCount} more place
+            {gate - lovedCount === 1 ? '' : 's'} you love and we can honestly tell whose taste fits
+            yours — we never guess.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Log a place"
+            onPress={() => router.push('/(tabs)/add' as never)}
+            style={styles.gateCta}
+          >
+            <Text style={styles.gateCtaLabel}>Log a place</Text>
+          </Pressable>
+        </View>
+      ) : twins.length === 0 ? (
+        <View style={styles.gateCard}>
+          <Text style={styles.gateTitle}>No maps to borrow yet.</Text>
+          <Text style={styles.gateBody}>
+            You're past the gate — people appear here as more of the tribe logs {gate}+ loves.
+          </Text>
+        </View>
+      ) : (
+        <View style={{ marginTop: 18 }}>
+          <Eyebrow>Whose taste fits yours</Eyebrow>
+          <View style={{ gap: 8, marginTop: 12 }}>
+            {twins.map((t) => {
+              const who = t.display_name ?? t.handle ?? 'Someone';
+              const pending = follow.isPending || unfollow.isPending;
+              return (
+                <View key={t.user_id} style={styles.row}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${who}'s map`}
+                    onPress={() => router.push(`/(tabs)/person/${t.user_id}` as never)}
+                    style={styles.rowBody}
+                  >
+                    <Face uri={t.avatar_url} initials={who.slice(0, 2).toUpperCase()} size="md" />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.rowName} numberOfLines={1}>
+                        {who}
+                      </Text>
+                      <Text style={styles.rowMeta}>
+                        <Text style={styles.rowMatch}>
+                          {Math.round(t.match * 100)}% taste overlap
+                        </Text>
+                        {'  ·  '}
+                        {t.love_count} loves
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t.followed ? `Unfollow ${who}` : `Follow ${who}`}
+                    disabled={pending}
+                    onPress={() =>
+                      t.followed ? unfollow.mutate(t.user_id) : follow.mutate(t.user_id)
+                    }
+                    style={[styles.followBtn, t.followed && styles.followBtnOn]}
+                  >
+                    <Text style={[styles.followLabel, t.followed && { color: MUTE }]}>
+                      {t.followed ? 'Following' : 'Follow'}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
+    </Page>
+  );
+}
+
+const styles = StyleSheet.create({
+  headline: {
+    fontFamily: SERIF,
+    fontSize: 28,
+    color: INK,
+    letterSpacing: -0.6,
+    paddingTop: 8,
+  },
+  sub: { fontFamily: SANS, fontSize: 14, lineHeight: 21, color: MUTE, marginTop: 8 },
+  empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 24 },
+  gateCard: {
+    marginTop: 24,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: CARD,
+  },
+  gateTitle: { fontFamily: SERIF, fontSize: 22, color: INK, letterSpacing: -0.4 },
+  gateBody: { fontFamily: SANS, fontSize: 13.5, lineHeight: 21, color: MUTE, marginTop: 8 },
+  gateCta: {
+    marginTop: 16,
+    backgroundColor: CORAL,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  gateCtaLabel: { fontFamily: SANS_SEMI, fontSize: 14, color: '#FFFFFF' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: CARD,
+  },
+  rowBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowName: { fontFamily: SANS_SEMI, fontSize: 15, color: INK },
+  rowMeta: { fontFamily: SANS, fontSize: 12.5, color: MUTE, marginTop: 2 },
+  rowMatch: { fontFamily: SANS_BOLD, fontSize: 12.5, color: CORAL },
+  followBtn: {
+    borderWidth: 1.5,
+    borderColor: CORAL,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  followBtnOn: { borderColor: HAIR },
+  followLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
+});

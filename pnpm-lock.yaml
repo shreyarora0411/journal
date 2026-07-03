@@ -26,6 +26,9 @@ importers:
       '@expo-google-fonts/geist':
         specifier: ^0.4.2
         version: 0.4.2
+      '@expo-google-fonts/hanken-grotesk':
+        specifier: ^0.4.2
+        version: 0.4.3
       '@expo-google-fonts/instrument-serif':
         specifier: ^0.4.1
         version: 0.4.1
@@ -922,6 +925,9 @@ packages:
 
   '@expo-google-fonts/geist@0.4.2':
     resolution: {integrity: sha512-cTsqJRQrvK5EniTVwH7UDK18RFf9Bc6yxciAuM936aViQ+eR6j3mLEI2rQkJXz5JP9kwtn8tHJviDyZ0ulH6oA==}
+
+  '@expo-google-fonts/hanken-grotesk@0.4.3':
+    resolution: {integrity: sha512-TZn/Ux+nCxEjG/zAenCFbEhOAPxSXN3lo2YU2jHcPsNBPFeicm8feQStL81igJuAwJLCn62VvEOdTtmVEBDl0g==}
 
   '@expo-google-fonts/instrument-serif@0.4.1':
     resolution: {integrity: sha512-1CgCrLbTSgE7RV8ZrTT7i06UAyNQDBrhxQuxkReNnfq5yvUhTmvpOK17grlEsXG5p04lJ1ZXGiIjPeHo6X0sXg==}
@@ -5891,6 +5897,8 @@ snapshots:
   '@expo-google-fonts/fraunces@0.2.3': {}
 
   '@expo-google-fonts/geist@0.4.2': {}
+
+  '@expo-google-fonts/hanken-grotesk@0.4.3': {}
 
   '@expo-google-fonts/instrument-serif@0.4.1': {}
 

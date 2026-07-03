@@ -24,7 +24,7 @@ const isWeb = Platform.OS === 'web';
  * Three connector cards stacked: Instagram (primary, coral border, "Best"
  * badge), Contacts, WhatsApp chat. Instagram and WhatsApp are placeholders
  * pending OAuth (ADR 0005); Contacts is the only live path. Below the
- * cards we summarize matched friends already on lore.
+ * cards we summarize matched friends already on Vouch.
  */
 export function CircleScreen() {
   const router = useRouter();
@@ -145,7 +145,7 @@ export function CircleScreen() {
           {isReentry ? 'Grow\nyour circle.' : 'Bring\nyour circle.'}
         </Text>
         <Text style={styles.sub}>
-          Lore only works when the people you trust are on it. Pick one source — we'll match the
+          Vouch only works when the people you trust are on it. Pick one source — we'll match the
           rest.
         </Text>
       </View>
@@ -157,8 +157,8 @@ export function CircleScreen() {
             matchContacts.isPending
               ? 'Matching…'
               : hasMatches
-                ? `${friends.length} friend${friends.length === 1 ? '' : 's'} already on lore.`
-                : 'Find people you already know who are on lore.'
+                ? `${friends.length} friend${friends.length === 1 ? '' : 's'} already on Vouch.`
+                : 'Find people you already know who are on Vouch.'
           }
           badge="Best"
           coralBorder
@@ -197,7 +197,7 @@ export function CircleScreen() {
               size="md"
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.matchedTitle}>{friends.length} friends already on lore.</Text>
+              <Text style={styles.matchedTitle}>{friends.length} friends already on Vouch.</Text>
               <Text style={styles.matchedSub}>Add them and your book gets useful immediately.</Text>
             </View>
           </View>
@@ -220,7 +220,7 @@ export function CircleScreen() {
           <Text style={styles.matchedTitle}>No one yet.</Text>
           <Text style={styles.matchedSub}>
             We checked {matchOutcome.uploaded} number{matchOutcome.uploaded === 1 ? '' : 's'} — no
-            one in your contacts is on lore yet. Invite a friend, or come back when more of your
+            one in your contacts is on Vouch yet. Invite a friend, or come back when more of your
             circle joins.
           </Text>
         </View>

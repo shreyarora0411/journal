@@ -28,7 +28,7 @@ beforeEach(() => {
 describe('LoginScreen', () => {
   it('renders the wordmark, OTP-style headline, sub copy, country pill and CTA', () => {
     renderWithProviders(<LoginScreen />);
-    expect(screen.getByLabelText('lore.')).toBeTruthy();
+    expect(screen.getByLabelText('Vouch.')).toBeTruthy();
     expect(screen.getByText('Sign in with the number\nyour friends already have.')).toBeTruthy();
     expect(screen.getByText(/We'll text you a one-time code/)).toBeTruthy();
     expect(screen.getByText('+91')).toBeTruthy();

@@ -37,6 +37,16 @@ export default function TripDetailScreen() {
   const [listPickerOpen, setListPickerOpen] = useState(false);
   const containingQ = useListsContaining('trip', id ?? null);
 
+  // First-to-vouch probe. Its inputs are derived defensively from tripQ.data so
+  // the hook is called UNCONDITIONALLY, above the loading/not-found early returns
+  // below — a hook placed after those returns changes the hook count between
+  // renders ("Rendered more hooks than during the previous render").
+  const isMine = tripQ.data ? tripQ.data.user_id === myUserId : false;
+  const primaryCity = tripQ.data?.cities[0] ?? null;
+  const primaryGooglePlaceId =
+    (primaryCity as { google_place_id?: string | null } | null)?.google_place_id ?? null;
+  const firstVoucherQ = useFirstVoucherForPlace(isMine ? null : primaryGooglePlaceId);
+
   if (tripQ.isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -63,20 +73,13 @@ export default function TripDetailScreen() {
   }
 
   const trip = tripQ.data;
-  const isMine = trip.user_id === myUserId;
   const dateRange = formatDateRange(trip.start_date, trip.end_date);
   const cover = trip.photos.find((p) => p.id === trip.cover_photo_id) ?? trip.photos[0];
 
-  // First-to-vouch (Round 2, Phase C). Probe the trip's PRIMARY city
-  // — the first one in the trip's city list. Multi-city trips with
-  // distinct firsts-per-city would render multiple badges, which is
-  // noisier than the "social proof at the top of the page" the brief
-  // calls for. Hide entirely on the viewer's own trips: a user being
-  // "first in their own network" is meaningless.
-  const primaryCity = trip.cities[0] ?? null;
-  const primaryGooglePlaceId =
-    (primaryCity as { google_place_id?: string | null } | null)?.google_place_id ?? null;
-  const firstVoucherQ = useFirstVoucherForPlace(isMine ? null : primaryGooglePlaceId);
+  // First-to-vouch (Round 2, Phase C). Probe computed above (hook order). Hidden
+  // on the viewer's own trips — being "first in your own network" is meaningless
+  // — and only shown when this trip's author IS that first voucher, >= 3 months
+  // ahead of the next person in the network.
   const showBadge =
     !isMine &&
     primaryCity &&

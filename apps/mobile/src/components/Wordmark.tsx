@@ -33,8 +33,8 @@ export function Wordmark({ size = 'md', color = '#1A1410' }: Props) {
     letterSpacing: size === 'xl' ? -1.6 : size === 'lg' ? -1 : -0.5,
   };
   return (
-    <Text accessibilityLabel="lore." style={baseStyle}>
-      lore
+    <Text accessibilityLabel="Vouch." style={baseStyle}>
+      Vouch
       <Text testID="wordmark-dot" style={{ color: CORAL, fontSize }}>
         .
       </Text>

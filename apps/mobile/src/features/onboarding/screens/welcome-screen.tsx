@@ -76,8 +76,8 @@ export function WelcomeScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Top bar: lore. + Sign in */}
       <View style={styles.topBar}>
-        <Text accessibilityLabel="lore." style={styles.wordmark}>
-          lore<Text style={{ color: CORAL }}>.</Text>
+        <Text accessibilityLabel="Vouch." style={styles.wordmark}>
+          Vouch<Text style={{ color: CORAL }}>.</Text>
         </Text>
         <Pressable
           accessibilityRole="link"

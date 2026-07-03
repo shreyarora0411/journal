@@ -34,9 +34,11 @@ jest.mock('@/features/wishlist', () => ({
 
 const mockVouchSearch = jest.fn();
 const mockRecordInteraction = jest.fn();
+const mockLatestSignal = jest.fn();
 jest.mock('@/features/search', () => ({
   useVouchSearch: () => mockVouchSearch(),
   useRecordInteraction: () => ({ mutate: mockRecordInteraction }),
+  useLatestDestinationSignal: () => mockLatestSignal(),
 }));
 
 const mockVouchFeed = jest.fn();
@@ -53,6 +55,9 @@ beforeEach(() => {
   mockVouchFeed.mockReset();
   mockCirclePulse.mockReset();
   mockRecordInteraction.mockReset();
+  mockLatestSignal.mockReset();
+  // Default: no private search signal — resurfacing falls back to wishlist.
+  mockLatestSignal.mockReturnValue({ data: null, isLoading: false });
 
   // Default: a brand-new user — every section empty.
   mockVouchUses.mockReturnValue({ data: [], isLoading: false });
@@ -66,7 +71,7 @@ beforeEach(() => {
 describe('FeedScreen', () => {
   it('renders the wordmark + two-step activation for a new user with no rows', () => {
     renderWithProviders(<FeedScreen />);
-    expect(screen.getByLabelText('lore.')).toBeTruthy();
+    expect(screen.getByLabelText('Vouch.')).toBeTruthy();
     expect(screen.getByText('Start your circle.')).toBeTruthy();
     // Two-step activation: log a place, then invite the circle.
     expect(screen.getByLabelText('Log one place')).toBeTruthy();
@@ -116,7 +121,7 @@ describe('FeedScreen', () => {
     expect(screen.getByText(/saved your/)).toBeTruthy();
   });
 
-  it('uses the most recent vouched destination in the supply CTA', () => {
+  it('uses the most recent vouched destination in the supply CTA (non-asserting)', () => {
     mockMyVouches.mockReturnValue({
       data: [
         {
@@ -143,10 +148,10 @@ describe('FeedScreen', () => {
       isLoading: false,
     });
     renderWithProviders(<FeedScreen />);
-    expect(screen.getByText('Back from Udaipur?')).toBeTruthy();
+    expect(screen.getByText('More from Udaipur?')).toBeTruthy();
   });
 
-  it('renders the resurfacing card for the first saved destination', () => {
+  it('renders the resurfacing card for the first saved destination when no search signal', () => {
     mockWishlistRows.mockReturnValue({
       data: [
         {
@@ -186,9 +191,64 @@ describe('FeedScreen', () => {
       isLoading: false,
     });
     renderWithProviders(<FeedScreen />);
-    expect(screen.getByText('Lisbon — your circle vouched for 1')).toBeTruthy();
+    expect(screen.getByText('Lisbon — your circle’s picks')).toBeTruthy();
     expect(screen.getByText('"Cervejaria Ramiro for the prawns"')).toBeTruthy();
     expect(screen.getByText('See all ›')).toBeTruthy();
+  });
+
+  it('resurfaces the destination the viewer SEARCHED (private signal), over a saved one', () => {
+    // The honest forward signal: a real in-app search, not a wishlist heuristic.
+    mockLatestSignal.mockReturnValue({
+      data: {
+        destination_text: 'Kyoto',
+        norm_destination: 'kyoto',
+        search_count: 2,
+        last_searched_at: '2026-06-25T00:00:00Z',
+      },
+      isLoading: false,
+    });
+    // A stale saved destination that must NOT win over the live search signal.
+    mockWishlistRows.mockReturnValue({
+      data: [
+        {
+          id: 'w-1',
+          parent_wishlist_item_id: null,
+          target_external_id: 'x',
+          target_label: 'Lisbon',
+        },
+      ],
+      isLoading: false,
+    });
+    mockVouchSearch.mockReturnValue({
+      data: [
+        {
+          vouch_id: 'sv-2',
+          list_id: null,
+          list_title: null,
+          vouch_text: 'Kissa Master for the kissaten set',
+          vouch_type: 'eat_drink',
+          destination_text: 'Kyoto',
+          author_id: 'user-rhea',
+          author_name: 'Rhea',
+          author_handle: 'rhea',
+          author_avatar: null,
+          is_own: false,
+          is_trusted: true,
+          context_match: false,
+          score: 1,
+          created_at: '2026-05-01T00:00:00Z',
+          is_fof: false,
+          place_google_id: null,
+          place_lat: null,
+          place_lng: null,
+          place_name: null,
+        },
+      ],
+      isLoading: false,
+    });
+    renderWithProviders(<FeedScreen />);
+    expect(screen.getByText('Kyoto — your circle’s picks')).toBeTruthy();
+    expect(screen.queryByText('Lisbon — your circle’s picks')).toBeNull();
   });
 
   it('renders the liveness line and belonging nudge from circle pulse', () => {

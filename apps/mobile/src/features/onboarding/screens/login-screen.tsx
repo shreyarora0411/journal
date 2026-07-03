@@ -118,8 +118,8 @@ export function LoginScreen() {
               <Text style={styles.backGlyph}>‹</Text>
             </Pressable>
 
-            <Text accessibilityLabel="lore." style={styles.wordmark}>
-              lore<Text style={{ color: CORAL }}>.</Text>
+            <Text accessibilityLabel="Vouch." style={styles.wordmark}>
+              Vouch<Text style={{ color: CORAL }}>.</Text>
             </Text>
 
             <Text style={styles.headline}>

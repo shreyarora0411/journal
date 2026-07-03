@@ -189,7 +189,7 @@ export function ListPickerSheet({
             // Inline create — input + Add. No route push, no extra screen.
             <View style={styles.createRow}>
               <View style={styles.newGlyph}>
-                <Text style={styles.newGlyphText}>＋</Text>
+                <Text style={styles.newGlyphText}>+</Text>
               </View>
               <TextInput
                 accessibilityLabel="New list name"

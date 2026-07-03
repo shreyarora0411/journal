@@ -1,6 +1,5 @@
-// Search tab → Vouched v3 Plan/Search (Loop B): destination in, trusted
-// friends' vouches out, ranked by who said it. The legacy friend-graph
-// SearchScreen stays in the tree as a fallback.
-import { PlanScreen } from '@/features/search';
+// Go out tab → taste-ranked discovery (spec §3 screen 3). The old PlanScreen
+// (trust-era search) stays in features/search as reference until removed.
+import { GoOutScreen } from '@/features/taste';
 
-export default PlanScreen;
+export default GoOutScreen;

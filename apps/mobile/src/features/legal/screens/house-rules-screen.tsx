@@ -10,7 +10,7 @@ const RULES = [
   },
   {
     title: 'Recommend honestly.',
-    body: "If a place was mid, say so. Lore is only useful when it's truthful.",
+    body: "If a place was mid, say so. Vouch is only useful when it's truthful.",
   },
   {
     title: 'Only your circle.',
@@ -37,7 +37,7 @@ export function HouseRulesScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <Text style={styles.title}>House rules</Text>
         <Text style={styles.intro}>
-          Lore works because friends trust what friends write. Three rules keep it that way.
+          Vouch works because friends trust what friends write. Three rules keep it that way.
         </Text>
         {RULES.map((r) => (
           <View key={r.title} style={styles.rule}>

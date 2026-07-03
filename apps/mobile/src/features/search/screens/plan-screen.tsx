@@ -3,7 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import type { VouchType } from '@journal/shared';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -14,8 +14,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useRecordDestinationSearch } from '../api/use-destination-signals';
 import { useRecordInteraction } from '../api/use-record-interaction';
 import { useSaveVouch, useSavedVouchIds } from '../api/use-save-vouch';
+import { useDebounced } from '../api/use-search';
 import {
   type VouchSearchResult,
   useVouchSearch,
@@ -70,6 +72,21 @@ export function PlanScreen() {
   const savedIds = useSavedVouchIds();
   const saveVouch = useSaveVouch();
   const recordInteraction = useRecordInteraction();
+
+  // Capture the searched destination as a viewer-PRIVATE consideration signal
+  // (migration 54). Debounced + deduped per place so we log "you were looking
+  // at {dest}", not a row per keystroke. Powers honest first-person resurfacing
+  // on the home — never broadcast to the circle, never a fabricated travel date.
+  const recordDestSearch = useRecordDestinationSearch();
+  const debouncedDest = useDebounced(destination.trim());
+  const lastLoggedDest = useRef<string | null>(null);
+  useEffect(() => {
+    const key = debouncedDest.toLowerCase();
+    if (debouncedDest.length >= 2 && lastLoggedDest.current !== key) {
+      lastLoggedDest.current = key;
+      recordDestSearch.mutate(debouncedDest);
+    }
+  }, [debouncedDest, recordDestSearch]);
 
   useEffect(() => {
     log.event('plan.screen_entered');
@@ -162,14 +179,14 @@ export function PlanScreen() {
             effectively invisible whenever search returned anything. */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Ask your circle"
+          accessibilityLabel="Ask your circle about a destination"
           onPress={() =>
             router.push({
               pathname: '/(tabs)/ask',
               params: trimmed ? { destination: trimmed } : {},
             } as never)
           }
-          hitSlop={6}
+          hitSlop={12}
           style={styles.askRow}
         >
           <Text style={styles.askRowLabel}>Going somewhere? Ask your circle →</Text>
@@ -282,7 +299,7 @@ export function PlanScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Open in Maps"
                             onPress={() => openMaps(r)}
-                            hitSlop={6}
+                            hitSlop={12}
                             style={styles.actionBtn}
                           >
                             {/* A resolved vouch drops a precise pin (query_place_id
@@ -297,7 +314,7 @@ export function PlanScreen() {
                           accessibilityRole="button"
                           accessibilityLabel="Share this vouch"
                           onPress={() => shareVouch(r)}
-                          hitSlop={6}
+                          hitSlop={12}
                           style={styles.actionBtn}
                         >
                           <Text style={styles.actionLabel}>Share</Text>

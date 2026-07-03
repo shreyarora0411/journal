@@ -145,7 +145,7 @@ export default function YearInTravelScreen() {
     const r = recap.data;
     if (!r) return;
     const text = appendInviteLink(
-      `My ${r.year} in travel — ${r.tripCount} trips, ${r.cityCount} cities${r.topDestination ? `, most asked about ${r.topDestination}` : ''}. On lore.`,
+      `My ${r.year} in travel — ${r.tripCount} trips, ${r.cityCount} cities${r.topDestination ? `, most asked about ${r.topDestination}` : ''}. On Vouch.`,
     );
     try {
       await Linking.openURL(buildWhatsAppLink(text));

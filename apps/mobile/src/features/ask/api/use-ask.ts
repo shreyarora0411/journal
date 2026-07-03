@@ -209,3 +209,58 @@ export const useRespondToRequest = () => {
     },
   });
 };
+
+/** A real, named beneficiary for a destination: someone in the viewer's circle
+ *  with an OPEN ask about it. This is the honest "who is this for" signal — an
+ *  explicit, persisted forward request — used to make the save-moment reward
+ *  concrete ("Mira asked about Goa — your vouch answers her") instead of a
+ *  fabricated travel date. Null when no one is asking. */
+export type AskBeneficiary = { requester_name: string; destination_text: string };
+
+const normDest = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+export const useOpenAskForDestination = (destination: string | null | undefined) => {
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  const dest = (destination ?? '').trim();
+  return useQuery({
+    queryKey: ['ask', 'for-dest', userId, dest.toLowerCase()],
+    enabled: Boolean(userId) && dest.length >= 2,
+    staleTime: 30_000,
+    queryFn: async (): Promise<AskBeneficiary | null> => {
+      if (!userId || dest.length < 2) return null;
+      const supabase = getSupabase();
+      // RLS (rec_req_circle_read) already restricts to open trusted_circle
+      // requests from people the viewer follows; we just exclude our own and
+      // match the destination punctuation-insensitively (mirrors norm_search).
+      const { data, error } = await supabase
+        .from('recommendation_requests')
+        .select('destination_text, requester:requester_user_id(display_name, handle)')
+        .neq('requester_user_id', userId)
+        .eq('status', 'open')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) {
+        if ((error as { code?: string }).code === '42P01') return null;
+        throw error;
+      }
+      const nd = normDest(dest);
+      type Row = {
+        destination_text: string;
+        requester: { display_name: string | null; handle: string | null } | null;
+      };
+      for (const r of (data ?? []) as unknown as Row[]) {
+        const rn = normDest(r.destination_text);
+        if (rn && nd && (rn.includes(nd) || nd.includes(rn))) {
+          const who = r.requester?.display_name ?? r.requester?.handle ?? null;
+          if (who) return { requester_name: who, destination_text: r.destination_text };
+        }
+      }
+      return null;
+    },
+  });
+};

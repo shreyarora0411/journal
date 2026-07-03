@@ -13,7 +13,7 @@ beforeEach(() => {
 describe('WelcomeScreen', () => {
   it('renders the wordmark, sample card deck, eyebrow, and headline', () => {
     renderWithProviders(<WelcomeScreen />);
-    expect(screen.getByLabelText('lore.')).toBeTruthy();
+    expect(screen.getByLabelText('Vouch.')).toBeTruthy();
     expect(screen.getByLabelText('Sample friend quotes')).toBeTruthy();
     expect(screen.getByText('THIS IS THE WHOLE APP')).toBeTruthy();
     expect(screen.getByText(/One honest line/)).toBeTruthy();

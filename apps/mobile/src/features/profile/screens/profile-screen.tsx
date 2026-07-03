@@ -1,34 +1,33 @@
-import { CategoryPill, CityHero, Eyebrow, Face, Page, StatusSpace, VenueThumb } from '@/components';
+import { CityHero, Eyebrow, Face, Page, StatusSpace } from '@/components';
 import { useAuthStore, useProfile, useSignOut } from '@/features/auth';
+import { useFollowCounts } from '@/features/follows';
 import { useDeleteList, useMyLists } from '@/features/lists';
-import {
-  useDeleteAtomicLog,
-  useDeleteVouch,
-  useMyAtomicLogs,
-  useMyVouches,
-  useUpdateVouch,
-  useVouchUses,
-} from '@/features/trips';
+import { useDeleteVouch, useMyVouches, useUpdateVouch, useVouchUses } from '@/features/trips';
 import { useWishlistRows } from '@/features/wishlist';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
-import type { Category } from '@/theme';
+import { deriveTrustProfile, knownForTail } from '@/lib/trust-context';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useMeStats } from '../api/use-me-stats';
-import { useUserTrips } from '../api/use-user-trips';
 
 const CORAL = '#FF4D2E';
-const INK = '#1A1410';
-const MUTE = '#7A716A';
-const FAINT = '#B7AE9F';
-const TINT = '#FAF6F0';
-const HAIR = '#EFEAE2';
+const INK = '#1B1714';
+const MUTE = '#8A8178';
+const HAIR = '#E7E1D7';
+const PAPER_CARD = '#FFFDFA';
+const CHIP_BG = '#FBEFE9';
 
-// Short type labels for the user's own vouches — match the composer/search/feed
-// surfaces so a vouch reads the same everywhere. No stars, no score — just the
-// kind of thing it is.
+// Vouch identity type stack — Fraunces (display + voiced quotes) + Hanken
+// Grotesk (UI). Chosen for the emotional-voice thesis: a friend's quote should
+// read like a human voice, not a review.
+const SERIF = 'Fraunces_500';
+const SERIF_IT = 'Fraunces_400Italic';
+const SANS = 'HankenGrotesk_400Regular';
+const SANS_MED = 'HankenGrotesk_500Medium';
+const SANS_SEMI = 'HankenGrotesk_600SemiBold';
+const SANS_BOLD = 'HankenGrotesk_700Bold';
+
 const VOUCH_TYPE_LABEL: Record<string, string> = {
   stay: 'Stay',
   eat_drink: 'Eat / Drink',
@@ -38,40 +37,42 @@ const VOUCH_TYPE_LABEL: Record<string, string> = {
   skip: 'Skip',
 };
 
+const cap = (s: string) => (s.length === 0 ? s : s.charAt(0).toUpperCase() + s.slice(1));
+
 /**
- * Profile · Travel book.
+ * Profile · "You" — a followable travel-style IDENTITY, not a settings page.
  *
- * Real data only:
- *   - Name + handle + avatar from useProfile()
- *   - Trips/countries/tips stats from me_stats()
- *   - Trip grid from useUserTrips(self)
- *
- * Wrapped teaser only renders when the user has at least one trip;
- * a brand-new pilot user sees a clean profile with `0` stats and a
- * quiet empty state below — no theatrical "0 trips · 0 countries"
- * gradient banner.
+ * The identity engine (Granovetter weak-tie discovery + Cialdini social
+ * currency): the header flaunts a derived travel-style signature + the domains
+ * you're trusted for, backed by HONEST social-currency stats (vouches you
+ * wrote, times your circle saved them, followers) — never stars, never
+ * fabricated numbers. Then the payoff ("used by your circle"), the spine (your
+ * vouches in your own voice), and private Saved + Lists.
  */
 export function ProfileScreen() {
   const router = useRouter();
   const signOut = useSignOut();
-  const stats = useMeStats();
   const profile = useProfile();
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
-  const tripsQ = useUserTrips(userId);
-  const tipsQ = useMyAtomicLogs(12);
   const vouchesQ = useMyVouches();
   const usesQ = useVouchUses();
   const listsQ = useMyLists();
   const wishlistQ = useWishlistRows();
-  const deleteTip = useDeleteAtomicLog();
+  const followCounts = useFollowCounts(userId);
   const deleteList = useDeleteList();
   const updateVouch = useUpdateVouch();
   const deleteVouch = useDeleteVouch();
   const toast = useToast();
 
-  // Inline vouch edit — mirrors list-detail-vouches-screen.tsx. These are
-  // always the viewer's own vouches (useMyVouches), so the affordances always
-  // show; the hooks also enforce owner-only server-side.
+  // Travel-style identity, derived from the viewer's own vouches by domain.
+  // Null at 0 vouches → the identity block is suppressed in favour of a prompt.
+  const trust = useMemo(() => deriveTrustProfile(vouchesQ.data ?? []), [vouchesQ.data]);
+
+  // Honest social-currency numbers — every one drawn from real rows.
+  const vouchCount = (vouchesQ.data ?? []).length;
+  const savedByCircle = (usesQ.data ?? []).length;
+  const followers = followCounts.data?.followers ?? 0;
+
   const [editingVouchId, setEditingVouchId] = useState<string | null>(null);
   const [vouchDraft, setVouchDraft] = useState('');
 
@@ -94,7 +95,6 @@ export function ProfileScreen() {
     }
   };
   const onDeleteVouch = (vouchId: string) =>
-    // The hooks invalidate ['vouches'], so on delete the card disappears.
     Alert.alert('Delete this vouch?', 'It will be removed from your book and search.', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -112,52 +112,34 @@ export function ProfileScreen() {
       },
     ]);
 
-  /** Long-press confirmation pattern. Used for both tips and lists. */
-  const confirmDelete = (kind: 'tip' | 'list', name: string, onDelete: () => Promise<void>) => {
-    Alert.alert(
-      kind === 'tip' ? 'Delete this tip?' : 'Delete this list?',
-      kind === 'tip'
-        ? `"${name}" will be removed from your book.`
-        : `"${name}" will be removed. Items inside are not deleted.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onDelete();
-              toast.show({ message: `Deleted ${name}.`, variant: 'success' });
-            } catch (err) {
-              const msg = err instanceof Error ? err.message : 'Could not delete.';
-              toast.show({ message: msg, variant: 'error' });
-            }
-          },
+  const confirmDeleteList = (name: string, onDelete: () => Promise<void>) => {
+    Alert.alert('Delete this list?', `"${name}" will be removed. Items inside are not deleted.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await onDelete();
+            toast.show({ message: `Deleted ${name}.`, variant: 'success' });
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Could not delete.';
+            toast.show({ message: msg, variant: 'error' });
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   useEffect(() => {
     log.event('profile.screen_entered');
   }, []);
 
-  const fmt = (n: number | undefined | null): string => (typeof n === 'number' ? String(n) : '—');
-  const trips = stats.data?.trips_count ?? null;
-  const countries = stats.data?.countries_count ?? null;
-  const tips = stats.data?.tips_given_count ?? null;
-  const tripsLabel = fmt(trips);
-  const countriesLabel = fmt(countries);
-  const tipsLabel = fmt(tips);
-
   const displayName = profile.data?.display_name ?? '—';
   const handle = profile.data?.handle ? `@${profile.data.handle}` : '';
   const avatarUrl = profile.data?.avatar_url ?? null;
-  const myTrips = tripsQ.data ?? [];
 
   const onSignOut = () => {
-    // Alert.alert is a no-op on React Native Web — fall back to
-    // window.confirm so the sign-out flow works during web preview.
     const run = async () => {
       try {
         await signOut.mutateAsync();
@@ -186,7 +168,7 @@ export function ProfileScreen() {
     <Page>
       <StatusSpace />
 
-      {/* Header — face + name + cog */}
+      {/* Identity header — face + name + sign-out */}
       <View style={styles.header}>
         <Face uri={avatarUrl} initials={displayName.slice(0, 2).toUpperCase()} size="lg" />
         <View style={{ flex: 1 }}>
@@ -198,36 +180,53 @@ export function ProfileScreen() {
         </Pressable>
       </View>
 
-      {/* 3-stat row — real numbers via me_stats(); `—` while loading,
-          0 when zero (honest). */}
-      <View style={styles.statRow}>
-        <View style={[styles.stat, styles.statOutlined]}>
-          <Text style={[styles.statValue, { color: INK }]}>{tripsLabel}</Text>
-          <Text style={[styles.statLabel, { color: MUTE }]}>Trips</Text>
-        </View>
-        <View style={[styles.stat, styles.statTinted]}>
-          <Text style={[styles.statValue, { color: INK }]}>{countriesLabel}</Text>
-          <Text style={[styles.statLabel, { color: MUTE }]}>Countries</Text>
-        </View>
-        <View style={[styles.stat, styles.statFilled]}>
-          <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{tipsLabel}</Text>
-          <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.85 }]}>Tips I gave</Text>
-        </View>
-      </View>
+      {trust ? (
+        <>
+          {/* Travel-style signature — the identity you flaunt; the hook that
+              makes someone follow you. Derived from your vouches by domain. */}
+          <View style={styles.signature}>
+            <Text style={styles.sigEyebrow}>TRAVEL STYLE</Text>
+            <Text style={styles.sigLine}>{cap(knownForTail(trust))}.</Text>
+          </View>
 
-      {/* Wrapped teaser removed — the /wrapped screen renders fabricated
-          fixture stats (WRAPPED_2026), which violates the no-fake-data
-          thesis. Re-add only when backed by real me_stats()-derived data. */}
+          {/* Trusted-for chips — domain opinion leadership made visible. */}
+          <View style={styles.chips}>
+            {trust.contexts.map((c) => (
+              <View key={c} style={styles.chip}>
+                <Text style={styles.chipText}>{c}</Text>
+              </View>
+            ))}
+          </View>
 
-      {/* =====================================================
-          USED BY YOUR CIRCLE — the payoff loop. Someone you know
-          saved a vouch YOU wrote, to act on later. PULL-only (no
-          push): the author sees it on their own profile. The reward
-          is the social signal itself (concern-for-others) — no count,
-          no score, no points. Only renders when there are real saves.
-          ===================================================== */}
+          {/* Social-currency stats — honest numbers only. */}
+          <View style={styles.stats}>
+            <View style={styles.stat}>
+              <Text style={styles.statNum}>{vouchCount}</Text>
+              <Text style={styles.statLabel}>vouches</Text>
+            </View>
+            <View style={[styles.stat, styles.statMid]}>
+              <Text style={styles.statNum}>{savedByCircle}</Text>
+              <Text style={styles.statLabel}>saved by circle</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statNum}>{followers}</Text>
+              <Text style={styles.statLabel}>follower{followers === 1 ? '' : 's'}</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <View style={styles.signature}>
+          <Text style={styles.sigEyebrow}>TRAVEL STYLE</Text>
+          <Text style={styles.sigPrompt}>
+            Log a few vouches and your travel style takes shape here — the thing friends follow you
+            for.
+          </Text>
+        </View>
+      )}
+
+      {/* USED BY YOUR CIRCLE — the altruistic payoff. Only when there are saves. */}
       {(usesQ.data ?? []).length > 0 ? (
-        <View style={{ marginTop: 28 }}>
+        <View style={{ marginTop: 30 }}>
           <Eyebrow>Used by your circle</Eyebrow>
           <View style={{ gap: 10, marginTop: 12 }}>
             {(usesQ.data ?? []).map((u) => {
@@ -250,252 +249,105 @@ export function ProfileScreen() {
         </View>
       ) : null}
 
-      {/* =====================================================
-          AUTHORED — things I wrote (trips + tips).
-          ===================================================== */}
+      {/* YOUR VOUCHES — the spine, in your own voice. */}
       <View style={{ marginTop: 32 }}>
-        <Eyebrow>I wrote</Eyebrow>
-
-        {/* Trips */}
-        <View style={{ marginTop: 14 }}>
-          <Text style={styles.subEyebrow}>Trips</Text>
-          {tripsQ.isLoading ? (
-            <Text style={styles.empty}>Loading…</Text>
-          ) : myTrips.length === 0 ? (
-            <View style={styles.emptyInline}>
-              <Text style={styles.emptyInlineBody}>
-                Add your first trip to start your recommendations.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.grid}>
-              {myTrips.map((t) => (
-                <Pressable
-                  key={t.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={t.title}
-                  onPress={() => router.push(`/trip/${t.id}` as never)}
-                  style={styles.tripCard}
-                >
-                  <View style={styles.tripCardInner}>
-                    <Text style={styles.tripDest}>{t.title}</Text>
-                    {t.start_date ? (
-                      <Text style={styles.tripMeta}>
-                        {new Date(t.start_date).toDateString().toUpperCase()}
-                      </Text>
-                    ) : null}
-                    {/* Count line per Round 2 spec: surfaces the trip's
-                        actual content density on the profile card.
-                        Tip count = venues with category (atomic logs);
-                        we approximate by total venues for now since the
-                        atomic-vs-trip-venue distinction needs a category
-                        filter we can't do in the embedded count. */}
-                    <Text style={styles.tripCounts}>
-                      {t.venues_count} venue{t.venues_count === 1 ? '' : 's'} · {t.cities_count} cit
-                      {t.cities_count === 1 ? 'y' : 'ies'} · {t.trip_photos_count} photo
-                      {t.trip_photos_count === 1 ? '' : 's'}
+        <Eyebrow>Your vouches</Eyebrow>
+        {vouchesQ.isLoading ? (
+          <Text style={styles.empty}>Loading…</Text>
+        ) : (vouchesQ.data ?? []).length === 0 ? (
+          <View style={styles.emptyInline}>
+            <Text style={styles.emptyInlineBody}>
+              Log a place and your vouch shows up here — in your own words.
+            </Text>
+          </View>
+        ) : (
+          <View style={{ gap: 10, marginTop: 12 }}>
+            {(vouchesQ.data ?? []).map((v) => {
+              const editing = editingVouchId === v.id;
+              return (
+                <View key={v.id} style={styles.vouchCard}>
+                  <View style={styles.vouchMetaRow}>
+                    <Text style={styles.vouchType}>
+                      {VOUCH_TYPE_LABEL[v.vouch_type] ?? v.vouch_type}
                     </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Your vouches — every vouch the user authored, list-bound or
-            standalone. This is what makes fast-door logging not a void: a
-            listless vouch still lands here, in the author's own voice. Voice-
-            forward cards (italic Playfair quote), no stars/photos. */}
-        <View style={{ marginTop: 22 }}>
-          <Text style={styles.subEyebrow}>Your vouches</Text>
-          {vouchesQ.isLoading ? (
-            <Text style={styles.empty}>Loading…</Text>
-          ) : (vouchesQ.data ?? []).length === 0 ? (
-            <View style={styles.emptyInline}>
-              <Text style={styles.emptyInlineBody}>
-                Log a place and your vouch shows up here — in your own words.
-              </Text>
-            </View>
-          ) : (
-            <View style={{ gap: 10, marginTop: 8 }}>
-              {(vouchesQ.data ?? []).map((v) => {
-                const editing = editingVouchId === v.id;
-                return (
-                  <View key={v.id} style={styles.vouchCard}>
-                    <View style={styles.vouchMetaRow}>
-                      <Text style={styles.vouchType}>
-                        {VOUCH_TYPE_LABEL[v.vouch_type] ?? v.vouch_type}
-                      </Text>
-                      {v.destination_text ? (
-                        <>
-                          <Text style={styles.vouchDot}>·</Text>
-                          <Text style={styles.vouchDest} numberOfLines={1}>
-                            {v.destination_text}
-                          </Text>
-                        </>
-                      ) : null}
-                    </View>
-                    {editing ? (
+                    {v.destination_text ? (
                       <>
-                        <TextInput
+                        <Text style={styles.vouchDot}>·</Text>
+                        <Text style={styles.vouchDest} numberOfLines={1}>
+                          {v.destination_text}
+                        </Text>
+                      </>
+                    ) : null}
+                  </View>
+                  {editing ? (
+                    <>
+                      <TextInput
+                        accessibilityLabel="Edit vouch"
+                        value={vouchDraft}
+                        onChangeText={(t) => setVouchDraft(t.slice(0, 500))}
+                        multiline
+                        autoFocus
+                        style={styles.vouchEditInput}
+                        selectionColor={CORAL}
+                      />
+                      <View style={styles.vouchActions}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Save edit"
+                          onPress={() => onSaveVouchEdit(v.id)}
+                          disabled={updateVouch.isPending}
+                          hitSlop={12}
+                          style={styles.vouchActionBtn}
+                        >
+                          <Text style={styles.vouchActionPrimary}>Save</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Cancel edit"
+                          onPress={cancelEditVouch}
+                          hitSlop={12}
+                          style={styles.vouchActionBtn}
+                        >
+                          <Text style={styles.vouchActionLabel}>Cancel</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.vouchQuote}>"{v.text}"</Text>
+                      <View style={styles.vouchActions}>
+                        <View style={{ flex: 1 }} />
+                        <Pressable
+                          accessibilityRole="button"
                           accessibilityLabel="Edit vouch"
-                          value={vouchDraft}
-                          onChangeText={(t) => setVouchDraft(t.slice(0, 500))}
-                          multiline
-                          autoFocus
-                          style={styles.vouchEditInput}
-                          selectionColor={CORAL}
-                        />
-                        <View style={styles.vouchActions}>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Save edit"
-                            onPress={() => onSaveVouchEdit(v.id)}
-                            disabled={updateVouch.isPending}
-                            hitSlop={6}
-                            style={styles.vouchActionBtn}
-                          >
-                            <Text style={styles.vouchActionPrimary}>Save</Text>
-                          </Pressable>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Cancel edit"
-                            onPress={cancelEditVouch}
-                            hitSlop={6}
-                            style={styles.vouchActionBtn}
-                          >
-                            <Text style={styles.vouchActionLabel}>Cancel</Text>
-                          </Pressable>
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        <Text style={styles.vouchQuote}>"{v.text}"</Text>
-                        <View style={styles.vouchActions}>
-                          <View style={{ flex: 1 }} />
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Edit vouch"
-                            onPress={() => startEditVouch(v.id, v.text)}
-                            hitSlop={6}
-                            style={styles.vouchActionBtn}
-                          >
-                            <Text style={styles.vouchActionLabel}>Edit</Text>
-                          </Pressable>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Delete vouch"
-                            onPress={() => onDeleteVouch(v.id)}
-                            hitSlop={6}
-                            style={styles.vouchActionBtn}
-                          >
-                            <Text style={styles.vouchActionDanger}>Delete</Text>
-                          </Pressable>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </View>
-
-        {/* Tips */}
-        <View style={{ marginTop: 22 }}>
-          <Text style={styles.subEyebrow}>Tips</Text>
-          {tipsQ.isLoading ? (
-            <Text style={styles.empty}>Loading…</Text>
-          ) : (tipsQ.data ?? []).length === 0 ? (
-            <View style={styles.emptyInline}>
-              <Text style={styles.emptyInlineBody}>
-                Add your first tip to start your recommendations.
-              </Text>
-            </View>
-          ) : (
-            <View style={{ gap: 18, marginTop: 8 }}>
-              {(() => {
-                // Group tips by city. Cityless tips go in a "Standalone"
-                // bucket at the end so they're still visible.
-                const tips = tipsQ.data ?? [];
-                const groups = new Map<
-                  string,
-                  {
-                    cityName: string;
-                    countryName: string | null;
-                    items: typeof tips;
-                  }
-                >();
-                for (const t of tips) {
-                  const key = t.city?.id ?? '__standalone__';
-                  const existing = groups.get(key);
-                  if (existing) {
-                    existing.items.push(t);
-                  } else {
-                    groups.set(key, {
-                      cityName: t.city?.name ?? 'Standalone',
-                      countryName: t.city?.country?.display_name ?? null,
-                      items: [t],
-                    });
-                  }
-                }
-                return Array.from(groups.entries()).map(([key, group]) => (
-                  <View key={key} style={{ gap: 10 }}>
-                    <CityHero
-                      cityName={group.cityName}
-                      countryName={group.countryName}
-                      meta={`${group.items.length} TIP${group.items.length === 1 ? '' : 'S'}`}
-                      height={140}
-                    />
-                    {group.items.map((t) => (
-                      <Pressable
-                        key={t.id}
-                        accessibilityRole="button"
-                        accessibilityLabel={t.name}
-                        onPress={() => router.push('/(tabs)/book' as never)}
-                        onLongPress={() =>
-                          confirmDelete('tip', t.name, () => deleteTip.mutateAsync(t.id))
-                        }
-                        delayLongPress={400}
-                        style={styles.tipCard}
-                      >
-                        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-                          {t.cover_photo_path || t.google_place_id ? (
-                            <VenueThumb
-                              storagePath={t.cover_photo_path}
-                              googlePlaceId={t.google_place_id}
-                              size={72}
-                            />
-                          ) : null}
-                          <View style={{ flex: 1, gap: 8 }}>
-                            <View style={styles.tipHeader}>
-                              <Text style={styles.tipName}>{t.name}</Text>
-                              {t.category ? (
-                                <CategoryPill category={t.category as Category} variant="soft" />
-                              ) : null}
-                            </View>
-                            {t.one_line ? (
-                              <Text style={styles.tipQuote} numberOfLines={2}>
-                                "{t.one_line}"
-                              </Text>
-                            ) : null}
-                          </View>
-                        </View>
-                      </Pressable>
-                    ))}
-                  </View>
-                ));
-              })()}
-            </View>
-          )}
-        </View>
+                          onPress={() => startEditVouch(v.id, v.text)}
+                          hitSlop={12}
+                          style={styles.vouchActionBtn}
+                        >
+                          <Text style={styles.vouchActionLabel}>Edit</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Delete vouch"
+                          onPress={() => onDeleteVouch(v.id)}
+                          hitSlop={12}
+                          style={styles.vouchActionBtn}
+                        >
+                          <Text style={styles.vouchActionDanger}>Delete</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
 
-      {/* =====================================================
-          SAVED — places I want to act on (wishlist).
-          ===================================================== */}
+      {/* SAVED — private to you. */}
       <View style={{ marginTop: 32 }}>
-        <Eyebrow>I saved</Eyebrow>
+        <Eyebrow>Saved (private)</Eyebrow>
         {wishlistQ.isLoading ? (
           <Text style={styles.empty}>Loading…</Text>
         ) : (
@@ -545,9 +397,7 @@ export function ProfileScreen() {
         )}
       </View>
 
-      {/* =====================================================
-          LISTS — curated groupings, neither pure authored nor saved.
-          ===================================================== */}
+      {/* LISTS — curated groupings the viewer made. */}
       <View style={{ marginTop: 32, marginBottom: 80 }}>
         <View style={styles.listsHeader}>
           <Eyebrow>Lists I made</Eyebrow>
@@ -583,9 +433,7 @@ export function ProfileScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={l.title}
                 onPress={() => router.push(`/(tabs)/list/${l.id}` as never)}
-                onLongPress={() =>
-                  confirmDelete('list', l.title, () => deleteList.mutateAsync(l.id))
-                }
+                onLongPress={() => confirmDeleteList(l.title, () => deleteList.mutateAsync(l.id))}
                 delayLongPress={400}
                 style={styles.listCard}
               >
@@ -612,143 +460,100 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   name: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 28,
+    fontFamily: SERIF,
+    fontSize: 30,
     color: INK,
     letterSpacing: -0.6,
   },
   handle: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 11,
-    letterSpacing: 1.2,
+    fontFamily: SANS_MED,
+    fontSize: 13,
     color: MUTE,
-    marginTop: 2,
+    marginTop: 3,
   },
   cog: { fontSize: 20, color: MUTE },
-  statRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 20,
-  },
-  stat: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  statOutlined: {
-    borderWidth: 1,
-    borderColor: HAIR,
-    backgroundColor: '#FFFFFF',
-  },
-  statTinted: { backgroundColor: TINT },
-  statFilled: { backgroundColor: CORAL },
-  statValue: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 28,
-    letterSpacing: -0.6,
-  },
-  statLabel: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 9,
-    letterSpacing: 1.2,
-    marginTop: 4,
-  },
-  wrappedCard: {
-    borderRadius: 18,
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  wrappedEyebrow: {
-    fontFamily: 'DMSans_700Bold',
+
+  // Travel-style signature
+  signature: { marginTop: 20 },
+  sigEyebrow: {
+    fontFamily: SANS_BOLD,
     fontSize: 10,
-    letterSpacing: 1.4,
-    color: '#FFFFFF',
-    opacity: 0.92,
+    letterSpacing: 1.6,
+    color: '#C8A24A',
   },
-  wrappedHeadline: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 28,
-    lineHeight: 32,
-    color: '#FFFFFF',
-    letterSpacing: -0.6,
-    marginTop: 8,
+  sigLine: {
+    fontFamily: SERIF,
+    fontSize: 22,
+    lineHeight: 29,
+    color: INK,
+    letterSpacing: -0.3,
+    marginTop: 6,
   },
-  wrappedFooter: {
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 12,
-    color: '#FFFFFF',
-    opacity: 0.92,
-    marginTop: 12,
-  },
-  wrappedChevron: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 32,
-    color: '#FFFFFF',
-    marginLeft: 12,
-  },
-  subEyebrow: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 10,
-    letterSpacing: 1.2,
+  sigPrompt: {
+    fontFamily: SANS,
+    fontSize: 14,
+    lineHeight: 21,
     color: MUTE,
-    marginBottom: 6,
+    marginTop: 6,
   },
-  emptyInline: {
-    paddingVertical: 14,
-  },
-  emptyInlineBody: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    color: MUTE,
-  },
-  tipCard: {
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
+
+  // Trusted-for chips
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 14 },
+  chip: { backgroundColor: CHIP_BG, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  chipText: { fontFamily: SANS_SEMI, fontSize: 12.5, color: '#9A3B1E' },
+
+  // Social-currency stats
+  stats: {
+    flexDirection: 'row',
+    marginTop: 18,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: HAIR,
-    backgroundColor: '#FFFFFF',
   },
-  // Your-vouches card — voice-forward, no stars/photos. The voiced line is the
-  // hero (italic Playfair pull-quote); type + destination are the quiet meta.
+  stat: { flex: 1, paddingVertical: 14, alignItems: 'center' },
+  statMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: HAIR },
+  statNum: { fontFamily: SERIF, fontSize: 24, color: INK },
+  statLabel: { fontFamily: SANS, fontSize: 10.5, color: MUTE, marginTop: 2, letterSpacing: 0.2 },
+
+  emptyInline: { paddingVertical: 14 },
+  emptyInlineBody: { fontFamily: SANS, fontSize: 13, lineHeight: 20, color: MUTE },
+
+  // Vouch cards — voice-forward.
   vouchCard: {
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: HAIR,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: PAPER_CARD,
   },
   vouchMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   vouchType: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 9,
-    letterSpacing: 1.2,
+    fontFamily: SANS_BOLD,
+    fontSize: 9.5,
+    letterSpacing: 1,
     color: CORAL,
     textTransform: 'uppercase',
   },
-  vouchDot: { color: FAINT, fontSize: 11 },
+  vouchDot: { color: MUTE, fontSize: 12 },
+  // The PLACE is the unit of a vouch — make it read clearly, not as faint
+  // meta. Ink + bold + a touch larger so "Koh Samui" is legible at a glance.
   vouchDest: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 9,
-    letterSpacing: 1.2,
-    color: MUTE,
+    fontFamily: SANS_BOLD,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    color: INK,
     textTransform: 'uppercase',
     flexShrink: 1,
   },
   vouchQuote: {
-    fontFamily: 'PlayfairDisplay_500Medium_Italic',
-    fontSize: 16,
-    lineHeight: 24,
+    fontFamily: SERIF_IT,
+    fontSize: 17,
+    lineHeight: 25,
     color: INK,
     marginTop: 8,
   },
-  // Inline edit + owner actions on a profile vouch card — mirrors
-  // list-detail-vouches-screen.tsx so a vouch reads/edits the same everywhere.
   vouchEditInput: {
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: SANS,
     fontSize: 16,
     lineHeight: 24,
     color: INK,
@@ -764,130 +569,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  vouchActionLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: INK },
-  vouchActionPrimary: { fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: CORAL },
-  vouchActionDanger: { fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: '#B23A14' },
-  // "Used by your circle" — the payoff line. Voice-forward, no count/score.
+  vouchActionLabel: { fontFamily: SANS_SEMI, fontSize: 12, color: INK },
+  vouchActionPrimary: { fontFamily: SANS_SEMI, fontSize: 12, color: CORAL },
+  vouchActionDanger: { fontFamily: SANS_SEMI, fontSize: 12, color: '#B23A14' },
+
+  // Used by your circle
   useCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: PAPER_CARD,
+  },
+  useLine: { flex: 1 },
+  useWho: { fontFamily: SANS_BOLD, fontSize: 14, color: INK },
+  useVerb: { fontFamily: SANS, fontSize: 14, color: MUTE },
+  useQuote: { fontFamily: SERIF_IT, fontSize: 14, color: INK },
+
+  listsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  newListLink: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
+  listCard: {
+    padding: 14,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: HAIR,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: PAPER_CARD,
   },
-  useLine: { flex: 1 },
-  useWho: { fontFamily: 'DMSans_700Bold', fontSize: 14, color: INK },
-  useVerb: { fontFamily: 'DMSans_400Regular', fontSize: 14, color: MUTE },
-  useQuote: {
-    fontFamily: 'PlayfairDisplay_500Medium_Italic',
-    fontSize: 14,
-    color: INK,
-  },
-  tipHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  tipName: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 20,
-    color: INK,
-    letterSpacing: -0.4,
-    flex: 1,
-  },
-  tipMeta: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 9,
-    letterSpacing: 1.2,
-    color: MUTE,
-    marginTop: 4,
-  },
-  tipQuote: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 15,
-    lineHeight: 22,
-    color: INK,
-    marginTop: 8,
-  },
-  listsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  newListLink: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: CORAL },
-  listCard: {
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: HAIR,
-    backgroundColor: '#FFFFFF',
-  },
-  listTitle: {
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 15,
-    color: INK,
-  },
-  listSub: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 12,
-    color: MUTE,
-    marginTop: 4,
-  },
-  empty: { fontFamily: 'DMSans_400Regular', fontSize: 13, color: MUTE, marginTop: 16 },
+  listTitle: { fontFamily: SANS_SEMI, fontSize: 15, color: INK },
+  listSub: { fontFamily: SANS, fontSize: 12, color: MUTE, marginTop: 4 },
+
+  empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 16 },
   emptyCard: {
     marginTop: 14,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: HAIR,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: PAPER_CARD,
   },
-  emptyTitle: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 22,
-    color: INK,
-    letterSpacing: -0.4,
-  },
-  emptyBody: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    color: MUTE,
-    marginTop: 8,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 14,
-  },
-  tripCard: { width: '48%' },
-  tripCardInner: {
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: HAIR,
-    backgroundColor: '#FFFFFF',
-    minHeight: 100,
-    justifyContent: 'flex-end',
-  },
-  tripDest: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 22,
-    color: INK,
-    letterSpacing: -0.4,
-  },
-  tripMeta: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 9,
-    letterSpacing: 1.2,
-    color: MUTE,
-    marginTop: 4,
-  },
-  tripCounts: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 11.5,
-    color: MUTE,
-    marginTop: 6,
-  },
+  emptyTitle: { fontFamily: SERIF, fontSize: 22, color: INK, letterSpacing: -0.4 },
+  emptyBody: { fontFamily: SANS, fontSize: 13, lineHeight: 20, color: MUTE, marginTop: 8 },
 });

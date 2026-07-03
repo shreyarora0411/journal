@@ -2,9 +2,9 @@ import { renderWithProviders, screen } from '@/test/render';
 import { Wordmark } from './Wordmark';
 
 describe('Wordmark', () => {
-  it('renders the lore. wordmark text', () => {
+  it('renders the Vouch. wordmark text', () => {
     renderWithProviders(<Wordmark />);
-    expect(screen.getByLabelText('lore.')).toBeTruthy();
+    expect(screen.getByLabelText('Vouch.')).toBeTruthy();
   });
 
   it('renders the trailing dot in coral (#FF4D2E)', () => {
@@ -15,7 +15,7 @@ describe('Wordmark', () => {
 
   it('uses Instrument Serif italic at the chosen size', () => {
     renderWithProviders(<Wordmark size="lg" />);
-    const root = screen.getByLabelText('lore.');
+    const root = screen.getByLabelText('Vouch.');
     const styles = Array.isArray(root.props.style) ? root.props.style : [root.props.style];
     const flat = Object.assign({}, ...styles);
     expect(flat.fontFamily).toBe('PlayfairDisplay_500Medium');
@@ -24,7 +24,7 @@ describe('Wordmark', () => {
 
   it('supports the xl size for hero moments', () => {
     renderWithProviders(<Wordmark size="xl" />);
-    const root = screen.getByLabelText('lore.');
+    const root = screen.getByLabelText('Vouch.');
     const styles = Array.isArray(root.props.style) ? root.props.style : [root.props.style];
     const flat = Object.assign({}, ...styles);
     expect(flat.fontSize).toBe(56);
@@ -32,7 +32,7 @@ describe('Wordmark', () => {
 
   it('defaults to ink color and overrides via color prop', () => {
     const { rerender } = renderWithProviders(<Wordmark />);
-    const root = () => screen.getByLabelText('lore.');
+    const root = () => screen.getByLabelText('Vouch.');
     const flatStyle = () => {
       const s = root().props.style;
       const arr = Array.isArray(s) ? s : [s];

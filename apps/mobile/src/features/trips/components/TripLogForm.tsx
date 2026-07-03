@@ -168,7 +168,7 @@ export function TripLogForm() {
             [
               { value: 'followers', label: 'Followers', sub: 'Only people who follow me' },
               { value: 'friends_of_friends', label: 'My circle', sub: 'Friends + their friends' },
-              { value: 'everyone', label: 'Everyone', sub: 'Anyone on lore' },
+              { value: 'everyone', label: 'Everyone', sub: 'Anyone on Vouch' },
             ] as const
           ).map((opt) => {
             const isOn = visibility === opt.value;

@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { type ListVouch, useListVouches } from '../api/use-list-vouches';
 import { useList, useRenameList } from '../api/use-lists';
+import { AddExistingVouchSheet } from '../components/AddExistingVouchSheet';
 
 const INK = '#1A1410';
 const MUTE = '#7A716A';
@@ -67,6 +68,7 @@ export function ListDetailScreen() {
   const [draft, setDraft] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [listDraft, setListDraft] = useState('');
+  const [addExistingOpen, setAddExistingOpen] = useState(false);
 
   useEffect(() => {
     log.event('list.detail_entered', { id });
@@ -220,7 +222,7 @@ export function ListDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Save list name"
               onPress={onRename}
-              hitSlop={6}
+              hitSlop={12}
             >
               <Text style={styles.actionPrimary}>Save</Text>
             </Pressable>
@@ -228,7 +230,7 @@ export function ListDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Cancel rename"
               onPress={() => setRenaming(false)}
-              hitSlop={6}
+              hitSlop={12}
             >
               <Text style={styles.actionLabel}>Cancel</Text>
             </Pressable>
@@ -254,14 +256,24 @@ export function ListDetailScreen() {
         </Text>
 
         {isMine ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Add a vouch"
-            onPress={onAddVouch}
-            style={styles.addBtn}
-          >
-            <Text style={styles.addLabel}>+ Add a vouch</Text>
-          </Pressable>
+          <View style={styles.addRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Write a new vouch for this list"
+              onPress={onAddVouch}
+              style={styles.addBtn}
+            >
+              <Text style={styles.addLabel}>+ Write a vouch</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add a vouch you've already written"
+              onPress={() => setAddExistingOpen(true)}
+              style={styles.addBtn}
+            >
+              <Text style={styles.addLabel}>+ Add existing</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         {vouchesQ.isLoading ? (
@@ -319,7 +331,7 @@ export function ListDetailScreen() {
                                         accessibilityLabel="Save edit"
                                         onPress={() => onSaveEdit(v.id)}
                                         disabled={updateVouch.isPending}
-                                        hitSlop={6}
+                                        hitSlop={12}
                                         style={styles.actionBtn}
                                       >
                                         <Text style={styles.actionPrimary}>Save</Text>
@@ -328,7 +340,7 @@ export function ListDetailScreen() {
                                         accessibilityRole="button"
                                         accessibilityLabel="Cancel edit"
                                         onPress={cancelEdit}
-                                        hitSlop={6}
+                                        hitSlop={12}
                                         style={styles.actionBtn}
                                       >
                                         <Text style={styles.actionLabel}>Cancel</Text>
@@ -346,9 +358,12 @@ export function ListDetailScreen() {
                                       />
                                       <Text style={styles.byWho}>
                                         {who}
-                                        {!g.multiDest && v.destination_text
-                                          ? ` · ${v.destination_text}`
-                                          : ''}
+                                        {!g.multiDest && v.destination_text ? (
+                                          <Text style={styles.byPlace}>
+                                            {' · '}
+                                            {v.destination_text}
+                                          </Text>
+                                        ) : null}
                                       </Text>
                                     </View>
                                     <View style={styles.actions}>
@@ -357,7 +372,7 @@ export function ListDetailScreen() {
                                           accessibilityRole="button"
                                           accessibilityLabel="Open in Maps"
                                           onPress={() => openMaps(v)}
-                                          hitSlop={6}
+                                          hitSlop={12}
                                           style={styles.actionBtn}
                                         >
                                           <Text style={styles.actionLabel}>↗ Maps</Text>
@@ -367,7 +382,7 @@ export function ListDetailScreen() {
                                         accessibilityRole="button"
                                         accessibilityLabel="Share this vouch"
                                         onPress={() => shareVouch(v)}
-                                        hitSlop={6}
+                                        hitSlop={12}
                                         style={styles.actionBtn}
                                       >
                                         <Text style={styles.actionLabel}>Share</Text>
@@ -379,7 +394,7 @@ export function ListDetailScreen() {
                                             accessibilityRole="button"
                                             accessibilityLabel="Edit vouch"
                                             onPress={() => startEdit(v)}
-                                            hitSlop={6}
+                                            hitSlop={12}
                                             style={styles.actionBtn}
                                           >
                                             <Text style={styles.actionLabel}>Edit</Text>
@@ -388,7 +403,7 @@ export function ListDetailScreen() {
                                             accessibilityRole="button"
                                             accessibilityLabel="Delete vouch"
                                             onPress={() => onDelete(v)}
-                                            hitSlop={6}
+                                            hitSlop={12}
                                             style={styles.actionBtn}
                                           >
                                             <Text style={styles.actionDanger}>Delete</Text>
@@ -411,6 +426,14 @@ export function ListDetailScreen() {
         )}
         <View style={{ height: 48 }} />
       </ScrollView>
+
+      {id ? (
+        <AddExistingVouchSheet
+          listId={id}
+          isOpen={addExistingOpen}
+          onClose={() => setAddExistingOpen(false)}
+        />
+      ) : null}
     </Page>
   );
 }
@@ -426,9 +449,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   meta: { fontFamily: 'DMSans_400Regular', fontSize: 13, color: MUTE, marginTop: 6 },
+  addRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 },
   addBtn: {
     alignSelf: 'flex-start',
-    marginTop: 16,
     backgroundColor: '#FAF6F0',
     borderWidth: 1,
     borderColor: HAIR,
@@ -473,10 +496,11 @@ const styles = StyleSheet.create({
   },
   chevron: { fontSize: 12, color: FAINT },
   destSub: {
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 12,
-    color: MUTE,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 13,
+    color: INK,
     marginTop: 2,
+    letterSpacing: 0.2,
   },
   vouchCard: {
     backgroundColor: '#FFFFFF',
@@ -493,6 +517,7 @@ const styles = StyleSheet.create({
   },
   byRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   byWho: { fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: MUTE },
+  byPlace: { fontFamily: 'DMSans_700Bold', fontSize: 13, color: INK },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',

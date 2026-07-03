@@ -20,7 +20,7 @@ export default function Landing() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <Box flex={1} justifyContent="center" alignItems="center" padding="xl">
         <Text variant="title" textAlign="center" marginBottom="m">
-          lore
+          Vouch
         </Text>
         <Text variant="body" color="textMuted" textAlign="center" marginBottom="xl">
           Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in apps/mobile/.env to

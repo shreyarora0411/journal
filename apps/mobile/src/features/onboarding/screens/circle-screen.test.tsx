@@ -74,7 +74,7 @@ describe('CircleScreen', () => {
     // The phrase appears in two places — the Contacts connector subtitle
     // and the matched-friends card. The card-specific affordance is the
     // "Add all N" pill.
-    expect(screen.getAllByText('2 friends already on lore.').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('2 friends already on Vouch.').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText('Add all 2')).toBeTruthy();
   });
 

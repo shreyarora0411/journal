@@ -6,3 +6,4 @@ export * from './schemas/vouch';
 export * from './types';
 export * from './extractors';
 export * from './phone';
+export * from './taste';

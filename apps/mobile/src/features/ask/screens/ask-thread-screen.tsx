@@ -110,7 +110,7 @@ export function AskThreadScreen() {
                           style={styles.saveBtn}
                         >
                           <Text style={[styles.saveGlyph, isSaved && styles.saveGlyphOn]}>
-                            {isSaved ? '🔖 Saved' : '+ Save'}
+                            {isSaved ? 'Saved' : '+ Save'}
                           </Text>
                         </Pressable>
                       </View>

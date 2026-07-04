@@ -51,6 +51,7 @@ export function GoOutScreen() {
   const results = q.data ?? [];
 
   const openMaps = (p: RecommendedPlace) => {
+    log.event('taste.maps_opened', { place_id: p.place_id, from: 'goout' });
     Linking.openURL(mapsUrl(p)).catch(() => undefined);
   };
 

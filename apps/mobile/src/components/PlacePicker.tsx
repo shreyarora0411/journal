@@ -7,6 +7,7 @@ import {
   placeDetails,
 } from '@/lib/google-places';
 import { getSupabase } from '@/lib/supabase';
+import { hubLabel } from '@journal/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -121,7 +122,7 @@ export function PlacePicker({
           .map((c) => ({
             placeId: c.google_place_id,
             primary: c.name,
-            secondary: [c.hub, c.zone].filter(Boolean).join(' · ') || 'On the map',
+            secondary: [hubLabel(c.hub), c.zone].filter(Boolean).join(' · ') || 'On the map',
             description: c.name,
           }));
         setHits([...google, ...extra]);

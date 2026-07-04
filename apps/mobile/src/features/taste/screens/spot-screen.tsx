@@ -1,4 +1,5 @@
 import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { log } from '@/lib/log';
 import { hubLabel } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -38,6 +39,7 @@ export function SpotScreen() {
 
   const openMaps = () => {
     if (!place) return;
+    log.event('taste.maps_opened', { place_id: place.id, from: 'spot' });
     Linking.openURL(
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.google_place_id}`,
     ).catch(() => undefined);

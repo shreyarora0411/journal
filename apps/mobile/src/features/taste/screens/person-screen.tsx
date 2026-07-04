@@ -1,9 +1,11 @@
 import { Eyebrow, Face, Page, StatusSpace } from '@/components';
 import { useAuthStore } from '@/features/auth';
 import { useFollow, useFollowStatus, useUnfollow } from '@/features/follows';
+import { TASTE_TUNING, hubLabel } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePersonMap } from '../api/use-person-map';
+import { LoadError } from '../components/LoadError';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
@@ -51,6 +53,8 @@ export function PersonScreen() {
 
       {q.isLoading ? (
         <Text style={styles.empty}>Loading…</Text>
+      ) : q.isError ? (
+        <LoadError message="Couldn't load this map." onRetry={() => q.refetch()} />
       ) : !person ? (
         <Text style={styles.empty}>Not found.</Text>
       ) : (
@@ -64,7 +68,10 @@ export function PersonScreen() {
               {match != null ? (
                 <Text style={styles.matchLine}>{Math.round(match * 100)}% taste overlap</Text>
               ) : !isMe ? (
-                <Text style={styles.matchMuted}>Taste overlap appears at 8 loves each.</Text>
+                <Text style={styles.matchMuted}>
+                  Taste overlap shows once you've both logged {TASTE_TUNING.confidenceMinLoves}{' '}
+                  loves.
+                </Text>
               ) : null}
             </View>
             {!isMe && id ? (
@@ -103,7 +110,7 @@ export function PersonScreen() {
                         {p.name}
                       </Text>
                       <Text style={styles.rowMeta} numberOfLines={1}>
-                        {[p.hub, p.zone].filter(Boolean).join(' · ').toUpperCase() || '—'}
+                        {[hubLabel(p.hub), p.zone].filter(Boolean).join(' · ').toUpperCase() || '—'}
                       </Text>
                       {p.note ? (
                         <Text style={styles.rowNote} numberOfLines={2}>

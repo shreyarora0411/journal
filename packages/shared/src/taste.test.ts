@@ -11,6 +11,7 @@ import {
   blendFingerprint,
   clampAxis,
   cosineAxes,
+  inferZone,
   placeScore,
   tasteMatch,
   tasteReadout,
@@ -186,5 +187,27 @@ describe('clampAxis', () => {
     expect(clampAxis(2)).toBe(1);
     expect(clampAxis(-2)).toBe(-1);
     expect(clampAxis(0.3)).toBe(0.3);
+  });
+});
+
+describe('inferZone', () => {
+  it('maps known Gurgaon venues to gurgaon', () => {
+    expect(inferZone(28.457, 77.09)).toBe('gurgaon'); // Comorin, GCR
+    expect(inferZone(28.4814, 77.104)).toBe('gurgaon'); // The Kitchens, Sector 26
+    expect(inferZone(28.38, 77.05)).toBe('gurgaon'); // Sec 68 / Airia
+  });
+  it('maps known Delhi areas to delhi', () => {
+    expect(inferZone(28.6, 77.227)).toBe('delhi'); // Khan Market
+    expect(inferZone(28.514, 77.178)).toBe('delhi'); // Mehrauli
+  });
+  it('keeps the Gurgaon border zone gurgaon (box order)', () => {
+    expect(inferZone(28.481, 77.104)).toBe('gurgaon'); // Sikanderpur/MG Rd
+  });
+  it('returns null for out-of-market and missing coords', () => {
+    expect(inferZone(9.535, 100.062)).toBeNull(); // Chaweng Beach
+    expect(inferZone(13.75, 100.5)).toBeNull(); // Bangkok
+    expect(inferZone(28.35, 77.31)).toBeNull(); // Faridabad — not a v1 zone
+    expect(inferZone(null, 77.1)).toBeNull();
+    expect(inferZone(28.45, undefined)).toBeNull();
   });
 });

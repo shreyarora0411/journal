@@ -1,10 +1,12 @@
 import { Eyebrow, Face, Icon, Page, StatusSpace } from '@/components';
 import { useProfile } from '@/features/auth';
 import { TASTE_TUNING } from '@journal/shared';
+import { hubLabel } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { type MyPlaceRow, useMyPlaces, useMyTaste } from '../api/use-taste-data';
+import { type MyPlaceRow, useMyPlaces, useMyPriors, useMyTaste } from '../api/use-taste-data';
+import { LoadError } from '../components/LoadError';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
@@ -36,6 +38,7 @@ export function YourMapScreen() {
   const profile = useProfile();
   const tasteQ = useMyTaste();
   const placesQ = useMyPlaces();
+  const priorsQ = useMyPriors();
 
   const places = placesQ.data ?? [];
   const lovedCount = useMemo(() => places.filter((p) => p.sentiment === 'loved').length, [places]);
@@ -61,22 +64,30 @@ export function YourMapScreen() {
         </Pressable>
       </View>
 
-      {/* Identity block — the taste readout, derived, never self-declared. */}
+      {/* Identity block — the taste readout, derived, never self-declared.
+          Never assert "0 loves" while loading or on error: a flaky open
+          must not read like an empty life. */}
       <View style={{ marginTop: 18 }}>
         <Text style={styles.eyebrowGold}>YOUR TASTE</Text>
-        {readout.length > 0 ? (
-          <Text style={styles.readout}>{readout.join(' · ')}.</Text>
-        ) : (
-          <Text style={styles.readoutPrompt}>
-            Log a few places you love and your taste takes shape here.
-          </Text>
+        {tasteQ.isLoading || placesQ.isLoading ? (
+          <Text style={styles.readoutPrompt}>…</Text>
+        ) : tasteQ.isError || placesQ.isError ? null : (
+          <>
+            {readout.length > 0 ? (
+              <Text style={styles.readout}>{readout.join(' · ')}.</Text>
+            ) : (
+              <Text style={styles.readoutPrompt}>
+                Log a few places you love and your taste takes shape here.
+              </Text>
+            )}
+            {lovedCount < gate ? (
+              <Text style={styles.gateLine}>
+                {lovedCount}/{gate} loves — {gate - lovedCount} more and we’ll know whose taste fits
+                yours.
+              </Text>
+            ) : null}
+          </>
         )}
-        {lovedCount < gate ? (
-          <Text style={styles.gateLine}>
-            {lovedCount}/{gate} loves — {gate - lovedCount} more and we’ll know whose taste fits
-            yours.
-          </Text>
-        ) : null}
       </View>
 
       {/* Log CTA — the single most important action on an empty map. */}
@@ -90,25 +101,59 @@ export function YourMapScreen() {
         <Text style={styles.logCtaLabel}>Log a place</Text>
       </Pressable>
 
+      {/* Re-entry door: the quiz was skippable — keep it reachable until
+          priors exist (it stops rendering the moment they do). */}
+      {places.length > 0 && !priorsQ.isLoading && !priorsQ.data ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Finish your taste setup"
+          onPress={() => router.push('/(tabs)/taste-setup' as never)}
+          style={styles.setupNudge}
+        >
+          <Text style={styles.setupNudgeText}>
+            Finish your taste setup — four quick calls sharpen your map. ›
+          </Text>
+        </Pressable>
+      ) : null}
+
       {/* The map — every place you've logged, newest first. */}
       <View style={{ marginTop: 28, marginBottom: 80 }}>
         <Eyebrow>Your places</Eyebrow>
         {placesQ.isLoading ? (
           <Text style={styles.empty}>Loading…</Text>
+        ) : placesQ.isError ? (
+          <LoadError message="Couldn't load your map." onRetry={() => placesQ.refetch()} />
         ) : places.length === 0 ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Set up your taste"
-            onPress={() => router.push('/(tabs)/taste-setup' as never)}
-            style={styles.emptyCard}
-          >
-            <Text style={styles.emptyTitle}>Nothing logged yet.</Text>
-            <Text style={styles.emptyBody}>
-              Two minutes: four quick calls, then the five places that are so you — and your taste
-              is live.
-            </Text>
-            <Text style={styles.emptyCta}>Set up your taste ›</Text>
-          </Pressable>
+          // Quiz already done → the missing thing is a first log, not a
+          // second quiz (which would overwrite saved priors).
+          priorsQ.data ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Log a place"
+              onPress={() => router.push('/(tabs)/add' as never)}
+              style={styles.emptyCard}
+            >
+              <Text style={styles.emptyTitle}>Nothing logged yet.</Text>
+              <Text style={styles.emptyBody}>
+                Your taste setup is in — now log the first place you love and your map begins.
+              </Text>
+              <Text style={styles.emptyCta}>Log a place ›</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Set up your taste"
+              onPress={() => router.push('/(tabs)/taste-setup' as never)}
+              style={styles.emptyCard}
+            >
+              <Text style={styles.emptyTitle}>Nothing logged yet.</Text>
+              <Text style={styles.emptyBody}>
+                Two minutes: four quick calls, then the five places that are so you — and your taste
+                is live.
+              </Text>
+              <Text style={styles.emptyCta}>Set up your taste ›</Text>
+            </Pressable>
+          )
         ) : (
           <View style={{ gap: 8, marginTop: 12 }}>
             {places.map((row: MyPlaceRow) =>
@@ -125,7 +170,7 @@ export function YourMapScreen() {
                       {row.place.name}
                     </Text>
                     <Text style={styles.rowMeta} numberOfLines={1}>
-                      {[row.place.hub, row.place.zone].filter(Boolean).join(' · ') || '—'}
+                      {[hubLabel(row.place.hub), row.place.zone].filter(Boolean).join(' · ') || '—'}
                     </Text>
                     {row.note ? (
                       <Text style={styles.rowNote} numberOfLines={2}>
@@ -189,6 +234,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   logCtaLabel: { fontFamily: SANS_SEMI, fontSize: 15, color: '#FFFFFF' },
+  setupNudge: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: CARD,
+  },
+  setupNudgeText: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

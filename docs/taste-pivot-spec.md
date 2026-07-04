@@ -99,6 +99,23 @@ MAX term = taste-led (best-matched lover), NOT popularity; log term = mild suppo
 **Success bar:** ~2+ logs/person/week for 3+ weeks; discovery beats "Google/ask the chat" for the cohort; taste-twin (non-close-friend) recs get acted on.
 **Kill signals:** logging doesn't recur unprompted (no push exists to save it); Your Map doesn't beat Notes; matches feel random.
 
+### 3b. You tab — full redesign (SPEC APPROVED FOR PLANNING 2026-07-04, NOT YET BUILT)
+
+The You tab is still the trust-era travel profile and contradicts the taste product everywhere else. Founder call: full redesign, planned now, built after sign-off.
+
+**Role split:** Your Map (book tab) = the working artifact for YOU (log, gate progress, your notes). You tab = your PUBLIC taste identity + account home — "this is the map people borrow," plus controls.
+
+**Sections, top to bottom:**
+1. **Header** — Face (lg), display name, @handle; edit avatar/name/bio inline (existing profile-edit hooks).
+2. **Taste identity card** — the derived readout (never self-declared), loves count, hubs covered ("14 loves · 5 hubs"). Tapping opens your own `person/[id]` page — you see exactly what a borrower sees. This is the anti-dating affordance turned inward.
+3. **Your voice** — voiced-note count + latest note preview (Fraunces italic); a nudge listing loved places still missing a note ("6 places are waiting for your words") deep-linking into the log flow. Notes are the moat; this surface farms them.
+4. **Lists** — the existing lists feature as curated shelves ("Date-night bets", "Solo coffee"); create/manage entry.
+5. **Reach** — accepted follower/following counts framed as borrowing ("4 people borrow this map"); the WhatsApp invite entry (shared with People screen).
+6. **Account** — default visibility, house rules, sign out.
+
+**Rules:** identity always derived; no "match" as a noun; no gamified stats/leaderboards; no photo wall. **Data:** entirely existing hooks — `me()`, `useMyTaste`, `useMyPlaces`, `useFollowCounts` (accepted only), lists queries. No new backend.
+**Build sketch:** new `features/taste/screens/you-screen.tsx` wired into `app/(tabs)/you.tsx`; retire profile-screen's travel-style blocks; keep avatar/name editing components.
+
 ## 4. Rollout phases
 
 - **Phase 0 (seed):** food/drink obsessives, one neighborhood. Highest taste-overlap + they ARE the tastemakers. Saturate the pocket; calibrate the engine substance-first.
@@ -140,4 +157,5 @@ MAX term = taste-led (best-matched lover), NOT popularity; log term = mild suppo
 3. ~~The screens~~ BUILT + verified live in sim (2026-07-03): features/taste/* — Your Map (book tab; readout + gate progress + places), Log (add tab; place→sentiment→note→≤3 tags→hub), Go out (search tab; zone/hub/occasion chips, honest tiers), People (friends tab; taste-twins, honest 8-love gate, rows open person map), Spot (spot/[id]; lover cards open person map), **Person (person/[id]; person AS a map — % taste overlap or honest gate line, Follow map, their loved places → spot; the structural anti-dating affordance)** + Taste setup onboarding ((tabs)/taste-setup: 4 either/or → priors; pick-5-loves → real reactions). Old trust-era screens remain unrouted in repo. Tab bar: Map/Go out/Log/People/You.
 4. ~~Seed tooling~~ BUILT + first batch APPLIED: docs/seed/gurgaon-venues.csv (draft, founder-correctable) + scripts/seed-gurgaon-places.ts (Places-API-verified, duplicate-resolution guard) → supabase/seed/gurgaon-places.generated.sql. 31 clean venues live on Trail (13 flagged/excluded rows need founder fixes); Anardana + Molecule re-hubbed to m3m_ifc, Blue Tokai AIPL to gc_ext. Founder: correct flags + extend toward ~300.
 5. ~~DEPLOY~~ DONE (2026-07-03) per docs/deploy-taste-pivot.md: migrations 55–60 applied, 31 venues seeded, RLS smoke passed (tag-vote attribution denied, direct axes call denied, 0 foreign reactions), client E2E in sim (quiz → priors → love → readout → person map → spot). Old dummy data NOT wiped — decide before invite-out.
-6. Recruit the 250; run the seed cohort; measure against §3's success bar.
+6. ~~Pre-invite hardening~~ DONE (2026-07-04): **mig 61** re-tightened live users grants (phone_e164/home coords were readable + is_creator writable by any signed-in user — squashed-baseline drift; probes verified) and revoked TRUNCATE/TRIGGER/REFERENCES everywhere + all anon function EXECUTE. **Audit fixes shipped:** occasion tags castable at log time (WHEN'S IT FOR row; tag votes were ALSO always failing — ON CONFLICT needs SELECT on user_id which the de-attribution grant withholds; now delete-then-insert) + occasion-aware Go Out empty state; zone inference from NCR bounding boxes (`inferZone` in shared, safety net in the mutation — hub-less logs no longer vanish from Go Out; legacy travel rows honestly stay null); Delhi hubs pickable at log time; honest error states (LoadError + retry) on Map/Go out/Spot/Person/People; `backBehavior="fullHistory"` (back retraces spot→person→spot); note-save honesty (rating-saved-but-note-failed keeps the form + says so); PlacePicker searches the seeded corpus as fallback + no-results/offline row; taste-setup re-entry (prefilled quiz, finish-with-existing-loves, persistent door while priors missing); onboarding lands in taste-setup; Welcome + invite copy pivoted to taste; follow/unfollow now visibly updates taste surfaces (status='accepted' semantics, error toasts); hubLabel everywhere; +not-found redirect; polish batch. You-tab redesign SPEC'd (§3b), not built.
+7. Recruit the 250; run the seed cohort; measure against §3's success bar.

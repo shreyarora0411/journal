@@ -12,11 +12,13 @@ export const useFollowStatus = (followedId: string | null | undefined) => {
     queryFn: async (): Promise<boolean> => {
       if (!viewerId || !followedId) return false;
       const supabase = getSupabase();
+      // accepted only: a pending or blocked row must not read as "following"
       const { data, error } = await supabase
         .from('follows')
         .select('follower_id')
         .eq('follower_id', viewerId)
         .eq('followed_id', followedId)
+        .eq('status', 'accepted')
         .maybeSingle();
       if (error) throw error;
       return Boolean(data);

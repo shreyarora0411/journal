@@ -16,8 +16,8 @@ describe('WelcomeScreen', () => {
     expect(screen.getByLabelText('Vouch.')).toBeTruthy();
     expect(screen.getByLabelText('Sample friend quotes')).toBeTruthy();
     expect(screen.getByText('THIS IS THE WHOLE APP')).toBeTruthy();
-    expect(screen.getByText(/One honest line/)).toBeTruthy();
-    expect(screen.getByText(/Search any city/)).toBeTruthy();
+    expect(screen.getByText(/Places you'll love/)).toBeTruthy();
+    expect(screen.getByText(/their map\s?becomes your answers/i)).toBeTruthy();
   });
 
   it('renders the three sample friend cards', () => {

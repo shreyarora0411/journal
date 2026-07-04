@@ -1,11 +1,14 @@
 import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { useAuthStore } from '@/features/auth';
 import { useFollow, useUnfollow } from '@/features/follows';
+import { buildPersonalInviteText, buildWhatsAppLink } from '@/features/invite';
 import { log } from '@/lib/log';
 import { TASTE_TUNING } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMyPlaces, useTasteTwins } from '../api/use-taste-data';
+import { LoadError } from '../components/LoadError';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
@@ -25,6 +28,7 @@ const SANS_BOLD = 'HankenGrotesk_700Bold';
  */
 export function PeopleScreen() {
   const router = useRouter();
+  const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
   const twinsQ = useTasteTwins();
   const placesQ = useMyPlaces();
   const follow = useFollow();
@@ -33,6 +37,11 @@ export function PeopleScreen() {
   useEffect(() => {
     log.event('taste.people_entered');
   }, []);
+
+  const onInvite = () => {
+    log.event('taste.invite_tapped');
+    Linking.openURL(buildWhatsAppLink(buildPersonalInviteText(viewerId))).catch(() => undefined);
+  };
 
   const lovedCount = useMemo(
     () => (placesQ.data ?? []).filter((p) => p.sentiment === 'loved').length,
@@ -47,12 +56,20 @@ export function PeopleScreen() {
       <StatusSpace />
       <Text style={styles.headline}>Borrow better taste.</Text>
       <Text style={styles.sub}>
-        These aren't matches to meet — they're maps to follow. When someone's taste overlaps yours,
-        their loved places become your answers.
+        This isn't about meeting anyone — these are maps to follow. When someone's taste overlaps
+        yours, their loved places become your answers.
       </Text>
 
       {twinsQ.isLoading || placesQ.isLoading ? (
         <Text style={styles.empty}>Loading…</Text>
+      ) : twinsQ.isError || placesQ.isError ? (
+        <LoadError
+          message="Couldn't load people."
+          onRetry={() => {
+            twinsQ.refetch();
+            placesQ.refetch();
+          }}
+        />
       ) : gated ? (
         <View style={styles.gateCard}>
           <Text style={styles.gateTitle}>This unlocks at {gate} loves.</Text>
@@ -125,6 +142,20 @@ export function PeopleScreen() {
           </View>
         </View>
       )}
+
+      {/* Supply-side door: the graph only gets useful when people whose
+          taste you trust are on it. Always reachable, never pushy. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Invite someone"
+        onPress={onInvite}
+        style={styles.inviteCard}
+      >
+        <Text style={styles.inviteTitle}>Bring someone whose taste you trust.</Text>
+        <Text style={styles.inviteBody}>
+          Their map makes yours better — send them your link on WhatsApp. ›
+        </Text>
+      </Pressable>
     </Page>
   );
 }
@@ -180,4 +211,15 @@ const styles = StyleSheet.create({
   },
   followBtnOn: { borderColor: HAIR },
   followLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
+  inviteCard: {
+    marginTop: 20,
+    marginBottom: 90,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: CARD,
+  },
+  inviteTitle: { fontFamily: SERIF, fontSize: 18, color: INK, letterSpacing: -0.3 },
+  inviteBody: { fontFamily: SANS, fontSize: 13, lineHeight: 19, color: MUTE, marginTop: 6 },
 });

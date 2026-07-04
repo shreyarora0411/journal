@@ -1,7 +1,9 @@
 import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { hubLabel } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePlaceDetail } from '../api/use-taste-data';
+import { LoadError } from '../components/LoadError';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
@@ -55,13 +57,15 @@ export function SpotScreen() {
 
       {q.isLoading ? (
         <Text style={styles.empty}>Loading…</Text>
+      ) : q.isError ? (
+        <LoadError message="Couldn't load this place." onRetry={() => q.refetch()} />
       ) : !place ? (
         <Text style={styles.empty}>Place not found.</Text>
       ) : (
         <>
           <Text style={styles.name}>{place.name}</Text>
           <Text style={styles.meta}>
-            {[place.hub, place.zone, place.destination_text]
+            {[hubLabel(place.hub), place.zone, place.destination_text]
               .filter(
                 (part, i, all): part is string =>
                   Boolean(part) &&

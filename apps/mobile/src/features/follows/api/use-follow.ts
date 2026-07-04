@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/features/auth';
+import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +7,7 @@ import { followKeys } from './keys';
 
 export const useFollow = () => {
   const qc = useQueryClient();
+  const toast = useToast();
   const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
 
   return useMutation({
@@ -41,8 +43,10 @@ export const useFollow = () => {
       qc.setQueryData(followKeys.status(followedId), true);
       return { prev };
     },
-    onError: (_err, followedId, ctx) => {
+    onError: (err, followedId, ctx) => {
       qc.setQueryData(followKeys.status(followedId), ctx?.prev ?? false);
+      log.error('follow failed', err);
+      toast.show({ message: "Couldn't follow — try again.", variant: 'error' });
     },
     onSettled: (result) => {
       if (result) {
@@ -52,6 +56,8 @@ export const useFollow = () => {
         // Friend-graph results may now include the followee's trips.
         qc.invalidateQueries({ queryKey: ['feed'] });
         qc.invalidateQueries({ queryKey: ['search'] });
+        // Taste surfaces carry followed flags + follow-boosted ranking.
+        qc.invalidateQueries({ queryKey: ['taste'] });
       }
     },
   });
@@ -59,17 +65,20 @@ export const useFollow = () => {
 
 export const useUnfollow = () => {
   const qc = useQueryClient();
+  const toast = useToast();
   const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
 
   return useMutation({
     mutationFn: async (followedId: string) => {
       if (!viewerId) throw new Error('Not signed in');
       const supabase = getSupabase();
+      // Never delete a blocked row: "unfollow" must not silently unblock.
       const { error } = await supabase
         .from('follows')
         .delete()
         .eq('follower_id', viewerId)
-        .eq('followed_id', followedId);
+        .eq('followed_id', followedId)
+        .neq('status', 'blocked');
       if (error) throw error;
       log.event('follow.deleted');
       return { followedId };
@@ -80,8 +89,10 @@ export const useUnfollow = () => {
       qc.setQueryData(followKeys.status(followedId), false);
       return { prev };
     },
-    onError: (_err, followedId, ctx) => {
+    onError: (err, followedId, ctx) => {
       qc.setQueryData(followKeys.status(followedId), ctx?.prev ?? true);
+      log.error('unfollow failed', err);
+      toast.show({ message: "Couldn't unfollow — try again.", variant: 'error' });
     },
     onSettled: (result) => {
       if (result) {
@@ -90,6 +101,7 @@ export const useUnfollow = () => {
         if (viewerId) qc.invalidateQueries({ queryKey: followKeys.counts(viewerId) });
         qc.invalidateQueries({ queryKey: ['feed'] });
         qc.invalidateQueries({ queryKey: ['search'] });
+        qc.invalidateQueries({ queryKey: ['taste'] });
       }
     },
   });

@@ -2,7 +2,7 @@ import { useAuthStore } from '@/features/auth';
 import type { PlaceDetails } from '@/lib/google-places';
 import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
-import { type Sentiment, categoryToVouchType } from '@journal/shared';
+import { type Sentiment, categoryToVouchType, inferZone } from '@journal/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 /** Google place types → our category_priors key. Heuristic, founder-correctable
@@ -22,11 +22,21 @@ export type LogPlaceVars = {
   sentiment: Sentiment;
   /** Optional voiced note — becomes a public vouch attached to the place. */
   note?: string;
-  /** Optional ≤3 taste-tag slugs. */
+  /** Optional ≤3 format-tag slugs. */
   tags?: string[];
+  /** Optional single occasion-tag slug — Go Out's occasion filter matches
+   *  on these votes, so they must be castable at log time. */
+  occasion?: string | null;
   /** Optional curated hub/zone (from the hub chips when known). */
   hub?: string | null;
   zone?: string | null;
+};
+
+export type LogPlaceResult = {
+  placeId: string;
+  /** False when the voiced note failed to persist — the screen must NOT
+   *  claim full success and must keep the typed note recoverable. */
+  noteSaved: boolean;
 };
 
 /**
@@ -51,7 +61,7 @@ export const useLogPlace = () => {
     // reaction upsert keyed on user+place; note/tags never throw).
     retry: 2,
     retryDelay: 400,
-    mutationFn: async (vars: LogPlaceVars): Promise<{ placeId: string }> => {
+    mutationFn: async (vars: LogPlaceVars): Promise<LogPlaceResult> => {
       if (!userId) throw new Error('Not signed in');
       const supabase = getSupabase();
 
@@ -63,7 +73,10 @@ export const useLogPlace = () => {
         p_lng: vars.place.lng,
         p_category: googleTypesToCategory(vars.place.types),
         p_hub: vars.hub ?? null,
-        p_zone: vars.zone ?? null,
+        // Safety net for every capture door (log screen, pick-5): a place
+        // with no zone can never surface in Go Out, so infer from coords
+        // when the caller didn't decide. Out-of-market stays null.
+        p_zone: vars.zone ?? inferZone(vars.place.lat, vars.place.lng),
       });
       if (placeErr) throw placeErr;
       const pid = placeId as string;
@@ -76,7 +89,9 @@ export const useLogPlace = () => {
         );
       if (reactErr) throw reactErr;
 
-      // Best-effort extras — a failed note/tag never fails the log.
+      // Best-effort extras — a failed note/tag never fails the log, but the
+      // note outcome is REPORTED so the screen never lies about it.
+      let noteSaved = true;
       const note = vars.note?.trim();
       if (note) {
         const { error: vouchErr } = await supabase.from('vouches').insert({
@@ -88,19 +103,36 @@ export const useLogPlace = () => {
           source: 'user_created',
           visibility: 'friends_of_friends',
         });
-        if (vouchErr) log.warn('log-place note skipped', { error: vouchErr.message });
+        if (vouchErr) {
+          noteSaved = false;
+          log.warn('log-place note skipped', { error: vouchErr.message });
+        }
       }
-      const tags = (vars.tags ?? []).slice(0, 3);
-      if (tags.length > 0) {
-        const { error: tagErr } = await supabase.from('place_tag_votes').upsert(
-          tags.map((slug) => ({ user_id: userId, place_id: pid, tag_slug: slug })),
-          { onConflict: 'user_id,place_id,tag_slug', ignoreDuplicates: true },
-        );
+      const votes = [...(vars.tags ?? []).slice(0, 3), ...(vars.occasion ? [vars.occasion] : [])];
+      if (votes.length > 0) {
+        // Delete-then-insert, NOT upsert: ON CONFLICT's arbiter needs SELECT
+        // on user_id, which the de-attribution column grant (mig 55)
+        // deliberately withholds — the upsert always failed with permission
+        // denied. RLS scopes both statements to own rows, and replacing
+        // means a re-log restates your current tags.
+        const { error: clearErr } = await supabase
+          .from('place_tag_votes')
+          .delete()
+          .eq('place_id', pid);
+        const { error: tagErr } = clearErr
+          ? { error: clearErr }
+          : await supabase
+              .from('place_tag_votes')
+              .insert(votes.map((slug) => ({ user_id: userId, place_id: pid, tag_slug: slug })));
         if (tagErr) log.warn('log-place tags skipped', { error: tagErr.message });
       }
 
-      log.event('taste.place_logged', { sentiment: vars.sentiment, tags: tags.length });
-      return { placeId: pid };
+      log.event('taste.place_logged', {
+        sentiment: vars.sentiment,
+        tags: votes.length,
+        occasion: vars.occasion ?? 'none',
+      });
+      return { placeId: pid, noteSaved };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['taste'] });

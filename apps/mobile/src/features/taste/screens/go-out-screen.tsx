@@ -1,10 +1,11 @@
 import { Face, Page, StatusSpace } from '@/components';
 import { log } from '@/lib/log';
-import { DELHI_HUBS, GURGAON_HUBS, OCCASION_TAGS } from '@journal/shared';
+import { DELHI_HUBS, GURGAON_HUBS, OCCASION_TAGS, hubLabel } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { type RecommendedPlace, useRecommendPlaces } from '../api/use-taste-data';
+import { LoadError } from '../components/LoadError';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
@@ -129,16 +130,33 @@ export function GoOutScreen() {
           </View>
         </ScrollView>
 
-        {/* Results — honest tiers, who + why, act-on-it. */}
+        {/* Results — honest tiers, who + why, act-on-it. An error is an
+            error; "nothing loved here" is reserved for a real empty. */}
         {q.isLoading ? (
           <Text style={styles.empty}>Finding your places…</Text>
+        ) : q.isError ? (
+          <LoadError message="Couldn't load spots." onRetry={() => q.refetch()} />
         ) : results.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>Nothing loved here yet.</Text>
-            <Text style={styles.emptyBody}>
-              No one has loved a spot {hub ? 'in this hub' : 'here'} yet — be the first to put one
-              on the map.
-            </Text>
+            {occasion ? (
+              <>
+                <Text style={styles.emptyTitle}>
+                  Nothing tagged “{OCCASION_TAGS.find((o) => o.slug === occasion)?.label}” yet.
+                </Text>
+                <Text style={styles.emptyBody}>
+                  Loved places show up here once someone tags them for this occasion — add the tag
+                  when you log.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.emptyTitle}>Nothing loved here yet.</Text>
+                <Text style={styles.emptyBody}>
+                  No one else has loved a spot {hub ? 'in this hub' : 'here'} yet — be the first to
+                  put one on the map.
+                </Text>
+              </>
+            )}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Log a place"
@@ -163,7 +181,7 @@ export function GoOutScreen() {
                     {p.name}
                   </Text>
                   <Text style={styles.cardHub}>
-                    {[p.hub, p.zone].filter(Boolean).join(' · ').toUpperCase()}
+                    {[hubLabel(p.hub), p.zone].filter(Boolean).join(' · ').toUpperCase()}
                   </Text>
                 </View>
                 <Text style={styles.tierLine}>{TIER_LINE[p.tier]}</Text>
@@ -199,7 +217,7 @@ export function GoOutScreen() {
                     hitSlop={12}
                     style={styles.actionBtn}
                   >
-                    <Text style={styles.actionLabel}>↗ Maps</Text>
+                    <Text style={styles.actionLabel}>Open in Maps</Text>
                   </Pressable>
                 </View>
               </Pressable>

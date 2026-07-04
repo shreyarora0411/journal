@@ -6,8 +6,36 @@ import {
   placeAutocomplete,
   placeDetails,
 } from '@/lib/google-places';
+import { getSupabase } from '@/lib/supabase';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+
+/** A founder-seeded canonical_places row surfaced as a picker hit. */
+type CanonicalRow = {
+  google_place_id: string;
+  name: string;
+  hub: string | null;
+  zone: string | null;
+  destination_text: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+/** Search the seeded corpus by name — Google misses small/new venues and
+ *  dies with quota/offline; the ~300 hand-fingerprinted places must stay
+ *  findable regardless. Fail-soft: an error just means no extra hits. */
+const searchCanonical = async (q: string): Promise<CanonicalRow[]> => {
+  try {
+    const { data } = await getSupabase()
+      .from('canonical_places')
+      .select('google_place_id, name, hub, zone, destination_text, lat, lng')
+      .ilike('name', `%${q}%`)
+      .limit(4);
+    return (data ?? []) as CanonicalRow[];
+  } catch {
+    return [];
+  }
+};
 
 const CORAL = '#FF4D2E';
 const INK = '#1A1410';
@@ -59,15 +87,20 @@ export function PlacePicker({
 }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [hits, setHits] = useState<PlaceAutocompleteHit[]>([]);
+  const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resolving, setResolving] = useState<string | null>(null);
   const sessionToken = useMemo(() => newSessionToken(), []);
   const abortRef = useRef<AbortController | null>(null);
+  // Canonical rows keyed by google_place_id — tapping one resolves locally
+  // (no Google details call: we already hold coords, and it dodges quota).
+  const canonicalRef = useRef<Map<string, CanonicalRow>>(new Map());
 
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setHits([]);
+      setSearched(false);
       setLoading(false);
       return;
     }
@@ -76,13 +109,23 @@ export function PlacePicker({
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      const next = await placeAutocomplete(trimmed, {
-        mode,
-        sessionToken,
-        signal: controller.signal,
-      });
+      const [google, canonical] = await Promise.all([
+        placeAutocomplete(trimmed, { mode, sessionToken, signal: controller.signal }),
+        mode === 'broad' ? searchCanonical(trimmed) : Promise.resolve([]),
+      ]);
       if (!controller.signal.aborted) {
-        setHits(next);
+        canonicalRef.current = new Map(canonical.map((c) => [c.google_place_id, c]));
+        const googleIds = new Set(google.map((h) => h.placeId));
+        const extra: PlaceAutocompleteHit[] = canonical
+          .filter((c) => !googleIds.has(c.google_place_id))
+          .map((c) => ({
+            placeId: c.google_place_id,
+            primary: c.name,
+            secondary: [c.hub, c.zone].filter(Boolean).join(' · ') || 'On the map',
+            description: c.name,
+          }));
+        setHits([...google, ...extra]);
+        setSearched(true);
         setLoading(false);
       }
     }, DEBOUNCE_MS);
@@ -90,6 +133,21 @@ export function PlacePicker({
   }, [query, mode, sessionToken]);
 
   const onTapHit = async (hit: PlaceAutocompleteHit) => {
+    const canonical = canonicalRef.current.get(hit.placeId);
+    if (canonical) {
+      onPick({
+        google_place_id: canonical.google_place_id,
+        name: canonical.name,
+        country: null,
+        country_iso: null,
+        region: null,
+        locality: canonical.destination_text,
+        lat: canonical.lat,
+        lng: canonical.lng,
+        types: [],
+      });
+      return;
+    }
     setResolving(hit.placeId);
     const details = await placeDetails(hit.placeId, { sessionToken });
     setResolving(null);
@@ -115,6 +173,14 @@ export function PlacePicker({
         />
         {loading ? <ActivityIndicator size="small" color={MUTE} /> : null}
       </View>
+
+      {!loading && searched && hits.length === 0 ? (
+        <View style={styles.noResults}>
+          <Text style={styles.noResultsText}>
+            Nothing found — check the spelling, or you may be offline.
+          </Text>
+        </View>
+      ) : null}
 
       {hits.length > 0 ? (
         <View style={styles.dropdown}>
@@ -216,6 +282,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   freeTextLabel: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 13,
+    color: MUTE,
+  },
+  noResults: {
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  noResultsText: {
     fontFamily: 'DMSans_400Regular',
     fontSize: 13,
     color: MUTE,

@@ -2,12 +2,13 @@ import { Page, PlacePicker, StatusSpace } from '@/components';
 import { useToast } from '@/hooks/use-toast';
 import type { PlaceDetails } from '@/lib/google-places';
 import { log } from '@/lib/log';
-import type { TasteAxes, TasteAxis } from '@journal/shared';
+import { TASTE_AXES, type TasteAxes, type TasteAxis } from '@journal/shared';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLogPlace } from '../api/use-log-place';
 import { useSavePriors } from '../api/use-save-priors';
+import { useMyPlaces, useMyPriors } from '../api/use-taste-data';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
@@ -62,15 +63,33 @@ export function TasteSetupScreen() {
   const toast = useToast();
   const savePriors = useSavePriors();
   const logPlace = useLogPlace();
+  const priorsQ = useMyPriors();
+  const placesQ = useMyPlaces();
 
   const [answers, setAnswers] = useState<Partial<TasteAxes>>({});
   const [phase, setPhase] = useState<'quiz' | 'places'>('quiz');
   const [picked, setPicked] = useState<PlaceDetails[]>([]);
   const [pickerKey, setPickerKey] = useState(0);
+  const prefilled = useRef(false);
 
   useEffect(() => {
     log.event('taste.setup_entered');
   }, []);
+
+  // Re-entry: a returning user's saved answers come back instead of a
+  // blank quiz that would overwrite their priors with zeros.
+  useEffect(() => {
+    if (prefilled.current || !priorsQ.data) return;
+    prefilled.current = true;
+    const restored: Partial<TasteAxes> = {};
+    TASTE_AXES.forEach((axis, i) => {
+      const v = priorsQ.data?.[i];
+      if (v !== undefined && v !== 0) restored[axis] = v;
+    });
+    setAnswers((prev) => (Object.keys(prev).length === 0 ? restored : prev));
+  }, [priorsQ.data]);
+
+  const existingLoves = (placesQ.data ?? []).filter((p) => p.sentiment === 'loved').length;
 
   const answered = QUESTIONS.filter((q) => answers[q.axis] !== undefined).length;
 
@@ -99,11 +118,18 @@ export function TasteSetupScreen() {
 
   const onFinish = () => {
     toast.show({
-      message: `Your taste is live — ${picked.length} love${picked.length === 1 ? '' : 's'} on the map.`,
+      message:
+        picked.length > 0
+          ? `Your taste is live — ${picked.length} love${picked.length === 1 ? '' : 's'} on the map.`
+          : 'Your taste setup is in.',
       variant: 'success',
     });
     router.replace('/(tabs)/book' as never);
   };
+
+  // A returning user with loves already on the map may finish with 0 new
+  // picks — the pick-5 is for the cold start, not a toll booth.
+  const canFinish = picked.length > 0 || existingLoves > 0;
 
   return (
     <Page>
@@ -192,11 +218,15 @@ export function TasteSetupScreen() {
               accessibilityRole="button"
               accessibilityLabel="Finish taste setup"
               onPress={onFinish}
-              disabled={picked.length === 0}
-              style={[styles.cta, picked.length === 0 && styles.ctaDisabled]}
+              disabled={!canFinish}
+              style={[styles.cta, !canFinish && styles.ctaDisabled]}
             >
               <Text style={styles.ctaLabel}>
-                {picked.length >= GOAL ? 'Done — show my map' : `Finish with ${picked.length}`}
+                {picked.length >= GOAL
+                  ? 'Done — show my map'
+                  : picked.length === 0 && existingLoves > 0
+                    ? 'Done — back to my map'
+                    : `Finish with ${picked.length}`}
               </Text>
             </Pressable>
           </>

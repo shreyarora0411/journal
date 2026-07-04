@@ -2,7 +2,15 @@ import { Page, PlacePicker, StatusSpace } from '@/components';
 import { useToast } from '@/hooks/use-toast';
 import type { PlaceDetails } from '@/lib/google-places';
 import { log } from '@/lib/log';
-import { FORMAT_TAGS, GURGAON_HUBS, type Sentiment } from '@journal/shared';
+import {
+  ALL_HUBS,
+  DELHI_HUBS,
+  FORMAT_TAGS,
+  GURGAON_HUBS,
+  OCCASION_TAGS,
+  type Sentiment,
+  inferZone,
+} from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -41,6 +49,7 @@ export function LogPlaceScreen() {
   const [sentiment, setSentiment] = useState<Sentiment | null>(null);
   const [note, setNote] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [occasion, setOccasion] = useState<string | null>(null);
   const [hub, setHub] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,27 +70,38 @@ export function LogPlaceScreen() {
     setSentiment(null);
     setNote('');
     setTags([]);
+    setOccasion(null);
     setHub(null);
   };
 
   const onSave = async () => {
-    if (!place || !sentiment) return;
+    if (!place || !sentiment || logPlace.isPending) return;
+    // A place must land in SOME zone to surface in Go Out. The picked hub
+    // decides; otherwise infer from coordinates — out-of-market logs
+    // (travel) honestly stay zone-less.
+    const zone = hub
+      ? (ALL_HUBS.find((h) => h.slug === hub)?.zone ?? null)
+      : inferZone(place.lat, place.lng);
     try {
-      await logPlace.mutateAsync({
+      const result = await logPlace.mutateAsync({
         place,
         sentiment,
         note: note.trim() || undefined,
         tags,
+        occasion,
         hub,
-        zone: hub ? 'gurgaon' : null,
+        zone,
       });
-      toast.show({
-        message:
-          sentiment === 'loved'
-            ? `${place.name} is on your map — your taste just got sharper.`
-            : 'Logged. Your map remembers.',
-        variant: 'success',
-      });
+      if (!result.noteSaved) {
+        // Keep the whole form: the rating saved (idempotent on re-save),
+        // the note didn't — one more Save retries exactly that.
+        toast.show({
+          message: "Rating saved, but your note didn't stick — tap Save again.",
+          variant: 'error',
+        });
+        return;
+      }
+      toast.show({ message: `${place.name} is on your map.`, variant: 'success' });
       reset();
     } catch (err) {
       log.error('log place failed', err);
@@ -160,10 +180,14 @@ export function LogPlaceScreen() {
               placeholderTextColor="#B7AE9F"
               value={note}
               onChangeText={(t) => setNote(t.slice(0, 500))}
+              maxLength={500}
               multiline
               style={styles.noteInput}
               selectionColor={CORAL}
             />
+            {note.length > 400 ? (
+              <Text style={styles.noteCount}>{500 - note.length} characters left</Text>
+            ) : null}
 
             {/* 4. Tags (optional, ≤3) */}
             <Text style={styles.eyebrow}>WHAT KIND OF PLACE? (UP TO 3)</Text>
@@ -185,10 +209,49 @@ export function LogPlaceScreen() {
               })}
             </View>
 
-            {/* 5. Hub (optional — Gurgaon Phase 0) */}
+            {/* 4b. Occasion (optional, single) — Go Out's occasion filter
+                matches on these votes; without them it returns nothing. */}
+            <Text style={styles.eyebrow}>WHEN'S IT FOR? (OPTIONAL)</Text>
+            <View style={styles.tagWrap}>
+              {OCCASION_TAGS.map((o) => {
+                const on = occasion === o.slug;
+                return (
+                  <Pressable
+                    key={o.slug}
+                    accessibilityRole="button"
+                    accessibilityLabel={o.label}
+                    accessibilityState={{ selected: on }}
+                    onPress={() => setOccasion(on ? null : o.slug)}
+                    style={[styles.tagChip, on && styles.tagChipOn]}
+                  >
+                    <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{o.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* 5. Hub (optional — both zones; the hub decides the zone) */}
             <Text style={styles.eyebrow}>HUB (OPTIONAL)</Text>
             <View style={styles.tagWrap}>
               {GURGAON_HUBS.map((h) => {
+                const on = hub === h.slug;
+                return (
+                  <Pressable
+                    key={h.slug}
+                    accessibilityRole="button"
+                    accessibilityLabel={h.label}
+                    accessibilityState={{ selected: on }}
+                    onPress={() => setHub(on ? null : h.slug)}
+                    style={[styles.tagChip, on && styles.tagChipOn]}
+                  >
+                    <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{h.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={styles.zoneSub}>DELHI</Text>
+            <View style={styles.tagWrap}>
+              {DELHI_HUBS.map((h) => {
                 const on = hub === h.slug;
                 return (
                   <Pressable
@@ -248,6 +311,15 @@ const styles = StyleSheet.create({
     marginTop: 22,
     marginBottom: 10,
   },
+  zoneSub: {
+    fontFamily: SANS_BOLD,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: MUTE,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  noteCount: { fontFamily: SANS, fontSize: 11.5, color: MUTE, marginTop: 6 },
   pickedRow: {
     flexDirection: 'row',
     alignItems: 'center',

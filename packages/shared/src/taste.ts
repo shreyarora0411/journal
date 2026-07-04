@@ -423,6 +423,36 @@ export const DELHI_HUBS: Hub[] = [
 
 export const ALL_HUBS: Hub[] = [...GURGAON_HUBS, ...DELHI_HUBS];
 
+/** Chip label for a hub slug; falls back to the raw slug for unknowns. */
+export const hubLabel = (slug: string | null | undefined): string | null => {
+  if (!slug) return null;
+  return ALL_HUBS.find((h) => h.slug === slug)?.label ?? slug;
+};
+
+// Approximate NCR bounding boxes (pilot-grade, deliberately generous).
+// Checked in order — the border zone (Sikanderpur/MG Road) stays gurgaon.
+// Out-of-market places (travel logs) get null and never enter Go Out.
+const GURGAON_BOX = { latMin: 28.33, latMax: 28.545, lngMin: 76.88, lngMax: 77.155 };
+const DELHI_BOX = { latMin: 28.46, latMax: 28.9, lngMin: 76.84, lngMax: 77.4 };
+
+/**
+ * Infer the market zone from coordinates when the logger skipped the hub
+ * chip. A place must land in SOME zone to be retrievable in Go Out
+ * (recommend_places filters cp.zone = p_zone) — but a Bangkok log must
+ * NOT be stamped gurgaon, so unknown geography stays null.
+ */
+export const inferZone = (
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+): 'gurgaon' | 'delhi' | null => {
+  if (lat == null || lng == null) return null;
+  const inBox = (b: typeof GURGAON_BOX) =>
+    lat >= b.latMin && lat <= b.latMax && lng >= b.lngMin && lng <= b.lngMax;
+  if (inBox(GURGAON_BOX)) return 'gurgaon';
+  if (inBox(DELHI_BOX)) return 'delhi';
+  return null;
+};
+
 /**
  * Map a place category to the legacy vouch_type so a voiced note written from
  * the Log screen lands in the existing vouches table coherently.

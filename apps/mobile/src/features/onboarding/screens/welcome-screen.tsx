@@ -31,25 +31,25 @@ type SampleCard = {
 const SAMPLE_CARDS: ReadonlyArray<SampleCard> = [
   {
     name: 'Arjun',
-    city: 'TOKYO',
-    category: 'FOOD',
-    quote: '"The dutch pancake at Path Bakery is what I think about when I think about Tokyo."',
+    city: 'THE KITCHENS',
+    category: '86% OVERLAP',
+    quote: '"Easy Tiger, weeknight. Sit at the counter, order the raw bar, thank me later."',
     avatarBg: '#D8C3A5',
     avatarInitial: 'A',
   },
   {
     name: 'Mira',
-    city: 'TOKYO',
-    category: 'STAY',
-    quote: '"Stay in Yanaka. Old wooden lanes, no tourists past 6pm. Skip Shinjuku."',
+    city: 'GCR',
+    category: '79% OVERLAP',
+    quote: '"Comorin for the 6pm drink that turns into dinner. Get the kokum fizz."',
     avatarBg: '#A8C3D4',
     avatarInitial: 'M',
   },
   {
     name: 'Tara',
-    city: 'TOKYO',
-    category: 'WANDER',
-    quote: '"Walk the river from Kuramae to Asakusa at sunset. Trust me."',
+    city: '32ND AVENUE',
+    category: '74% OVERLAP',
+    quote: '"Skip the queue places. The quiet listening bar upstairs is the actual move."',
     avatarBg: '#E2A29A',
     avatarInitial: 'T',
   },
@@ -112,7 +112,7 @@ export function WelcomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardName}>{c.name}</Text>
                   <Text style={styles.cardMeta}>
-                    ON {c.city} <Text style={styles.cardMetaDim}>·</Text> {c.category}
+                    {c.city} <Text style={styles.cardMetaDim}>·</Text> {c.category}
                   </Text>
                 </View>
               </View>
@@ -128,12 +128,12 @@ export function WelcomeScreen() {
         </View>
 
         <Text style={styles.headline}>
-          One honest line.{'\n'}From a friend{'\n'}who's actually been.
+          Places you'll love,{'\n'}from people who{'\n'}get your taste.
         </Text>
 
         <Text style={styles.sub}>
-          Search any city → read what your people said. No reviews. No strangers. Drop in your own
-          when you're back.
+          Log the places you love, in your words. When someone's taste overlaps yours, their map
+          becomes your answers. No reviews. No stars.
         </Text>
       </ScrollView>
 

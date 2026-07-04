@@ -13,7 +13,13 @@ import { Tabs } from 'expo-router';
  */
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <FloatingTabBar {...props} />}>
+    <Tabs
+      // fullHistory keeps per-entry params so Back from spot→person→spot
+      // retraces the browse loop; the default (firstRoute) jumped to Book.
+      backBehavior="fullHistory"
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <FloatingTabBar {...props} />}
+    >
       <Tabs.Screen name="book" options={{ title: 'Map' }} />
       <Tabs.Screen name="search" options={{ title: 'Go out' }} />
       <Tabs.Screen name="add" options={{ title: 'Log' }} />

@@ -62,17 +62,17 @@ export const buildFollowLink = (userId: string): string => {
  * following them. Falls back to the link-free INVITE_TEXT when there's no
  * userId (e.g. not signed in yet).
  */
+const INVITE_BASE =
+  "i'm on Vouch — my map of places i actually love, and recs from people whose taste fits mine. no reviews, no stars.";
+
 export const buildPersonalInviteText = (userId?: string | null): string => {
-  const base = "i'm on Vouch — friends-only travel notes, no reviews, no strangers.";
-  if (!userId) return appendInviteLink(base);
-  return `${base}\n\n${buildFollowLink(userId)}`;
+  if (!userId) return appendInviteLink(INVITE_BASE);
+  return `${INVITE_BASE}\n\n${buildFollowLink(userId)}`;
 };
 
 /**
- * The generic "come join" invite, in the product's established voice:
- * friends-only travel notes, no reviews, no strangers. Single source of truth —
- * every invite surface shares this exact copy.
+ * The generic "come join" invite, in the product's voice (taste pivot):
+ * your map, your words, taste-matched recs — no reviews, no stars. Single
+ * source of truth — every invite surface shares this exact copy.
  */
-export const INVITE_TEXT = appendInviteLink(
-  "i'm on Vouch — friends-only travel notes, no reviews, no strangers.",
-);
+export const INVITE_TEXT = appendInviteLink(INVITE_BASE);

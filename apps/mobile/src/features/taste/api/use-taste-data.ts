@@ -41,6 +41,30 @@ export const useMyTaste = () => {
   });
 };
 
+/** The viewer's saved quiz priors (own-row RLS); null when the quiz was
+ *  never finished — Your Map uses this to keep a re-entry door open. */
+export const useMyPriors = () => {
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  return useQuery({
+    queryKey: ['taste', 'priors', userId],
+    enabled: Boolean(userId),
+    staleTime: 60_000,
+    queryFn: async (): Promise<number[] | null> => {
+      if (!userId) return null;
+      const { data, error } = await getSupabase()
+        .from('user_taste_priors')
+        .select('axes')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) {
+        if (isMissing(error)) return null;
+        throw error;
+      }
+      return (data?.axes as number[] | undefined) ?? null;
+    },
+  });
+};
+
 export type MyPlaceRow = {
   sentiment: Sentiment;
   updated_at: string;

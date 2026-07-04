@@ -16,12 +16,12 @@ describe('buildPersonalInviteText', () => {
   it('includes a follow link carrying the inviter id when signed in', () => {
     const text = buildPersonalInviteText('me-1');
     expect(text).toContain('lore://follow?id=me-1');
-    expect(text).toContain('friends-only travel notes');
+    expect(text).toContain('places i actually love');
   });
 
   it('falls back to link-free copy when there is no user id', () => {
     const text = buildPersonalInviteText(null);
     expect(text).not.toContain('follow?id=');
-    expect(text).toContain('friends-only travel notes');
+    expect(text).toContain('places i actually love');
   });
 });

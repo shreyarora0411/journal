@@ -78,7 +78,7 @@ describe('CircleScreen', () => {
     expect(screen.getByLabelText('Add all 2')).toBeTruthy();
   });
 
-  it('Continue stamps onboarding_completed and routes to /(tabs)/book', async () => {
+  it('Continue stamps onboarding_completed and routes to /(tabs)/taste-setup', async () => {
     mockMatched.mockReturnValue({
       data: [
         { id: 'a', display_name: 'Tara', handle: '@tara', avatar_url: null, badge: '', score: 1 },
@@ -92,17 +92,17 @@ describe('CircleScreen', () => {
     expect(mockUpdateProfile).toHaveBeenCalledWith(
       expect.objectContaining({ onboarding_completed: true }),
     );
-    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/taste-setup');
   });
 
-  it('Skip also stamps onboarding_completed and routes to /(tabs)/book', async () => {
+  it('Skip also stamps onboarding_completed and routes to /(tabs)/taste-setup', async () => {
     renderWithProviders(<CircleScreen />);
     fireEvent.press(screen.getByLabelText('Skip'));
     await new Promise((r) => setTimeout(r, 0));
     expect(mockUpdateProfile).toHaveBeenCalledWith(
       expect.objectContaining({ onboarding_completed: true }),
     );
-    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/taste-setup');
   });
 
   it('in re-entry mode, shows the Find friends eyebrow and does NOT re-stamp onboarding', async () => {

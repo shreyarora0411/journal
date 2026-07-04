@@ -96,7 +96,8 @@ export function FriendsScreen() {
       // to strand the user on this screen.
     }
     log.event('onboarding.completed');
-    router.replace('/(tabs)/book');
+    // Land in taste-setup, not an empty map (spec §3).
+    router.replace('/(tabs)/taste-setup');
   };
 
   const onSkip = async () => {

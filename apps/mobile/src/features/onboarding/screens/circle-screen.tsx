@@ -121,7 +121,9 @@ export function CircleScreen() {
     } catch (err) {
       log.warn('onboarding completion stamp failed', { error: String(err) });
     }
-    router.replace('/(tabs)/book');
+    // Land in taste-setup, not an empty map: a brand-new user leaves
+    // onboarding with a live taste vector or not at all (spec §3).
+    router.replace('/(tabs)/taste-setup');
   };
 
   const onContinue = () => finish(hasMatches ? 'continue' : 'no-matches');

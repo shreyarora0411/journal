@@ -37,17 +37,20 @@ export type PersonMap = {
 export const usePersonMap = (userId: string | null) => {
   const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
   return useQuery({
-    queryKey: ['taste', 'person', userId],
+    // viewerId is in the key: match + visibility-gated notes are viewer-
+    // relative and must not survive an account switch.
+    queryKey: ['taste', 'person', viewerId, userId],
     enabled: Boolean(viewerId) && Boolean(userId),
     staleTime: 30_000,
     queryFn: async (): Promise<PersonMap> => {
       const supabase = getSupabase();
       const [personRes, placesRes, matchRes] = await Promise.all([
+        // No deleted_at filter: it isn't in the column grant (mig 61) and
+        // the users_safe_cols_read policy already hides deleted rows.
         supabase
           .from('users')
           .select('id, display_name, handle, avatar_url')
           .eq('id', userId as string)
-          .is('deleted_at', null)
           .maybeSingle(),
         supabase.rpc('user_loved_places', { p_user: userId }),
         userId === viewerId

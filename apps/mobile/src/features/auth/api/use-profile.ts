@@ -9,6 +9,7 @@ export type Profile = {
   handle: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  bio: string | null;
   default_visibility: Visibility;
   onboarding_completed_at: string | null;
   home_city: string | null;
@@ -25,6 +26,7 @@ const pickProfile = (row: Record<string, unknown>): Profile => ({
   handle: (row.handle as string | null) ?? null,
   display_name: (row.display_name as string | null) ?? null,
   avatar_url: (row.avatar_url as string | null) ?? null,
+  bio: (row.bio as string | null) ?? null,
   default_visibility: (row.default_visibility as Visibility) ?? 'friends_of_friends',
   onboarding_completed_at: (row.onboarding_completed_at as string | null) ?? null,
   home_city: (row.home_city as string | null) ?? null,
@@ -84,4 +86,4 @@ export const useProfile = () => {
 };
 
 export const PROFILE_COLUMNS =
-  'id, handle, display_name, avatar_url, default_visibility, onboarding_completed_at, home_city, home_lat, home_lng, home_country_code';
+  'id, handle, display_name, avatar_url, bio, default_visibility, onboarding_completed_at, home_city, home_lat, home_lng, home_country_code';

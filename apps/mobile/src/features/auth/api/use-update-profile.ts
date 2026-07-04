@@ -26,6 +26,7 @@ export const useUpdateProfile = () => {
       const validated = ProfileUpdateSchema.parse({
         display_name: vars.display_name,
         avatar_url: vars.avatar_url,
+        bio: vars.bio,
         default_visibility: vars.default_visibility,
         home_city: vars.home_city,
         home_lat: vars.home_lat,

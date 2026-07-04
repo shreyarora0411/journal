@@ -75,6 +75,13 @@ export function YourMapScreen() {
           <>
             {readout.length > 0 ? (
               <Text style={styles.readout}>{readout.join(' · ')}.</Text>
+            ) : lovedCount > 0 ? (
+              // tasteReadout only names axes with a clear lean (±0.25) — a
+              // few loves can sit near-neutral and legitimately produce
+              // nothing to say yet. Never claim they haven't logged.
+              <Text style={styles.readoutPrompt}>
+                Your taste is still finding its shape — a few more loves will sharpen it.
+              </Text>
             ) : (
               <Text style={styles.readoutPrompt}>
                 Log a few places you love and your taste takes shape here.

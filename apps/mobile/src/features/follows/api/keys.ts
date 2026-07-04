@@ -4,4 +4,5 @@ export const followKeys = {
   following: (userId: string) => [...followKeys.all, 'following', userId] as const,
   followers: (userId: string) => [...followKeys.all, 'followers', userId] as const,
   counts: (userId: string) => [...followKeys.all, 'counts', userId] as const,
+  reach: (userId: string) => [...followKeys.all, 'reach', userId] as const,
 };

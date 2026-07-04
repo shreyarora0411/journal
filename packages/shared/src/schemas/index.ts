@@ -40,6 +40,7 @@ export const ProfileUpdateSchema = z
   .object({
     display_name: DisplayNameSchema.optional(),
     avatar_url: z.string().url().nullable().optional(),
+    bio: z.string().trim().max(280).nullable().optional(),
     default_visibility: VisibilitySchema.optional(),
   })
   .merge(HomeCitySchema);

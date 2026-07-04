@@ -44,6 +44,13 @@ export const useLogPlace = () => {
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
 
   return useMutation({
+    // iOS reuses kept-alive sockets the server already closed; the first write
+    // after idle then dies with "Network request failed" while reads (which
+    // retry by default) recover invisibly. Retrying is safe: every step that
+    // can throw here is idempotent (find_or_create keyed on google_place_id,
+    // reaction upsert keyed on user+place; note/tags never throw).
+    retry: 2,
+    retryDelay: 400,
     mutationFn: async (vars: LogPlaceVars): Promise<{ placeId: string }> => {
       if (!userId) throw new Error('Not signed in');
       const supabase = getSupabase();

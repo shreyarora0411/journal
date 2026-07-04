@@ -14,6 +14,10 @@ export const useSavePriors = () => {
   const qc = useQueryClient();
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
   return useMutation({
+    // Pure upsert — safe to retry past iOS dead-socket failures (see
+    // use-log-place.ts for the pattern).
+    retry: 2,
+    retryDelay: 400,
     mutationFn: async (axes: Partial<TasteAxes>): Promise<void> => {
       if (!userId) throw new Error('Not signed in');
       const arr = TASTE_AXES.map((a) => axes[a] ?? 0);

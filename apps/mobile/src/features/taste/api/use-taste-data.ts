@@ -44,6 +44,8 @@ export const useMyTaste = () => {
 export type MyPlaceRow = {
   sentiment: Sentiment;
   updated_at: string;
+  /** The viewer's own voiced note for this place (latest vouch), if any. */
+  note: string | null;
   place: {
     id: string;
     name: string;
@@ -54,7 +56,9 @@ export type MyPlaceRow = {
   } | null;
 };
 
-/** Every place the viewer has reacted to, newest first (own-row RLS). */
+/** Every place the viewer has reacted to, newest first (own-row RLS),
+ *  with the viewer's own voiced note attached — the map must show your
+ *  words back to you or logging them is a dead letter. */
 export const useMyPlaces = () => {
   const userId = useAuthStore((s) => s.session?.user.id ?? null);
   return useQuery({
@@ -62,18 +66,39 @@ export const useMyPlaces = () => {
     enabled: Boolean(userId),
     queryFn: async (): Promise<MyPlaceRow[]> => {
       if (!userId) return [];
-      const { data, error } = await getSupabase()
-        .from('place_reactions')
-        .select(
-          'sentiment, updated_at, place:place_id(id, name, hub, zone, category, google_place_id)',
-        )
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false });
-      if (error) {
-        if (isMissing(error)) return [];
-        throw error;
+      const supabase = getSupabase();
+      const [reactRes, vouchRes] = await Promise.all([
+        supabase
+          .from('place_reactions')
+          .select(
+            'sentiment, updated_at, place:place_id(id, name, hub, zone, category, google_place_id)',
+          )
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('vouches')
+          .select('place_id, text')
+          .eq('user_id', userId)
+          .not('place_id', 'is', null)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false }),
+      ]);
+      if (reactRes.error) {
+        if (isMissing(reactRes.error)) return [];
+        throw reactRes.error;
       }
-      return (data ?? []) as unknown as MyPlaceRow[];
+      if (vouchRes.error && !isMissing(vouchRes.error)) throw vouchRes.error;
+
+      // Latest note per place (rows arrive newest-first).
+      const noteByPlace = new Map<string, string>();
+      for (const v of (vouchRes.data ?? []) as { place_id: string; text: string }[]) {
+        if (!noteByPlace.has(v.place_id)) noteByPlace.set(v.place_id, v.text);
+      }
+      const rows = (reactRes.data ?? []) as unknown as Omit<MyPlaceRow, 'note'>[];
+      return rows.map((r) => ({
+        ...r,
+        note: r.place ? (noteByPlace.get(r.place.id) ?? null) : null,
+      }));
     },
   });
 };
@@ -173,19 +198,44 @@ export const usePlaceDetail = (placeId: string | null) => {
     enabled: Boolean(userId) && Boolean(placeId),
     queryFn: async () => {
       const supabase = getSupabase();
-      const [placeRes, loversRes] = await Promise.all([
+      const [placeRes, loversRes, myReactRes, myNoteRes] = await Promise.all([
         supabase
           .from('canonical_places')
           .select('id, name, hub, zone, category, google_place_id, lat, lng, destination_text')
           .eq('id', placeId as string)
           .maybeSingle(),
         supabase.rpc('place_lovers', { p_place: placeId }),
+        // The viewer's own presence on this page — place_lovers excludes you
+        // by design, so your reaction + note are fetched via own-row RLS.
+        supabase
+          .from('place_reactions')
+          .select('sentiment')
+          .eq('user_id', userId as string)
+          .eq('place_id', placeId as string)
+          .maybeSingle(),
+        supabase
+          .from('vouches')
+          .select('text')
+          .eq('user_id', userId as string)
+          .eq('place_id', placeId as string)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (placeRes.error && !isMissing(placeRes.error)) throw placeRes.error;
       if (loversRes.error && !isMissing(loversRes.error)) throw loversRes.error;
+      if (myReactRes.error && !isMissing(myReactRes.error)) throw myReactRes.error;
+      if (myNoteRes.error && !isMissing(myNoteRes.error)) throw myNoteRes.error;
       return {
         place: placeRes.data ?? null,
         lovers: ((loversRes.data ?? []) as PlaceLover[]) ?? [],
+        mine: myReactRes.data
+          ? {
+              sentiment: myReactRes.data.sentiment as Sentiment,
+              note: myNoteRes.data?.text ?? null,
+            }
+          : null,
       };
     },
   });

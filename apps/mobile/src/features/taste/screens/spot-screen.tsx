@@ -19,6 +19,12 @@ const SANS_BOLD = 'HankenGrotesk_700Bold';
  * Spot — the place page (spec §3, screen 5). Who in your taste-orbit loved it,
  * their words, and Open in Maps. Attribution is loves-only by design.
  */
+const MY_SENTIMENT_LINE: Record<string, string> = {
+  loved: 'On your map — loved.',
+  fine: 'You logged this as fine.',
+  skip: 'You skipped this — only you ever see that.',
+};
+
 export function SpotScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +32,7 @@ export function SpotScreen() {
 
   const place = q.data?.place ?? null;
   const lovers = q.data?.lovers ?? [];
+  const mine = q.data?.mine ?? null;
 
   const openMaps = () => {
     if (!place) return;
@@ -72,6 +79,16 @@ export function SpotScreen() {
           >
             <Text style={styles.mapsLabel}>Open in Maps</Text>
           </Pressable>
+
+          {mine ? (
+            <View style={{ marginTop: 28 }}>
+              <Eyebrow>Your take</Eyebrow>
+              <View style={styles.mineCard}>
+                <Text style={styles.mineSentiment}>{MY_SENTIMENT_LINE[mine.sentiment]}</Text>
+                {mine.note ? <Text style={styles.loverNote}>“{mine.note}”</Text> : null}
+              </View>
+            </View>
+          ) : null}
 
           <View style={{ marginTop: 28, marginBottom: 80 }}>
             <Eyebrow>Who loved it</Eyebrow>
@@ -155,6 +172,16 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
     gap: 8,
   },
+  mineCard: {
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: CARD,
+    gap: 8,
+  },
+  mineSentiment: { fontFamily: SANS_SEMI, fontSize: 12.5, color: MUTE },
   loverHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   loverName: { fontFamily: SANS_SEMI, fontSize: 14, color: INK },
   loverMatch: { fontFamily: SANS_BOLD, fontSize: 12, color: CORAL },

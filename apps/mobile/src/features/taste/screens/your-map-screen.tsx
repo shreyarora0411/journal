@@ -13,6 +13,7 @@ const HAIR = '#E7E1D7';
 const CARD = '#FFFDFA';
 
 const SERIF = 'Fraunces_500';
+const SERIF_IT = 'Fraunces_400Italic';
 const SANS = 'HankenGrotesk_400Regular';
 const SANS_SEMI = 'HankenGrotesk_600SemiBold';
 const SANS_BOLD = 'HankenGrotesk_700Bold';
@@ -126,6 +127,11 @@ export function YourMapScreen() {
                     <Text style={styles.rowMeta} numberOfLines={1}>
                       {[row.place.hub, row.place.zone].filter(Boolean).join(' · ') || '—'}
                     </Text>
+                    {row.note ? (
+                      <Text style={styles.rowNote} numberOfLines={2}>
+                        “{row.note}”
+                      </Text>
+                    ) : null}
                   </View>
                   <View
                     style={[
@@ -201,6 +207,13 @@ const styles = StyleSheet.create({
     color: MUTE,
     textTransform: 'uppercase',
     marginTop: 3,
+  },
+  rowNote: {
+    fontFamily: SERIF_IT,
+    fontSize: 14.5,
+    lineHeight: 21,
+    color: INK,
+    marginTop: 6,
   },
   sentimentChip: {
     borderWidth: 1,

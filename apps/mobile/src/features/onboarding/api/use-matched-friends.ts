@@ -58,13 +58,12 @@ export const useMatchedFriends = () => {
         if (!lastTrip.has(uid)) lastTrip.set(uid, t.title as string);
       }
 
-      // Mutual-friend count via the FoF materialised view.
-      const { data: fof } = await supabase
-        .from('mv_friends_of_friends')
-        .select('target_id')
-        .eq('viewer_id', viewerId)
-        .in('target_id', ids);
-      const fofSet = new Set((fof ?? []).map((r) => (r as { target_id: string }).target_id));
+      // Mutual-friend count via the FoF materialised view (viewer scope is
+      // bound server-side to auth.uid() inside the RPC — never client-
+      // suppliable, since the underlying matview can't carry RLS).
+      const { data: fof } = await supabase.rpc('my_friends_of_friends').in('target_id', ids);
+      const fofRows = (fof ?? []) as { target_id: string }[];
+      const fofSet = new Set(fofRows.map((r) => r.target_id));
 
       const ranked = matches.map((m): MatchedFriend => {
         const trips = tripCount.get(m.id) ?? 0;

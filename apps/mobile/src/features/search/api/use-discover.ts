@@ -27,16 +27,13 @@ export const useDiscover = () => {
       if (!viewerId) return [];
       const supabase = getSupabase();
 
-      const { data: fof, error } = await supabase
-        .from('mv_friends_of_friends')
-        .select('target_id')
-        .eq('viewer_id', viewerId)
-        .limit(40);
+      const { data: fof, error } = await supabase.rpc('my_friends_of_friends').limit(40);
       if (error) {
-        if (error.code === '42P01') return [];
+        if (error.code === '42P01' || error.code === 'PGRST202') return [];
         throw error;
       }
-      const ids = (fof ?? []).map((r) => (r as { target_id: string }).target_id);
+      const rows = (fof ?? []) as { target_id: string }[];
+      const ids = rows.map((r) => r.target_id);
       if (ids.length === 0) return [];
 
       const [{ data: users }, { data: tripCounts }] = await Promise.all([

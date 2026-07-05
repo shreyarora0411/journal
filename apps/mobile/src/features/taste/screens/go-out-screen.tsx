@@ -1,9 +1,11 @@
 import { Face, Page, StatusSpace } from '@/components';
+import { useAuthStore } from '@/features/auth';
+import { buildPersonalInviteText } from '@/features/invite';
 import { log } from '@/lib/log';
 import { DELHI_HUBS, GURGAON_HUBS, OCCASION_TAGS, hubLabel } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { type RecommendedPlace, useRecommendPlaces } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
 
@@ -42,6 +44,7 @@ export function GoOutScreen() {
   const [hub, setHub] = useState<string | null>(null);
   const [occasion, setOccasion] = useState<string | null>(null);
   const q = useRecommendPlaces(zone, hub, occasion);
+  const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
 
   useEffect(() => {
     log.event('taste.go_out_entered');
@@ -53,6 +56,21 @@ export function GoOutScreen() {
   const openMaps = (p: RecommendedPlace) => {
     log.event('taste.maps_opened', { place_id: p.place_id, from: 'goout' });
     Linking.openURL(mapsUrl(p)).catch(() => undefined);
+  };
+
+  // Top voiced note already on the card — never invent a quote for the share.
+  const shareSpot = (p: RecommendedPlace) => {
+    log.event('taste.place_shared', { place_id: p.place_id, from: 'goout' });
+    const note = p.top_lovers[0]?.note ?? null;
+    const message = [
+      p.name,
+      note ? `"${note}"` : null,
+      mapsUrl(p),
+      buildPersonalInviteText(viewerId),
+    ]
+      .filter((line): line is string => Boolean(line))
+      .join('\n\n');
+    Share.share({ message }).catch(() => undefined);
   };
 
   return (
@@ -219,6 +237,15 @@ export function GoOutScreen() {
                     style={styles.actionBtn}
                   >
                     <Text style={styles.actionLabel}>Open in Maps</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Share ${p.name}`}
+                    onPress={() => shareSpot(p)}
+                    hitSlop={12}
+                    style={styles.actionBtn}
+                  >
+                    <Text style={styles.actionLabel}>Share</Text>
                   </Pressable>
                 </View>
               </Pressable>

@@ -1,8 +1,10 @@
 import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { useAuthStore } from '@/features/auth';
+import { buildPersonalInviteText } from '@/features/invite';
 import { log } from '@/lib/log';
 import { hubLabel } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { usePlaceDetail } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
 
@@ -28,10 +30,14 @@ const MY_SENTIMENT_LINE: Record<string, string> = {
   skip: 'You skipped this — only you ever see that.',
 };
 
+const mapsUrl = (p: { name: string; google_place_id: string }) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}&query_place_id=${p.google_place_id}`;
+
 export function SpotScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = usePlaceDetail(id ?? null);
+  const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
 
   const place = q.data?.place ?? null;
   const lovers = q.data?.lovers ?? [];
@@ -40,9 +46,24 @@ export function SpotScreen() {
   const openMaps = () => {
     if (!place) return;
     log.event('taste.maps_opened', { place_id: place.id, from: 'spot' });
-    Linking.openURL(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.google_place_id}`,
-    ).catch(() => undefined);
+    Linking.openURL(mapsUrl(place)).catch(() => undefined);
+  };
+
+  // Whatever voiced note is already on this page — your own take first (it's
+  // yours to share), else the top love — so the share never invents a quote.
+  const shareSpot = () => {
+    if (!place) return;
+    log.event('taste.place_shared', { place_id: place.id, from: 'spot' });
+    const note = mine?.note ?? lovers[0]?.note ?? null;
+    const message = [
+      place.name,
+      note ? `"${note}"` : null,
+      mapsUrl(place),
+      buildPersonalInviteText(viewerId),
+    ]
+      .filter((line): line is string => Boolean(line))
+      .join('\n\n');
+    Share.share({ message }).catch(() => undefined);
   };
 
   return (
@@ -77,14 +98,24 @@ export function SpotScreen() {
               .toUpperCase()}
           </Text>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Open ${place.name} in Maps`}
-            onPress={openMaps}
-            style={styles.mapsBtn}
-          >
-            <Text style={styles.mapsLabel}>Open in Maps</Text>
-          </Pressable>
+          <View style={styles.actionRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${place.name} in Maps`}
+              onPress={openMaps}
+              style={styles.mapsBtn}
+            >
+              <Text style={styles.mapsLabel}>Open in Maps</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Share ${place.name}`}
+              onPress={shareSpot}
+              style={styles.mapsBtn}
+            >
+              <Text style={styles.mapsLabel}>Share</Text>
+            </Pressable>
+          </View>
 
           {mine ? (
             <View style={{ marginTop: 28 }}>
@@ -158,9 +189,9 @@ const styles = StyleSheet.create({
     color: MUTE,
     marginTop: 6,
   },
+  actionRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
   mapsBtn: {
     alignSelf: 'flex-start',
-    marginTop: 16,
     borderWidth: 1,
     borderColor: HAIR,
     borderRadius: 999,

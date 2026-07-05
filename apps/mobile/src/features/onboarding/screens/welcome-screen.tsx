@@ -1,3 +1,4 @@
+import { Wordmark } from '@/components';
 import { log } from '@/lib/log';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
@@ -85,11 +86,9 @@ export function WelcomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Top bar: lore. + Sign in */}
+      {/* Top bar: wordmark + Sign in */}
       <View style={styles.topBar}>
-        <Text accessibilityLabel="Vouch." style={styles.wordmark}>
-          Vouch<Text style={{ color: CORAL }}>.</Text>
-        </Text>
+        <Wordmark size="md" color={INK} />
         <Pressable
           accessibilityRole="link"
           accessibilityLabel="Sign in"
@@ -171,12 +170,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 6,
     paddingBottom: 8,
-  },
-  wordmark: {
-    fontFamily: 'PlayfairDisplay_500Medium',
-    fontSize: 26,
-    color: INK,
-    letterSpacing: -0.6,
   },
   signInTop: {
     fontFamily: 'DMSans_600SemiBold',

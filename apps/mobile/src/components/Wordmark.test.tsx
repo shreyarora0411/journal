@@ -13,12 +13,12 @@ describe('Wordmark', () => {
     expect(dot.props.style).toEqual(expect.objectContaining({ color: '#FF4D2E' }));
   });
 
-  it('uses Instrument Serif italic at the chosen size', () => {
+  it('uses Fraunces at the chosen size', () => {
     renderWithProviders(<Wordmark size="lg" />);
     const root = screen.getByLabelText('Vouch.');
     const styles = Array.isArray(root.props.style) ? root.props.style : [root.props.style];
     const flat = Object.assign({}, ...styles);
-    expect(flat.fontFamily).toBe('PlayfairDisplay_500Medium');
+    expect(flat.fontFamily).toBe('Fraunces_500');
     expect(flat.fontSize).toBe(36);
   });
 

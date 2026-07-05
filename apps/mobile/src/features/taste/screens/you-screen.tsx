@@ -11,7 +11,7 @@ import { buildPersonalInviteText, buildWhatsAppLink } from '@/features/invite';
 import { useDeleteList, useMyLists } from '@/features/lists';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
-import type { Visibility } from '@journal/shared';
+import { type Visibility, ZERO_AXES } from '@journal/shared';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import { useMyPlaces, useMyTaste } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
+import { TasteShareCard } from '../components/taste-share-card';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
@@ -71,6 +72,7 @@ export function YouScreen() {
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [bioDraft, setBioDraft] = useState('');
+  const [shareVisible, setShareVisible] = useState(false);
 
   const displayName = profile.data?.display_name ?? '—';
   const handle = profile.data?.handle ? `@${profile.data.handle}` : '';
@@ -148,6 +150,13 @@ export function YouScreen() {
   const latestVoiced = voicedPlaces[0] ?? null;
   const lovedWithoutNote = lovedPlaces.filter((p) => p.note === null).length;
 
+  // Feed the share card named loves — flatMap over a type guard keeps TS
+  // happy without a verbose predicate function for the nullable `place`.
+  const shareCardPlaces = useMemo(
+    () => lovedPlaces.flatMap((p) => (p.place ? [{ name: p.place.name, note: p.note }] : [])),
+    [lovedPlaces],
+  );
+
   const confirmDeleteList = (name: string, onDelete: () => Promise<void>) => {
     Alert.alert('Delete this list?', `"${name}" will be removed. Items inside are not deleted.`, [
       { text: 'Cancel', style: 'cancel' },
@@ -170,6 +179,11 @@ export function YouScreen() {
   const onInvite = () => {
     log.event('you.invite_tapped');
     Linking.openURL(buildWhatsAppLink(buildPersonalInviteText(viewerId))).catch(() => undefined);
+  };
+
+  const onShareTaste = () => {
+    log.event('you.share_taste_tapped');
+    setShareVisible(true);
   };
 
   const onSetVisibility = (v: Visibility) => {
@@ -326,7 +340,26 @@ export function YouScreen() {
           {hubCount === 1 ? '' : 's'}
         </Text>
         <Text style={styles.identityCta}>See your map as others do ›</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Share your taste"
+          onPress={onShareTaste}
+          style={styles.shareTastePill}
+        >
+          <Text style={styles.shareTastePillLabel}>Share your taste ›</Text>
+        </Pressable>
       </Pressable>
+
+      <TasteShareCard
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        axes={tasteQ.data?.axes ?? ZERO_AXES}
+        readout={readout}
+        lovedCount={lovedPlaces.length}
+        hubCount={hubCount}
+        places={shareCardPlaces}
+        inviteText={buildPersonalInviteText(viewerId)}
+      />
 
       {/* 3. Your voice — the notes are the moat; this surface farms them. */}
       <View style={{ marginTop: 30 }}>
@@ -559,6 +592,16 @@ const styles = StyleSheet.create({
   readoutPrompt: { fontFamily: SANS, fontSize: 14, lineHeight: 21, color: MUTE, marginTop: 6 },
   identityStats: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE, marginTop: 10 },
   identityCta: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL, marginTop: 10 },
+  shareTastePill: {
+    alignSelf: 'flex-start',
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  shareTastePillLabel: { fontFamily: SANS_SEMI, fontSize: 12.5, color: INK },
 
   empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 12 },
   voiceCount: { fontFamily: SANS_SEMI, fontSize: 14, color: INK },

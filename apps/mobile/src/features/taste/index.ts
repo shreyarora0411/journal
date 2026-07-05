@@ -1,3 +1,4 @@
+export { TasteShareCard, type TasteShareCardPlace } from './components/taste-share-card';
 export { YourMapScreen } from './screens/your-map-screen';
 export { GoOutScreen } from './screens/go-out-screen';
 export { LogPlaceScreen } from './screens/log-place-screen';

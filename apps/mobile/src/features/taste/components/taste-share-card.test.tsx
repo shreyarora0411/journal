@@ -63,8 +63,8 @@ describe('TasteShareCard', () => {
     expect(screen.getByText('substance-first · high-energy.')).toBeTruthy();
     expect(screen.getByText('19 loves · 5 hubs')).toBeTruthy();
     expect(screen.getByText('Anardana')).toBeTruthy();
-    expect(screen.getByText('"the butter chicken is not optional"')).toBeTruthy();
-    expect(screen.getByText('"best cold brew in Gurgaon"')).toBeTruthy();
+    expect(screen.getByText('“the butter chicken is not optional”')).toBeTruthy();
+    expect(screen.getByText('“best cold brew in Gurgaon”')).toBeTruthy();
     // Noted places are preferred over noteless ones — Gulati (no note)
     // shouldn't need to appear while 2 noted places already exist.
     expect(screen.queryByText('Gulati')).toBeNull();

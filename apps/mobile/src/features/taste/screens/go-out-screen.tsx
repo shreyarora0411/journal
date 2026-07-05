@@ -1,4 +1,4 @@
-import { Face, Page, StatusSpace } from '@/components';
+import { Face, Page, StatusSpace, VoicedNote } from '@/components';
 import { useAuthStore } from '@/features/auth';
 import { buildPersonalInviteText } from '@/features/invite';
 import { log } from '@/lib/log';
@@ -8,19 +8,19 @@ import { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { type RecommendedPlace, useRecommendPlaces } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const CARD = '#FFFFFF';
-const TINT = '#FAF6F0';
-
-const SERIF = 'Fraunces_500';
-const SERIF_IT = 'Fraunces_400Italic';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CARD,
+  CORAL,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF,
+  TASTE_TYPE_SCALE,
+  TINT,
+} from '../lib/taste-tokens';
 
 const TIER_LINE: Record<RecommendedPlace['tier'], string> = {
   taste: 'People who go out like you',
@@ -220,9 +220,7 @@ export function GoOutScreen() {
                           ) : null}
                         </Text>
                         {l.note ? (
-                          <Text style={styles.loverNote} numberOfLines={2}>
-                            "{l.note}"
-                          </Text>
+                          <VoicedNote note={l.note} numberOfLines={2} style={styles.loverNote} />
                         ) : null}
                       </View>
                     </View>
@@ -275,7 +273,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   zoneChipOn: { backgroundColor: INK, borderColor: INK },
-  zoneLabel: { fontFamily: SANS_SEMI, fontSize: 14, color: MUTE },
+  zoneLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: MUTE },
   zoneLabelOn: { color: '#FFFFFF' },
   chip: {
     borderWidth: 1,
@@ -294,9 +292,9 @@ const styles = StyleSheet.create({
     backgroundColor: TINT,
   },
   chipOn: { backgroundColor: CORAL, borderColor: CORAL },
-  chipLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: INK },
+  chipLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: INK },
   chipLabelOn: { color: '#FFFFFF' },
-  empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 24 },
+  empty: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 24 },
   emptyCard: {
     marginTop: 20,
     padding: 20,
@@ -306,9 +304,25 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  emptyTitle: { fontFamily: SERIF, fontSize: 22, color: INK, letterSpacing: -0.4 },
-  emptyBody: { fontFamily: SANS, fontSize: 13, lineHeight: 20, color: MUTE, marginTop: 8 },
-  emptyCta: { fontFamily: SANS_SEMI, fontSize: 14, color: CORAL, marginTop: 14 },
+  emptyTitle: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.headlineLg,
+    color: INK,
+    letterSpacing: -0.4,
+  },
+  emptyBody: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.body,
+    lineHeight: 20,
+    color: MUTE,
+    marginTop: 8,
+  },
+  emptyCta: {
+    fontFamily: SANS_SEMI,
+    fontSize: TASTE_TYPE_SCALE.subhead,
+    color: CORAL,
+    marginTop: 14,
+  },
   card: {
     padding: 16,
     borderRadius: 16,
@@ -329,14 +343,8 @@ const styles = StyleSheet.create({
   },
   loverRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   loverName: { fontFamily: SANS_SEMI, fontSize: 13.5, color: INK },
-  loverMatch: { fontFamily: SANS_BOLD, fontSize: 12, color: CORAL },
-  loverNote: {
-    fontFamily: SERIF_IT,
-    fontSize: 14.5,
-    lineHeight: 21,
-    color: INK,
-    marginTop: 3,
-  },
+  loverMatch: { fontFamily: SANS_BOLD, fontSize: TASTE_TYPE_SCALE.label, color: CORAL },
+  loverNote: { marginTop: 3 },
   cardActions: { flexDirection: 'row', gap: 8 },
   actionBtn: {
     borderWidth: 1,
@@ -346,5 +354,5 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: '#FFFFFF',
   },
-  actionLabel: { fontFamily: SANS_SEMI, fontSize: 12, color: INK },
+  actionLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.label, color: INK },
 });

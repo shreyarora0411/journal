@@ -1,12 +1,5 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
-
-const CORAL = '#FF4D2E';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const CARD = '#FFFFFF';
-
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
+import { CARD, CORAL, HAIR, MUTE, SANS, SANS_SEMI } from '../lib/taste-tokens';
 
 /**
  * The honest failure state. A query error must never be dressed up as an

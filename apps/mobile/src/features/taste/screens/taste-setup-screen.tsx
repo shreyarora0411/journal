@@ -3,6 +3,7 @@ import { useAuthStore, useUpdateProfile } from '@/features/auth';
 import { useFollow, useUnfollow } from '@/features/follows';
 import { useToast } from '@/hooks/use-toast';
 import type { PlaceDetails } from '@/lib/google-places';
+import { hapticSuccess } from '@/lib/haptics';
 import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
 import { ALL_HUBS, TASTE_AXES, type TasteAxes, type TasteAxis, hubLabel } from '@journal/shared';
@@ -10,20 +11,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useLogPlace } from '../api/use-log-place';
 import { useSavePriors } from '../api/use-save-priors';
 import { useMyPlaces, useMyPriors, useTasteTwins } from '../api/use-taste-data';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const TINT = '#FAF6F0';
-
-const SERIF = 'Fraunces_500';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CORAL,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF,
+  TASTE_TYPE_SCALE,
+  TINT,
+} from '../lib/taste-tokens';
 
 // The 4 either/or taps (spec §3 onboarding). Each answer nudges ONE axis ±0.5
 // — mild on purpose: priors fold in at weight 2 and real loves take over fast.
@@ -213,6 +216,8 @@ export function TasteSetupScreen() {
     if (picked.some((p) => p.place.google_place_id === place.google_place_id)) return;
     try {
       const result = await logPlace.mutateAsync({ place, sentiment: 'loved' });
+      // Fire exactly on the tap that crosses the goal, not on every tap after.
+      if (picked.length + 1 === GOAL) hapticSuccess();
       setPicked((prev) => [...prev, { place, placeId: result.placeId }]);
       setPickerKey((k) => k + 1); // remount picker → clears the query
     } catch {
@@ -418,9 +423,18 @@ export function TasteSetupScreen() {
               </View>
             ) : null}
 
-            <Text style={styles.counter}>
-              {picked.length}/{GOAL} — {picked.length >= GOAL ? 'that’s a taste.' : 'keep going.'}
-            </Text>
+            {picked.length >= GOAL ? (
+              // A fresh element at this position (vs. reusing the same Text
+              // as the count keeps climbing) so the scale-in plays once, on
+              // the tap that revealed it — not on every re-render after.
+              <Animated.Text entering={ZoomIn.duration(280)} style={styles.counter}>
+                {picked.length}/{GOAL} — that’s a taste.
+              </Animated.Text>
+            ) : (
+              <Text style={styles.counter}>
+                {picked.length}/{GOAL} — keep going.
+              </Text>
+            )}
 
             <Pressable
               accessibilityRole="button"
@@ -507,9 +521,21 @@ export function TasteSetupScreen() {
 }
 
 const styles = StyleSheet.create({
-  headline: { fontFamily: SERIF, fontSize: 28, color: INK, letterSpacing: -0.6, paddingTop: 8 },
-  sub: { fontFamily: SANS, fontSize: 14, lineHeight: 21, color: MUTE, marginTop: 8 },
-  qPrompt: { fontFamily: SANS_BOLD, fontSize: 13, color: INK, marginBottom: 10 },
+  headline: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.display,
+    color: INK,
+    letterSpacing: -0.6,
+    paddingTop: 8,
+  },
+  sub: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.subhead,
+    lineHeight: 21,
+    color: MUTE,
+    marginTop: 8,
+  },
+  qPrompt: { fontFamily: SANS_BOLD, fontSize: TASTE_TYPE_SCALE.body, color: INK, marginBottom: 10 },
   qRow: { flexDirection: 'row', gap: 8 },
   qBtn: {
     flex: 1,
@@ -522,7 +548,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   qBtnOn: { backgroundColor: INK, borderColor: INK },
-  qLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: INK, textAlign: 'center' },
+  qLabel: {
+    fontFamily: SANS_SEMI,
+    fontSize: TASTE_TYPE_SCALE.body,
+    color: INK,
+    textAlign: 'center',
+  },
   cta: {
     marginTop: 28,
     backgroundColor: CORAL,
@@ -531,11 +562,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.4 },
-  ctaLabel: { fontFamily: SANS_SEMI, fontSize: 15, color: '#FFFFFF' },
+  ctaLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: '#FFFFFF' },
   hubSection: { marginBottom: 18 },
   hubHeader: {
     fontFamily: SANS_BOLD,
-    fontSize: 11,
+    fontSize: TASTE_TYPE_SCALE.caption,
     letterSpacing: 0.8,
     color: MUTE,
     textTransform: 'uppercase',
@@ -557,12 +588,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   tileOn: { backgroundColor: CORAL, borderColor: CORAL },
-  tileName: { flex: 1, fontFamily: SANS_SEMI, fontSize: 13, color: INK },
+  tileName: { flex: 1, fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: INK },
   tileNameOn: { color: '#FFFFFF' },
-  tileGlyph: { fontSize: 14, color: CORAL },
+  tileGlyph: { fontSize: TASTE_TYPE_SCALE.subhead, color: CORAL },
   tileGlyphOn: { color: '#FFFFFF' },
   searchToggle: { marginTop: 16, alignSelf: 'flex-start' },
-  searchToggleLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
+  searchToggleLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: CORAL },
   pickedRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -573,10 +604,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: HAIR,
   },
-  pickedName: { fontFamily: SANS_SEMI, fontSize: 14, color: INK, flex: 1, marginRight: 10 },
-  pickedLoved: { fontFamily: SANS_BOLD, fontSize: 11, color: CORAL, letterSpacing: 0.5 },
-  removeGlyph: { fontSize: 14, color: MUTE },
-  counter: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE, marginTop: 16, textAlign: 'center' },
+  pickedName: {
+    fontFamily: SANS_SEMI,
+    fontSize: TASTE_TYPE_SCALE.subhead,
+    color: INK,
+    flex: 1,
+    marginRight: 10,
+  },
+  pickedLoved: {
+    fontFamily: SANS_BOLD,
+    fontSize: TASTE_TYPE_SCALE.caption,
+    color: CORAL,
+    letterSpacing: 0.5,
+  },
+  removeGlyph: { fontSize: TASTE_TYPE_SCALE.subhead, color: MUTE },
+  counter: {
+    fontFamily: SANS_SEMI,
+    fontSize: TASTE_TYPE_SCALE.body,
+    color: MUTE,
+    marginTop: 16,
+    textAlign: 'center',
+  },
   followRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -587,7 +635,7 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: '#FFFFFF',
   },
-  followName: { fontFamily: SANS_SEMI, fontSize: 15, color: INK },
+  followName: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: INK },
   followMeta: { fontFamily: SANS, fontSize: 12.5, color: MUTE, marginTop: 2 },
   followBtn: {
     borderWidth: 1.5,
@@ -597,7 +645,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   followBtnOn: { borderColor: HAIR },
-  followBtnLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
+  followBtnLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: CORAL },
   emptyFollowCard: {
     padding: 16,
     borderRadius: 14,
@@ -605,6 +653,17 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: TINT,
   },
-  emptyFollowTitle: { fontFamily: SERIF, fontSize: 18, color: INK, letterSpacing: -0.3 },
-  emptyFollowBody: { fontFamily: SANS, fontSize: 13, lineHeight: 19, color: MUTE, marginTop: 6 },
+  emptyFollowTitle: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.headline,
+    color: INK,
+    letterSpacing: -0.3,
+  },
+  emptyFollowBody: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.body,
+    lineHeight: 19,
+    color: MUTE,
+    marginTop: 6,
+  },
 });

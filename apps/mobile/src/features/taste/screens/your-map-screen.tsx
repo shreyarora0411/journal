@@ -1,24 +1,27 @@
-import { Eyebrow, Face, Icon, Page, StatusSpace } from '@/components';
+import { Eyebrow, Face, Icon, Page, StatusSpace, VoicedNote } from '@/components';
 import { useProfile } from '@/features/auth';
+import { hapticSuccess } from '@/lib/haptics';
 import { TASTE_TUNING } from '@journal/shared';
 import { hubLabel } from '@journal/shared';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { ZoomOut } from 'react-native-reanimated';
 import { type MyPlaceRow, useMyPlaces, useMyPriors, useMyTaste } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const CARD = '#FFFFFF';
-
-const SERIF = 'Fraunces_500';
-const SERIF_IT = 'Fraunces_400Italic';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CARD,
+  CORAL,
+  GOLD,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF,
+  TASTE_TYPE_SCALE,
+} from '../lib/taste-tokens';
 
 const SENTIMENT_LABEL: Record<string, string> = {
   loved: 'Loved',
@@ -51,6 +54,19 @@ export function YourMapScreen() {
   const lovedCount = useMemo(() => places.filter((p) => p.sentiment === 'loved').length, [places]);
   const gate = TASTE_TUNING.confidenceMinLoves;
   const readout = tasteQ.data?.readout ?? [];
+
+  // Fires only on a real in-session crossing (below gate → at/above gate),
+  // never on the first load of an already-gated viewer — the ref starts null
+  // until placesQ.data has landed once, so that baseline read never counts.
+  const prevLovedCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!placesQ.data) return;
+    const prev = prevLovedCountRef.current;
+    if (prev !== null && prev < gate && lovedCount >= gate) {
+      hapticSuccess();
+    }
+    prevLovedCountRef.current = lovedCount;
+  }, [placesQ.data, lovedCount, gate]);
 
   const displayName = profile.data?.display_name ?? 'Your map';
 
@@ -127,10 +143,12 @@ export function YourMapScreen() {
               </Text>
             )}
             {lovedCount < gate ? (
-              <Text style={styles.gateLine}>
-                {lovedCount}/{gate} loves — {gate - lovedCount} more and we’ll know whose taste fits
-                yours.
-              </Text>
+              <Animated.View exiting={ZoomOut.duration(280)}>
+                <Text style={styles.gateLine}>
+                  {lovedCount}/{gate} loves — {gate - lovedCount} more and we’ll know whose taste
+                  fits yours.
+                </Text>
+              </Animated.View>
             ) : null}
           </>
         )}
@@ -277,9 +295,7 @@ export function YourMapScreen() {
                           '—'}
                       </Text>
                       {row.note ? (
-                        <Text style={styles.rowNote} numberOfLines={2}>
-                          “{row.note}”
-                        </Text>
+                        <VoicedNote note={row.note} numberOfLines={2} style={styles.rowNote} />
                       ) : null}
                     </View>
                     <View
@@ -317,17 +333,30 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   wordmark: { fontFamily: SERIF, fontSize: 26, color: INK, letterSpacing: -0.5 },
-  eyebrowGold: { fontFamily: SANS_BOLD, fontSize: 10, letterSpacing: 1.6, color: '#C8A24A' },
+  eyebrowGold: {
+    fontFamily: SANS_BOLD,
+    fontSize: TASTE_TYPE_SCALE.micro,
+    letterSpacing: 1.6,
+    color: GOLD,
+  },
   readout: {
     fontFamily: SERIF,
-    fontSize: 22,
+    fontSize: TASTE_TYPE_SCALE.headlineLg,
     lineHeight: 29,
     color: INK,
     letterSpacing: -0.3,
     marginTop: 6,
   },
-  readoutPrompt: { fontFamily: SANS, fontSize: 14, lineHeight: 21, color: MUTE, marginTop: 6 },
-  gateLine: { fontFamily: SANS_SEMI, fontSize: 12.5, color: CORAL, marginTop: 8 },
+  readoutPrompt: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.subhead,
+    lineHeight: 21,
+    color: MUTE,
+    marginTop: 6,
+  },
+  // MUTE, not CORAL — coral is reserved for match % and the one primary
+  // action per screen (Log a place); this is routine progress copy.
+  gateLine: { fontFamily: SANS_SEMI, fontSize: 12.5, color: MUTE, marginTop: 8 },
   logCta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -338,7 +367,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
   },
-  logCtaLabel: { fontFamily: SANS_SEMI, fontSize: 15, color: '#FFFFFF' },
+  logCtaLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: '#FFFFFF' },
   setupNudge: {
     marginTop: 12,
     padding: 12,
@@ -347,7 +376,7 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  setupNudgeText: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE },
+  setupNudgeText: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: MUTE },
   chip: {
     borderWidth: 1,
     borderColor: HAIR,
@@ -357,7 +386,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   chipOn: { backgroundColor: CORAL, borderColor: CORAL },
-  chipLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: INK },
+  chipLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: INK },
   chipLabelOn: { color: '#FFFFFF' },
   resurfaceCard: {
     marginTop: 14,
@@ -379,7 +408,7 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  rowName: { fontFamily: SANS_SEMI, fontSize: 15, color: INK },
+  rowName: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: INK },
   rowMeta: {
     fontFamily: SANS_BOLD,
     fontSize: 10.5,
@@ -388,13 +417,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: 3,
   },
-  rowNote: {
-    fontFamily: SERIF_IT,
-    fontSize: 14.5,
-    lineHeight: 21,
-    color: INK,
-    marginTop: 6,
-  },
+  rowNote: { marginTop: 6 },
   sentimentChip: {
     borderWidth: 1,
     borderColor: HAIR,
@@ -405,7 +428,7 @@ const styles = StyleSheet.create({
   sentimentLoved: { backgroundColor: CORAL, borderColor: CORAL },
   sentimentSkip: { backgroundColor: '#F2E2D2', borderColor: '#F2E2D2' },
   sentimentText: { fontFamily: SANS_SEMI, fontSize: 11.5, color: MUTE },
-  empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 14 },
+  empty: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 14 },
   emptyCard: {
     marginTop: 14,
     padding: 20,
@@ -414,7 +437,23 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  emptyTitle: { fontFamily: SERIF, fontSize: 22, color: INK, letterSpacing: -0.4 },
-  emptyBody: { fontFamily: SANS, fontSize: 13, lineHeight: 20, color: MUTE, marginTop: 8 },
-  emptyCta: { fontFamily: SANS_SEMI, fontSize: 14, color: CORAL, marginTop: 14 },
+  emptyTitle: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.headlineLg,
+    color: INK,
+    letterSpacing: -0.4,
+  },
+  emptyBody: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.body,
+    lineHeight: 20,
+    color: MUTE,
+    marginTop: 8,
+  },
+  emptyCta: {
+    fontFamily: SANS_SEMI,
+    fontSize: TASTE_TYPE_SCALE.subhead,
+    color: CORAL,
+    marginTop: 14,
+  },
 });

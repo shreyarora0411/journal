@@ -1,4 +1,4 @@
-import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { Eyebrow, Face, Page, StatusSpace, VoicedNote } from '@/components';
 import { useAuthStore } from '@/features/auth';
 import { buildPersonalInviteText } from '@/features/invite';
 import { log } from '@/lib/log';
@@ -7,18 +7,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { usePlaceDetail } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const CARD = '#FFFFFF';
-
-const SERIF = 'Fraunces_500';
-const SERIF_IT = 'Fraunces_400Italic';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CARD,
+  CORAL,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF,
+  TASTE_TYPE_SCALE,
+} from '../lib/taste-tokens';
 
 /**
  * Spot — the place page (spec §3, screen 5). Who in your taste-orbit loved it,
@@ -122,7 +122,7 @@ export function SpotScreen() {
               <Eyebrow>Your take</Eyebrow>
               <View style={styles.mineCard}>
                 <Text style={styles.mineSentiment}>{MY_SENTIMENT_LINE[mine.sentiment]}</Text>
-                {mine.note ? <Text style={styles.loverNote}>“{mine.note}”</Text> : null}
+                {mine.note ? <VoicedNote note={mine.note} size="lg" /> : null}
               </View>
             </View>
           ) : null}
@@ -159,7 +159,7 @@ export function SpotScreen() {
                           ) : null}
                         </Text>
                       </View>
-                      {l.note ? <Text style={styles.loverNote}>"{l.note}"</Text> : null}
+                      {l.note ? <VoicedNote note={l.note} size="lg" /> : null}
                     </Pressable>
                   );
                 })}
@@ -173,7 +173,7 @@ export function SpotScreen() {
 }
 
 const styles = StyleSheet.create({
-  back: { fontFamily: SANS_SEMI, fontSize: 14, color: MUTE, marginTop: 4 },
+  back: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: MUTE, marginTop: 4 },
   name: {
     fontFamily: SERIF,
     fontSize: 32,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontFamily: SANS_BOLD,
-    fontSize: 11,
+    fontSize: TASTE_TYPE_SCALE.caption,
     letterSpacing: 0.8,
     color: MUTE,
     marginTop: 6,
@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     backgroundColor: '#FFFFFF',
   },
-  mapsLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: INK },
-  empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 16 },
+  mapsLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: INK },
+  empty: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 16 },
   loverCard: {
     padding: 14,
     borderRadius: 14,
@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
   },
   mineSentiment: { fontFamily: SANS_SEMI, fontSize: 12.5, color: MUTE },
   loverHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  loverName: { fontFamily: SANS_SEMI, fontSize: 14, color: INK },
-  loverMatch: { fontFamily: SANS_BOLD, fontSize: 12, color: CORAL },
-  loverNote: { fontFamily: SERIF_IT, fontSize: 15.5, lineHeight: 23, color: INK },
+  loverName: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: INK },
+  loverMatch: { fontFamily: SANS_BOLD, fontSize: TASTE_TYPE_SCALE.label, color: CORAL },
 });

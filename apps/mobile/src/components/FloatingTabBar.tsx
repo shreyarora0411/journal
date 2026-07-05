@@ -1,3 +1,4 @@
+import { hapticImpactLight } from '@/lib/haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,6 +76,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           const accessibilityLabel = descriptor?.options.tabBarAccessibilityLabel ?? LABELS[icon];
 
           const onPress = () => {
+            hapticImpactLight();
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,

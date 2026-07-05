@@ -9,17 +9,18 @@ import { useEffect, useMemo } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMyPlaces, useTasteTwins } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const CARD = '#FFFFFF';
-
-const SERIF = 'Fraunces_500';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CARD,
+  CORAL,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF,
+  TASTE_TYPE_SCALE,
+} from '../lib/taste-tokens';
 
 /**
  * People — taste-twins (spec §3, screen 4). Ordered by proven taste-match,
@@ -132,9 +133,7 @@ export function PeopleScreen() {
                     }
                     style={[styles.followBtn, t.followed && styles.followBtnOn]}
                   >
-                    <Text style={[styles.followLabel, t.followed && { color: MUTE }]}>
-                      {t.followed ? 'Following' : 'Follow'}
-                    </Text>
+                    <Text style={styles.followLabel}>{t.followed ? 'Following' : 'Follow'}</Text>
                   </Pressable>
                 </View>
               );
@@ -163,13 +162,19 @@ export function PeopleScreen() {
 const styles = StyleSheet.create({
   headline: {
     fontFamily: SERIF,
-    fontSize: 28,
+    fontSize: TASTE_TYPE_SCALE.display,
     color: INK,
     letterSpacing: -0.6,
     paddingTop: 8,
   },
-  sub: { fontFamily: SANS, fontSize: 14, lineHeight: 21, color: MUTE, marginTop: 8 },
-  empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 24 },
+  sub: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.subhead,
+    lineHeight: 21,
+    color: MUTE,
+    marginTop: 8,
+  },
+  empty: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 24 },
   gateCard: {
     marginTop: 24,
     padding: 20,
@@ -178,7 +183,12 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  gateTitle: { fontFamily: SERIF, fontSize: 22, color: INK, letterSpacing: -0.4 },
+  gateTitle: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.headlineLg,
+    color: INK,
+    letterSpacing: -0.4,
+  },
   gateBody: { fontFamily: SANS, fontSize: 13.5, lineHeight: 21, color: MUTE, marginTop: 8 },
   gateCta: {
     marginTop: 16,
@@ -187,7 +197,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
-  gateCtaLabel: { fontFamily: SANS_SEMI, fontSize: 14, color: '#FFFFFF' },
+  gateCtaLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: '#FFFFFF' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,18 +209,20 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
   },
   rowBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowName: { fontFamily: SANS_SEMI, fontSize: 15, color: INK },
+  rowName: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: INK },
   rowMeta: { fontFamily: SANS, fontSize: 12.5, color: MUTE, marginTop: 2 },
   rowMatch: { fontFamily: SANS_BOLD, fontSize: 12.5, color: CORAL },
+  // MUTE, not CORAL — coral here is spent on match % above; a Follow
+  // button next to every row is routine chrome, not the rare exception.
   followBtn: {
     borderWidth: 1.5,
-    borderColor: CORAL,
+    borderColor: MUTE,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 7,
   },
   followBtnOn: { borderColor: HAIR },
-  followLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
+  followLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: MUTE },
   inviteCard: {
     marginTop: 20,
     marginBottom: 90,
@@ -220,6 +232,17 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  inviteTitle: { fontFamily: SERIF, fontSize: 18, color: INK, letterSpacing: -0.3 },
-  inviteBody: { fontFamily: SANS, fontSize: 13, lineHeight: 19, color: MUTE, marginTop: 6 },
+  inviteTitle: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.headline,
+    color: INK,
+    letterSpacing: -0.3,
+  },
+  inviteBody: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.body,
+    lineHeight: 19,
+    color: MUTE,
+    marginTop: 6,
+  },
 });

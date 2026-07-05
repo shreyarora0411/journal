@@ -1,4 +1,5 @@
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/render';
+import * as Haptics from 'expo-haptics';
 import { TasteSetupScreen } from './taste-setup-screen';
 
 const mockReplace = jest.fn();
@@ -271,5 +272,38 @@ describe('TasteSetupScreen — follow-seed-maps step', () => {
       );
       expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
     });
+  });
+});
+
+describe('TasteSetupScreen — goal-crossing haptic', () => {
+  it('fires the success haptic on the exact tap that reaches the goal, not before', async () => {
+    mockCorpusRows = Array.from({ length: 8 }, (_, i) => ({
+      google_place_id: `g-spot-${i}`,
+      name: `Spot ${i}`,
+      hub: 'gcr',
+      zone: 'gurgaon',
+      destination_text: 'Gurgaon',
+      lat: 28.45,
+      lng: 77.09,
+    }));
+
+    renderWithProviders(<TasteSetupScreen />);
+    await answerQuizAndContinue();
+    await screen.findByText('Spot 0');
+
+    const notificationAsync = Haptics.notificationAsync as jest.Mock;
+    notificationAsync.mockClear();
+
+    for (let i = 0; i < 7; i++) {
+      fireEvent.press(screen.getByLabelText(`Add Spot ${i}`));
+      await screen.findByLabelText(`Remove Spot ${i}`);
+    }
+    expect(notificationAsync).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByLabelText('Add Spot 7'));
+    await screen.findByText('8/8 — that’s a taste.');
+
+    expect(notificationAsync).toHaveBeenCalledTimes(1);
+    expect(notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
   });
 });

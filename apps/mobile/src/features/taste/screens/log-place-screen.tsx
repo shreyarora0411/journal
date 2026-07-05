@@ -1,6 +1,7 @@
 import { Page, PlacePicker, StatusSpace } from '@/components';
 import { useToast } from '@/hooks/use-toast';
 import type { PlaceDetails } from '@/lib/google-places';
+import { hapticImpactMedium, hapticSuccess } from '@/lib/haptics';
 import { log } from '@/lib/log';
 import {
   ALL_HUBS,
@@ -14,18 +15,25 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 import { useLogPlace } from '../api/use-log-place';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const TINT = '#FAF6F0';
-
-const SERIF = 'Fraunces_500';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CORAL,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF,
+  TASTE_TYPE_SCALE,
+  TINT,
+} from '../lib/taste-tokens';
 
 // No sublabels: naming which button feeds the algorithm invites performative
 // logging. How signals work lives on the how-it-works surface, not here.
@@ -34,6 +42,51 @@ const SENTIMENTS: { key: Sentiment; label: string }[] = [
   { key: 'fine', label: 'Fine' },
   { key: 'skip', label: 'Skip' },
 ];
+
+// A tiny scale pulse so the tap reads as registered before the mutation even
+// starts — the network round-trip is invisible, the tap shouldn't be.
+function SentimentChip({
+  sentiment,
+  active,
+  onPress,
+}: {
+  sentiment: { key: Sentiment; label: string };
+  active: boolean;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (!active) return;
+    scale.value = withSequence(
+      withSpring(1.08, { damping: 9, stiffness: 260 }),
+      withSpring(1, { damping: 12 }),
+    );
+  }, [active, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <Pressable
+        accessibilityRole="radio"
+        accessibilityLabel={sentiment.label}
+        accessibilityState={{ selected: active }}
+        onPress={onPress}
+        style={[
+          styles.sentimentBtn,
+          active && sentiment.key === 'loved' && styles.sentimentLovedOn,
+          active && sentiment.key === 'fine' && styles.sentimentFineOn,
+          active && sentiment.key === 'skip' && styles.sentimentSkipOn,
+        ]}
+      >
+        <Text style={[styles.sentimentLabel, active && { color: '#FFFFFF' }]}>
+          {sentiment.label}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 /**
  * Log — the 10-second door (spec §3, screen 2). Place → one-tap sentiment →
@@ -112,6 +165,7 @@ export function LogPlaceScreen() {
         zone,
         listId,
       });
+      hapticSuccess();
       if (!result.noteSaved) {
         // Keep the whole form: the rating saved (idempotent on re-save),
         // the note didn't — one more Save retries exactly that.
@@ -194,28 +248,17 @@ export function LogPlaceScreen() {
           <>
             <Text style={styles.eyebrow}>HOW WAS IT?</Text>
             <View style={styles.sentimentRow}>
-              {SENTIMENTS.map((s) => {
-                const on = sentiment === s.key;
-                return (
-                  <Pressable
-                    key={s.key}
-                    accessibilityRole="radio"
-                    accessibilityLabel={s.label}
-                    accessibilityState={{ selected: on }}
-                    onPress={() => setSentiment(s.key)}
-                    style={[
-                      styles.sentimentBtn,
-                      on && s.key === 'loved' && styles.sentimentLovedOn,
-                      on && s.key === 'fine' && styles.sentimentFineOn,
-                      on && s.key === 'skip' && styles.sentimentSkipOn,
-                    ]}
-                  >
-                    <Text style={[styles.sentimentLabel, on && { color: '#FFFFFF' }]}>
-                      {s.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {SENTIMENTS.map((s) => (
+                <SentimentChip
+                  key={s.key}
+                  sentiment={s}
+                  active={sentiment === s.key}
+                  onPress={() => {
+                    hapticImpactMedium();
+                    setSentiment(s.key);
+                  }}
+                />
+              ))}
             </View>
 
             {/* 3. The voiced note (optional, public) */}
@@ -367,7 +410,7 @@ export function LogPlaceScreen() {
 
 const styles = StyleSheet.create({
   headline: { fontFamily: SERIF, fontSize: 30, color: INK, letterSpacing: -0.6, paddingTop: 8 },
-  sub: { fontFamily: SANS, fontSize: 14, color: MUTE, marginTop: 6 },
+  sub: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.subhead, color: MUTE, marginTop: 6 },
   listBanner: {
     marginTop: 14,
     paddingHorizontal: 14,
@@ -377,11 +420,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: HAIR,
   },
-  listBannerText: { fontFamily: SANS, fontSize: 13, color: MUTE, lineHeight: 19 },
+  listBannerText: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.body,
+    color: MUTE,
+    lineHeight: 19,
+  },
   listBannerTitle: { fontFamily: SANS_SEMI, color: INK },
   eyebrow: {
     fontFamily: SANS_BOLD,
-    fontSize: 10,
+    fontSize: TASTE_TYPE_SCALE.micro,
     letterSpacing: 1.4,
     color: CORAL,
     marginTop: 22,
@@ -389,7 +437,7 @@ const styles = StyleSheet.create({
   },
   zoneSub: {
     fontFamily: SANS_BOLD,
-    fontSize: 10,
+    fontSize: TASTE_TYPE_SCALE.micro,
     letterSpacing: 1.4,
     color: MUTE,
     marginTop: 12,
@@ -406,7 +454,7 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
   },
   disclosureLabel: { fontFamily: SANS_SEMI, fontSize: 13.5, color: INK },
-  disclosureChevron: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE },
+  disclosureChevron: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: MUTE },
   pickedRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -417,9 +465,9 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: TINT,
   },
-  pickedName: { fontFamily: SERIF, fontSize: 18, color: INK },
+  pickedName: { fontFamily: SERIF, fontSize: TASTE_TYPE_SCALE.headline, color: INK },
   pickedMeta: { fontFamily: SANS, fontSize: 12.5, color: MUTE, marginTop: 2 },
-  changeLink: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
+  changeLink: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: CORAL },
   sentimentRow: { flexDirection: 'row', gap: 8 },
   sentimentBtn: {
     flex: 1,
@@ -434,7 +482,7 @@ const styles = StyleSheet.create({
   sentimentLovedOn: { backgroundColor: CORAL, borderColor: CORAL },
   sentimentFineOn: { backgroundColor: MUTE, borderColor: MUTE },
   sentimentSkipOn: { backgroundColor: INK, borderColor: INK },
-  sentimentLabel: { fontFamily: SANS_SEMI, fontSize: 14, color: INK },
+  sentimentLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: INK },
   noteInput: {
     fontFamily: SANS,
     fontSize: 16,
@@ -467,7 +515,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveDisabled: { opacity: 0.4 },
-  saveLabel: { fontFamily: SANS_SEMI, fontSize: 15, color: '#FFFFFF' },
-  saveHint: { fontFamily: SANS, fontSize: 12, color: MUTE, textAlign: 'center', marginTop: 8 },
-  doneLink: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE },
+  saveLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: '#FFFFFF' },
+  saveHint: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.label,
+    color: MUTE,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  doneLink: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: MUTE },
 });

@@ -1,20 +1,21 @@
-import { Wordmark } from '@/components';
+import { VoicedNote, Wordmark } from '@/components';
 import { TASTE_AXES, type TasteAxes, type TasteAxis } from '@journal/shared';
 import { useRef, useState } from 'react';
 import { Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import ViewShot, { type ViewShotRef } from 'react-native-view-shot';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const CARD = '#FFFFFF';
-const TINT = '#FAF6F0';
-
-const SERIF_IT = 'Fraunces_400Italic';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CARD,
+  CORAL,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF_IT,
+  TASTE_TYPE_SCALE,
+  TINT,
+} from '../lib/taste-tokens';
 
 // 9:16 story/WhatsApp-status shape — the one size that reads cleanly on
 // every share surface without the OS cropping it awkwardly.
@@ -126,9 +127,12 @@ export function TasteShareCard({
                         {p.name}
                       </Text>
                       {p.note ? (
-                        <Text style={styles.placeNote} numberOfLines={2}>
-                          "{p.note}"
-                        </Text>
+                        <VoicedNote
+                          note={p.note}
+                          size="sm"
+                          numberOfLines={2}
+                          style={styles.placeNote}
+                        />
                       ) : null}
                     </View>
                   ))}
@@ -185,7 +189,7 @@ const styles = StyleSheet.create({
   },
   readout: {
     fontFamily: SERIF_IT,
-    fontSize: 22,
+    fontSize: TASTE_TYPE_SCALE.headlineLg,
     lineHeight: 29,
     color: INK,
     letterSpacing: -0.3,
@@ -193,7 +197,7 @@ const styles = StyleSheet.create({
   },
   readoutPrompt: {
     fontFamily: SANS,
-    fontSize: 14,
+    fontSize: TASTE_TYPE_SCALE.subhead,
     lineHeight: 20,
     color: MUTE,
     marginTop: 18,
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
   },
   stats: {
     fontFamily: SANS_SEMI,
-    fontSize: 13,
+    fontSize: TASTE_TYPE_SCALE.body,
     color: MUTE,
     marginTop: 20,
   },
@@ -234,21 +238,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: TINT,
   },
-  placeName: { fontFamily: SANS_BOLD, fontSize: 13, color: INK },
-  placeNote: {
-    fontFamily: SERIF_IT,
-    fontSize: 13,
-    lineHeight: 18,
-    color: INK,
-    marginTop: 3,
-  },
+  placeName: { fontFamily: SANS_BOLD, fontSize: TASTE_TYPE_SCALE.body, color: INK },
+  placeNote: { marginTop: 3 },
   invite: {
     position: 'absolute',
     left: 24,
     right: 24,
     bottom: 24,
     fontFamily: SANS,
-    fontSize: 11,
+    fontSize: TASTE_TYPE_SCALE.caption,
     lineHeight: 16,
     color: MUTE,
   },
@@ -259,7 +257,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 12,
   },
-  shareBtnLabel: { fontFamily: SANS_SEMI, fontSize: 14, color: '#FFFFFF' },
+  shareBtnLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: '#FFFFFF' },
   closeBtn: {
     borderWidth: 1,
     borderColor: '#FFFFFF',
@@ -267,5 +265,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
-  closeBtnLabel: { fontFamily: SANS_SEMI, fontSize: 14, color: '#FFFFFF' },
+  closeBtnLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: '#FFFFFF' },
 });

@@ -1,4 +1,4 @@
-import { Eyebrow, Face, Page, StatusSpace } from '@/components';
+import { Eyebrow, Face, Page, StatusSpace, VoicedNote } from '@/components';
 import { useAuthStore } from '@/features/auth';
 import { useFollow, useFollowStatus, useUnfollow } from '@/features/follows';
 import { TASTE_TUNING, hubLabel } from '@journal/shared';
@@ -6,18 +6,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePersonMap } from '../api/use-person-map';
 import { LoadError } from '../components/LoadError';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const CARD = '#FFFFFF';
-
-const SERIF = 'Fraunces_500';
-const SERIF_IT = 'Fraunces_400Italic';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CARD,
+  CORAL,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF,
+  TASTE_TYPE_SCALE,
+} from '../lib/taste-tokens';
 
 /**
  * Person — a person AS a map (the anti-dating affordance). No bio, no photo
@@ -82,7 +82,7 @@ export function PersonScreen() {
                 onPress={() => (followStatus.data ? unfollow.mutate(id) : follow.mutate(id))}
                 style={[styles.followBtn, followStatus.data && styles.followBtnOn]}
               >
-                <Text style={[styles.followLabel, followStatus.data && { color: MUTE }]}>
+                <Text style={styles.followLabel}>
                   {followStatus.data ? 'Following' : 'Follow map'}
                 </Text>
               </Pressable>
@@ -113,9 +113,7 @@ export function PersonScreen() {
                         {[hubLabel(p.hub), p.zone].filter(Boolean).join(' · ').toUpperCase() || '—'}
                       </Text>
                       {p.note ? (
-                        <Text style={styles.rowNote} numberOfLines={2}>
-                          "{p.note}"
-                        </Text>
+                        <VoicedNote note={p.note} numberOfLines={2} style={styles.rowNote} />
                       ) : null}
                     </View>
                     <Text style={styles.chevron}>›</Text>
@@ -131,21 +129,23 @@ export function PersonScreen() {
 }
 
 const styles = StyleSheet.create({
-  back: { fontFamily: SANS_SEMI, fontSize: 14, color: MUTE, marginTop: 4 },
+  back: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: MUTE, marginTop: 4 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 14 },
   name: { fontFamily: SERIF, fontSize: 26, color: INK, letterSpacing: -0.5 },
-  matchLine: { fontFamily: SANS_BOLD, fontSize: 13, color: CORAL, marginTop: 3 },
+  matchLine: { fontFamily: SANS_BOLD, fontSize: TASTE_TYPE_SCALE.body, color: CORAL, marginTop: 3 },
   matchMuted: { fontFamily: SANS, fontSize: 12.5, color: MUTE, marginTop: 3 },
+  // MUTE, not CORAL — coral here is spent on the match % above; a Follow
+  // button is routine chrome, not the one action that should read as rare.
   followBtn: {
     borderWidth: 1.5,
-    borderColor: CORAL,
+    borderColor: MUTE,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   followBtnOn: { borderColor: HAIR },
-  followLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
-  empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 16 },
+  followLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: MUTE },
+  empty: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  rowName: { fontFamily: SANS_SEMI, fontSize: 15, color: INK },
+  rowName: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: INK },
   rowMeta: {
     fontFamily: SANS_BOLD,
     fontSize: 10.5,
@@ -164,12 +164,6 @@ const styles = StyleSheet.create({
     color: MUTE,
     marginTop: 3,
   },
-  rowNote: {
-    fontFamily: SERIF_IT,
-    fontSize: 14.5,
-    lineHeight: 21,
-    color: INK,
-    marginTop: 6,
-  },
-  chevron: { fontFamily: SANS, fontSize: 22, color: '#B7AE9F' },
+  rowNote: { marginTop: 6 },
+  chevron: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.headlineLg, color: '#B7AE9F' },
 });

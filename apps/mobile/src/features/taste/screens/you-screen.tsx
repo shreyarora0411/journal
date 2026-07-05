@@ -1,4 +1,4 @@
-import { Eyebrow, Face, Icon, Page, StatusSpace } from '@/components';
+import { Eyebrow, Face, Icon, Page, StatusSpace, VoicedNote } from '@/components';
 import {
   useAuthStore,
   useProfile,
@@ -28,19 +28,21 @@ import {
 import { useMyPlaces, useMyTaste } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
 import { TasteShareCard } from '../components/taste-share-card';
-
-const CORAL = '#FF4D2E';
-const INK = '#1B1714';
-const MUTE = '#7A716A';
-const HAIR = '#E7E1D7';
-const CARD = '#FFFFFF';
-const TINT = '#FAF6F0';
-
-const SERIF = 'Fraunces_500';
-const SERIF_IT = 'Fraunces_400Italic';
-const SANS = 'HankenGrotesk_400Regular';
-const SANS_SEMI = 'HankenGrotesk_600SemiBold';
-const SANS_BOLD = 'HankenGrotesk_700Bold';
+import {
+  CARD,
+  CORAL,
+  GOLD,
+  HAIR,
+  INK,
+  MUTE,
+  SANS,
+  SANS_BOLD,
+  SANS_SEMI,
+  SERIF,
+  SERIF_IT,
+  TASTE_TYPE_SCALE,
+  TINT,
+} from '../lib/taste-tokens';
 
 const VISIBILITY_OPTIONS: ReadonlyArray<{ key: Visibility; label: string }> = [
   { key: 'followers', label: 'Followers' },
@@ -372,9 +374,7 @@ export function YouScreen() {
               {voicedPlaces.length} note{voicedPlaces.length === 1 ? '' : 's'} written
             </Text>
             {latestVoiced?.note ? (
-              <Text style={styles.voicePreview} numberOfLines={3}>
-                "{latestVoiced.note}"
-              </Text>
+              <VoicedNote note={latestVoiced.note} numberOfLines={3} style={styles.voicePreview} />
             ) : null}
             {lovedWithoutNote > 0 ? (
               <Pressable
@@ -520,8 +520,8 @@ export function YouScreen() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 8 },
-  name: { fontFamily: SERIF, fontSize: 28, color: INK, letterSpacing: -0.5 },
-  handle: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE, marginTop: 3 },
+  name: { fontFamily: SERIF, fontSize: TASTE_TYPE_SCALE.display, color: INK, letterSpacing: -0.5 },
+  handle: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 3 },
   bio: {
     fontFamily: SERIF_IT,
     fontSize: 14.5,
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
   },
   editInput: {
     fontFamily: SANS,
-    fontSize: 15,
+    fontSize: TASTE_TYPE_SCALE.emphasis,
     color: INK,
     marginTop: 6,
     paddingVertical: 6,
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
   },
-  editSaveLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: '#FFFFFF' },
+  editSaveLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: '#FFFFFF' },
   editCancelBtn: {
     borderWidth: 1,
     borderColor: HAIR,
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
   },
-  editCancelLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: INK },
+  editCancelLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: INK },
 
   identityCard: {
     marginTop: 22,
@@ -580,7 +580,12 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  eyebrowGold: { fontFamily: SANS_BOLD, fontSize: 10, letterSpacing: 1.6, color: '#C8A24A' },
+  eyebrowGold: {
+    fontFamily: SANS_BOLD,
+    fontSize: TASTE_TYPE_SCALE.micro,
+    letterSpacing: 1.6,
+    color: GOLD,
+  },
   readout: {
     fontFamily: SERIF,
     fontSize: 21,
@@ -589,9 +594,25 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     marginTop: 6,
   },
-  readoutPrompt: { fontFamily: SANS, fontSize: 14, lineHeight: 21, color: MUTE, marginTop: 6 },
-  identityStats: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE, marginTop: 10 },
-  identityCta: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL, marginTop: 10 },
+  readoutPrompt: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.subhead,
+    lineHeight: 21,
+    color: MUTE,
+    marginTop: 6,
+  },
+  identityStats: {
+    fontFamily: SANS_SEMI,
+    fontSize: TASTE_TYPE_SCALE.body,
+    color: MUTE,
+    marginTop: 10,
+  },
+  identityCta: {
+    fontFamily: SANS_SEMI,
+    fontSize: TASTE_TYPE_SCALE.body,
+    color: CORAL,
+    marginTop: 10,
+  },
   shareTastePill: {
     alignSelf: 'flex-start',
     marginTop: 14,
@@ -603,15 +624,9 @@ const styles = StyleSheet.create({
   },
   shareTastePillLabel: { fontFamily: SANS_SEMI, fontSize: 12.5, color: INK },
 
-  empty: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 12 },
-  voiceCount: { fontFamily: SANS_SEMI, fontSize: 14, color: INK },
-  voicePreview: {
-    fontFamily: SERIF_IT,
-    fontSize: 14.5,
-    lineHeight: 21,
-    color: INK,
-    marginTop: 6,
-  },
+  empty: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 12 },
+  voiceCount: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: INK },
+  voicePreview: { marginTop: 6 },
   nudgeCard: {
     marginTop: 12,
     padding: 12,
@@ -620,10 +635,10 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: TINT,
   },
-  nudgeText: { fontFamily: SANS_SEMI, fontSize: 13, color: INK },
+  nudgeText: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: INK },
 
   listsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  newListLink: { fontFamily: SANS_SEMI, fontSize: 13, color: CORAL },
+  newListLink: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: CORAL },
   listCard: {
     padding: 14,
     borderRadius: 14,
@@ -631,8 +646,8 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  listTitle: { fontFamily: SANS_SEMI, fontSize: 15, color: INK },
-  listSub: { fontFamily: SANS, fontSize: 12, color: MUTE, marginTop: 4 },
+  listTitle: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: INK },
+  listSub: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.label, color: MUTE, marginTop: 4 },
   emptyCard: {
     marginTop: 14,
     padding: 20,
@@ -642,7 +657,13 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
   },
   emptyTitle: { fontFamily: SERIF, fontSize: 20, color: INK, letterSpacing: -0.4 },
-  emptyBody: { fontFamily: SANS, fontSize: 13, lineHeight: 20, color: MUTE, marginTop: 8 },
+  emptyBody: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.body,
+    lineHeight: 20,
+    color: MUTE,
+    marginTop: 8,
+  },
 
   reachCard: {
     marginTop: 12,
@@ -652,8 +673,13 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
-  reachLine: { fontFamily: SERIF, fontSize: 18, color: INK, letterSpacing: -0.3 },
-  reachSub: { fontFamily: SANS, fontSize: 13, color: MUTE, marginTop: 4 },
+  reachLine: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.headline,
+    color: INK,
+    letterSpacing: -0.3,
+  },
+  reachSub: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 4 },
   inviteCard: {
     marginTop: 10,
     padding: 16,
@@ -663,7 +689,13 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
   },
   inviteTitle: { fontFamily: SERIF, fontSize: 17, color: INK, letterSpacing: -0.3 },
-  inviteBody: { fontFamily: SANS, fontSize: 13, lineHeight: 19, color: MUTE, marginTop: 6 },
+  inviteBody: {
+    fontFamily: SANS,
+    fontSize: TASTE_TYPE_SCALE.body,
+    lineHeight: 19,
+    color: MUTE,
+    marginTop: 6,
+  },
 
   accountCard: {
     marginTop: 12,
@@ -701,5 +733,5 @@ const styles = StyleSheet.create({
     borderBottomColor: HAIR,
   },
   linkRowText: { fontFamily: SANS_SEMI, fontSize: 14.5, color: INK },
-  chevron: { fontFamily: SANS, fontSize: 18, color: '#B7AE9F' },
+  chevron: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.headline, color: '#B7AE9F' },
 });

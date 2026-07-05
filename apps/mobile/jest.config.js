@@ -1,6 +1,11 @@
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',
+  // Reanimated 4's Worklets native module otherwise self-initializes even
+  // when requiring the JS-only `react-native-reanimated/mock` — this
+  // resolver keeps worklets internals off the `.native` extension so the
+  // mock loads without touching native code (jest test env has no native side).
+  resolver: 'react-native-worklets/jest/resolver',
   setupFiles: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',

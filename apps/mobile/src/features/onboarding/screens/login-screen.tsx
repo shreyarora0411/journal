@@ -1,4 +1,4 @@
-import { useAuthStore, useStartSession } from '@/features/auth';
+import { KnownPhoneNoRecoveryError, useAuthStore, useStartSession } from '@/features/auth';
 import { fetchSelf } from '@/features/auth/api/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
@@ -27,13 +27,14 @@ const HAIR = '#EFEAE2';
 const EMERALD = '#00A67E';
 
 /**
- * Login (#02 — Batch A). Phone-first with an OTP visual hint, then the
- * camera-roll fast-path, then the emerald privacy line.
+ * Login (#02 — Batch A). Phone-first, then the emerald privacy line.
  *
- * Anonymous-auth visual treatment per ADR 0004: tapping Continue calls
+ * Anonymous-auth per ADR 0004: tapping Continue calls
  * `useStartSession({ phone })` which signs in anonymously and stores the
- * hashed phone. No real OTP round-trip happens — the "we just sent a code"
- * hint is visual only, kept to make the funnel feel familiar.
+ * hashed phone. No OTP round-trip happens — no SMS provider is wired yet
+ * (2026-07-05: an earlier version of this screen promised "we'll text you
+ * a code" as a visual-only hint; that's a first-minute lie the moment a
+ * user actually waits for a text, so the copy no longer claims one).
  *
  * Brief deviation flag: the brief specifies a pink Instagram fast-path
  * button. Rule 4 ("One accent at a time. Coral is the primary accent.
@@ -92,6 +93,10 @@ export function LoginScreen() {
         router.replace('/(auth)/framing');
       }
     } catch (err) {
+      if (err instanceof KnownPhoneNoRecoveryError) {
+        toast.show({ message: err.message, variant: 'error' });
+        return;
+      }
       log.error('startSession failed', err);
       toast.show({ message: 'Could not start. Try again.', variant: 'error' });
     }
@@ -126,7 +131,7 @@ export function LoginScreen() {
               Sign in with the number{'\n'}your friends already have.
             </Text>
             <Text style={styles.sub}>
-              We'll text you a one-time code. Used only to match you with people you actually know.
+              Used only to match you with people you actually know — never shown or shared.
             </Text>
 
             {/* Phone row — country pill + 10-digit input. */}
@@ -153,14 +158,12 @@ export function LoginScreen() {
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Send me a code"
+              accessibilityLabel="Continue"
               onPress={onContinue}
               style={styles.cta}
               disabled={start.isPending}
             >
-              <Text style={styles.ctaLabel}>
-                {start.isPending ? 'Starting…' : 'Send me a code'}
-              </Text>
+              <Text style={styles.ctaLabel}>{start.isPending ? 'Starting…' : 'Continue'}</Text>
             </Pressable>
 
             {/* Camera-roll fast-path removed in pilot-fixes session —

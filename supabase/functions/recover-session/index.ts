@@ -1,28 +1,37 @@
-// recover-session — phone-hash lookup that returns a magic-link token
-// the client can redeem to sign in AS the existing user.
+// recover-session — phone-hash lookup for the returning-user path.
 //
-// Anonymous Supabase auth (the pilot's ADR 0004) mints a fresh user on
-// every signInAnonymously() — there is no built-in path to recover the
-// same user from a fresh device. This function closes that gap.
+// SECURITY (2026-07-05 fix): this endpoint is public and unauthenticated by
+// necessity — a device with no session yet needs to ask "does this phone
+// belong to an existing account?" before one exists. It previously answered
+// that question by minting a Supabase magic-link token and returning the
+// redeemable email_otp/hashed_token DIRECTLY IN THE RESPONSE BODY. Since the
+// client computes client_hash as an UNPEPPERED sha256(phone) — the pepper is
+// applied server-side only — anyone who knew a user's phone number could
+// reproduce the same hash, POST here, and receive a token that signed them
+// in AS that user. This was a live account-takeover vector.
+//
+// There is currently no real OTP delivery channel wired (no SMS/WhatsApp
+// provider — see supabase/config.toml's auth.sms.twilio block, unconfigured;
+// the account's synthetic email `<id>@no-email.lore.app` cannot receive
+// mail). Until one exists, this function no longer returns anything
+// redeemable: it answers {found: boolean} ONLY. A known phone with no
+// self-serve delivery channel means recovery is human-mediated for now
+// (the inviter/founder helps out-of-band) rather than instant self-serve —
+// see use-start-session.ts's handling of found:true.
+//
+// TODO(next session with SMS/WhatsApp OTP provider credentials): once a
+// provider is wired, re-introduce automatic delivery by sending the OTP TO
+// the phone number on file (not returning it to the caller) and have the
+// client collect it via a code-entry screen.
 //
 // Flow:
 //   1. Client hashes the entered phone (no pepper) and POSTs it here.
 //   2. We apply the server pepper, look up public.users.phone_hash.
-//   3. If found, we fetch the auth user's synthetic email
-//      (`<id>@no-email.lore.app`, stamped at sign-up by stamp-phone-hash)
-//      and call auth.admin.generateLink({type:'magiclink', email}).
-//   4. We return {found:true, email, hashedToken} — the client then
-//      calls supabase.auth.verifyOtp({email, token, type:'magiclink'}).
-//   5. If no match, we return {found:false} and the client falls back
-//      to the existing signInAnonymously + stamp-phone-hash flow.
+//   3. We return {found: boolean} only. No token, no email, ever.
 //
 // Required env:
 //   PHONE_HASH_PEPPER          — MUST equal stamp-phone-hash + match-contacts
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — auto-injected
-//
-// Public endpoint — NOT authenticated. Returns enough information to
-// sign in if you guess the correct phone hash, which is exactly what
-// match-contacts already exposes. Both are gated only by the pepper.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.6';
 import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
@@ -80,11 +89,10 @@ Deno.serve(async (req) => {
   // because no unique constraint enforces uniqueness on the column
   // (and historically the anon-auth flow minted duplicates on every
   // sign-in before recovery existed). Pick the OLDEST — that's the
-  // canonical original account; later duplicates are abandoned. The
-  // accompanying cleanup SQL soft-deletes the duplicates.
+  // canonical original account; later duplicates are abandoned.
   const { data: userRows, error: lookupErr } = await admin
     .from('users')
-    .select('id, created_at')
+    .select('id')
     .eq('phone_hash', stored)
     .is('deleted_at', null)
     .order('created_at', { ascending: true })
@@ -95,48 +103,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'content-type': 'application/json' },
     });
   }
-  const userRow = userRows?.[0];
-  if (!userRow) {
-    return new Response(JSON.stringify({ found: false }), {
-      headers: { ...corsHeaders, 'content-type': 'application/json' },
-    });
-  }
 
-  const userId = (userRow as { id: string }).id;
-  const email = `${userId}@no-email.lore.app`;
-
-  // generateLink emits a hashed_token the client can verify without an
-  // email actually being sent. We use type=magiclink because it accepts
-  // an existing user's email and returns a token.
-  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-    type: 'magiclink',
-    email,
-  });
-  if (linkErr || !linkData) {
-    return new Response(
-      JSON.stringify({ error: 'link_failed', detail: linkErr?.message ?? 'no data' }),
-      { status: 500, headers: { ...corsHeaders, 'content-type': 'application/json' } },
-    );
-  }
-
-  // The properties shape: { action_link, hashed_token, verification_type,
-  // redirect_to, email_otp }. We return `email_otp` (the 6-digit code)
-  // rather than `hashed_token`. verifyOtp({type:'magiclink'}) with a
-  // hashed_token consistently rejects as "Token has expired or is invalid"
-  // — the hashed_token is meant for the action_link redirect flow, not for
-  // direct verifyOtp consumption. email_otp + type:'email' is the
-  // documented admin-generateLink → client-verify recipe that actually
-  // works.
-  const emailOtp = linkData.properties?.email_otp ?? null;
-  const hashedToken = linkData.properties?.hashed_token ?? null;
-  if (!emailOtp && !hashedToken) {
-    return new Response(JSON.stringify({ error: 'no_token' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'content-type': 'application/json' },
-    });
-  }
-
-  return new Response(JSON.stringify({ found: true, email, emailOtp, hashedToken }), {
+  // Answer ONLY whether the phone is known — never a redeemable token.
+  return new Response(JSON.stringify({ found: Boolean(userRows?.[0]) }), {
     headers: { ...corsHeaders, 'content-type': 'application/json' },
   });
 });

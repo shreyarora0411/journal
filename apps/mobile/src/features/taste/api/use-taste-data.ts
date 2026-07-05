@@ -77,6 +77,7 @@ export type MyPlaceRow = {
     zone: string | null;
     category: string | null;
     google_place_id: string;
+    destination_text: string | null;
   } | null;
 };
 
@@ -95,7 +96,7 @@ export const useMyPlaces = () => {
         supabase
           .from('place_reactions')
           .select(
-            'sentiment, updated_at, place:place_id(id, name, hub, zone, category, google_place_id)',
+            'sentiment, updated_at, place:place_id(id, name, hub, zone, category, google_place_id, destination_text)',
           )
           .eq('user_id', userId)
           .order('updated_at', { ascending: false }),

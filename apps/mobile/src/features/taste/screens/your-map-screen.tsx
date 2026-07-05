@@ -3,8 +3,8 @@ import { useProfile } from '@/features/auth';
 import { TASTE_TUNING } from '@journal/shared';
 import { hubLabel } from '@journal/shared';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { type MyPlaceRow, useMyPlaces, useMyPriors, useMyTaste } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
 
@@ -26,6 +26,13 @@ const SENTIMENT_LABEL: Record<string, string> = {
   skip: 'Skip',
 };
 
+// A love logged last week hasn't gone stale — resurfacing it would read as a
+// broken "0 months" nudge, not a prompt. 60 days is the shortest gap that
+// plausibly earns "still the move?".
+const RESURFACE_MIN_DAYS = 60;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const DAYS_PER_MONTH = 30.44;
+
 /**
  * Your Map — home + identity (spec §3, screen 1). The make-or-break surface:
  * it must beat a Notes list as a personal artifact, because it's what makes
@@ -46,6 +53,38 @@ export function YourMapScreen() {
   const readout = tasteQ.data?.readout ?? [];
 
   const displayName = profile.data?.display_name ?? 'Your map';
+
+  // Hub chips — derived client-side from the viewer's own places, not a new
+  // query. Sorted by count so the hub they log most is the first tap.
+  const [hubFilter, setHubFilter] = useState<string | null>(null);
+  const hubCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of places) {
+      const hub = p.place?.hub;
+      if (hub) counts.set(hub, (counts.get(hub) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([slug, count]) => ({ slug, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [places]);
+  const visiblePlaces = useMemo(
+    () => (hubFilter ? places.filter((p) => p.place?.hub === hubFilter) : places),
+    [places, hubFilter],
+  );
+
+  // Return-loop nudge — resurfaces the single love the viewer hasn't
+  // revisited in the longest time. Independent of the hub filter above: it's
+  // a standing prompt, not a view of the filtered list.
+  const resurfacePlace = useMemo(() => {
+    const loved = places.filter((p) => p.sentiment === 'loved' && p.place);
+    if (loved.length === 0) return null;
+    const oldest = loved.reduce((a, b) =>
+      new Date(a.updated_at).getTime() < new Date(b.updated_at).getTime() ? a : b,
+    );
+    const days = (Date.now() - new Date(oldest.updated_at).getTime()) / MS_PER_DAY;
+    if (days < RESURFACE_MIN_DAYS) return null;
+    return { row: oldest, months: Math.max(1, Math.round(days / DAYS_PER_MONTH)) };
+  }, [places]);
 
   return (
     <Page>
@@ -162,49 +201,108 @@ export function YourMapScreen() {
             </Pressable>
           )
         ) : (
-          <View style={{ gap: 8, marginTop: 12 }}>
-            {places.map((row: MyPlaceRow) =>
-              row.place ? (
-                <Pressable
-                  key={row.place.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open ${row.place.name}`}
-                  onPress={() => router.push(`/(tabs)/spot/${row.place?.id}` as never)}
-                  style={styles.row}
-                >
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.rowName} numberOfLines={1}>
-                      {row.place.name}
-                    </Text>
-                    <Text style={styles.rowMeta} numberOfLines={1}>
-                      {[hubLabel(row.place.hub), row.place.zone].filter(Boolean).join(' · ') || '—'}
-                    </Text>
-                    {row.note ? (
-                      <Text style={styles.rowNote} numberOfLines={2}>
-                        “{row.note}”
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View
-                    style={[
-                      styles.sentimentChip,
-                      row.sentiment === 'loved' && styles.sentimentLoved,
-                      row.sentiment === 'skip' && styles.sentimentSkip,
-                    ]}
+          <>
+            {/* Hub chips — derived from the viewer's own places, no new
+                query. "All" clears the filter and is selected by default. */}
+            {hubCounts.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginTop: 12 }}
+              >
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="All hubs"
+                    accessibilityState={{ selected: hubFilter === null }}
+                    onPress={() => setHubFilter(null)}
+                    style={[styles.chip, hubFilter === null && styles.chipOn]}
                   >
-                    <Text
+                    <Text style={[styles.chipLabel, hubFilter === null && styles.chipLabelOn]}>
+                      All
+                    </Text>
+                  </Pressable>
+                  {hubCounts.map(({ slug, count }) => (
+                    <Pressable
+                      key={slug}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${hubLabel(slug)}, ${count} places`}
+                      accessibilityState={{ selected: hubFilter === slug }}
+                      onPress={() => setHubFilter(hubFilter === slug ? null : slug)}
+                      style={[styles.chip, hubFilter === slug && styles.chipOn]}
+                    >
+                      <Text style={[styles.chipLabel, hubFilter === slug && styles.chipLabelOn]}>
+                        {hubLabel(slug)} {count}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
+            ) : null}
+
+            {/* Return-loop nudge — the oldest untouched love, so the map
+                pulls the viewer back instead of only accumulating. */}
+            {resurfacePlace ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Revisit ${resurfacePlace.row.place?.name}`}
+                onPress={() => router.push(`/(tabs)/spot/${resurfacePlace.row.place?.id}` as never)}
+                style={styles.resurfaceCard}
+              >
+                <Text style={styles.resurfaceText}>
+                  {resurfacePlace.months} month{resurfacePlace.months === 1 ? '' : 's'} since you
+                  loved <Text style={styles.resurfaceName}>{resurfacePlace.row.place?.name}</Text> —
+                  still the move?
+                </Text>
+              </Pressable>
+            ) : null}
+
+            <View style={{ gap: 8, marginTop: 12 }}>
+              {visiblePlaces.map((row: MyPlaceRow) =>
+                row.place ? (
+                  <Pressable
+                    key={row.place.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${row.place.name}`}
+                    onPress={() => router.push(`/(tabs)/spot/${row.place?.id}` as never)}
+                    style={styles.row}
+                  >
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.rowName} numberOfLines={1}>
+                        {row.place.name}
+                      </Text>
+                      <Text style={styles.rowMeta} numberOfLines={1}>
+                        {[hubLabel(row.place.hub), row.place.zone].filter(Boolean).join(' · ') ||
+                          row.place.destination_text ||
+                          '—'}
+                      </Text>
+                      {row.note ? (
+                        <Text style={styles.rowNote} numberOfLines={2}>
+                          “{row.note}”
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View
                       style={[
-                        styles.sentimentText,
-                        row.sentiment === 'loved' && { color: '#FFFFFF' },
+                        styles.sentimentChip,
+                        row.sentiment === 'loved' && styles.sentimentLoved,
+                        row.sentiment === 'skip' && styles.sentimentSkip,
                       ]}
                     >
-                      {SENTIMENT_LABEL[row.sentiment]}
-                    </Text>
-                  </View>
-                </Pressable>
-              ) : null,
-            )}
-          </View>
+                      <Text
+                        style={[
+                          styles.sentimentText,
+                          row.sentiment === 'loved' && { color: '#FFFFFF' },
+                        ]}
+                      >
+                        {SENTIMENT_LABEL[row.sentiment]}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ) : null,
+              )}
+            </View>
+          </>
         )}
       </View>
     </Page>
@@ -250,6 +348,27 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
   },
   setupNudgeText: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE },
+  chip: {
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    backgroundColor: '#FFFFFF',
+  },
+  chipOn: { backgroundColor: CORAL, borderColor: CORAL },
+  chipLabel: { fontFamily: SANS_SEMI, fontSize: 13, color: INK },
+  chipLabelOn: { color: '#FFFFFF' },
+  resurfaceCard: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: CARD,
+  },
+  resurfaceText: { fontFamily: SANS, fontSize: 13.5, lineHeight: 20, color: MUTE },
+  resurfaceName: { fontFamily: SANS_SEMI, color: INK },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

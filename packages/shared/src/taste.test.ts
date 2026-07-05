@@ -74,6 +74,18 @@ describe('blendFingerprint', () => {
     expect(fp.mellow_lively).toBeLessThanOrEqual(1);
     expect(fp.mellow_lively).toBeCloseTo(1); // 0.5 + 0.5 + 0.5 clamped
   });
+
+  it('a curated per-place override wins over the category prior (migration 65)', () => {
+    // "restaurant" carries zero prior by design — a curated fingerprint is
+    // how a specific venue gets real signal without needing tag votes.
+    const withoutOverride = blendFingerprint('restaurant', {});
+    expect(withoutOverride).toEqual(ZERO_AXES);
+
+    const curated = axes({ substance_scene: -0.4, refined_unfussy: -0.6 });
+    const withOverride = blendFingerprint('restaurant', {}, curated);
+    expect(withOverride.substance_scene).toBeCloseTo(-0.4);
+    expect(withOverride.refined_unfussy).toBeCloseTo(-0.6);
+  });
 });
 
 describe('userTasteAxes', () => {
@@ -117,6 +129,33 @@ describe('userTasteAxes', () => {
     );
     // (1·1 + 2·(−1)) / (1 + 2) = −1/3
     expect(v.mellow_lively).toBeCloseTo(-1 / 3);
+  });
+
+  it('a zero-signal love on one axis does not dilute a strong prior on another axis (migration 65 fix)', () => {
+    // Reproduces the live bug: a ±0.5 quiz prior on substance_scene, then
+    // loving a handful of places with NO signal on substance_scene (the
+    // exact shape of the seed corpus before per-place fingerprinting).
+    // Before the per-axis fix, the shared scalar denominator meant these
+    // zero-signal loves diluted substance_scene toward zero even though
+    // none of them said anything about it.
+    const zeroSignalLoves = Array.from({ length: 5 }, () => ({
+      placeAxes: axes({ mellow_lively: 0.3 }), // signal on a DIFFERENT axis only
+      sentiment: 'loved' as const,
+      ageDays: 0,
+    }));
+    const v = userTasteAxes(zeroSignalLoves, { substance_scene: -0.5 });
+    // substance_scene had NO reactions carrying signal on it — only the
+    // prior — so it should equal the prior exactly, undiluted.
+    expect(v.substance_scene).toBeCloseTo(-0.5);
+  });
+
+  it('a place is still zero on an axis it genuinely has no opinion on', () => {
+    // No prior, no other signal at all on this axis → stays exactly 0,
+    // not some leftover artifact of the per-axis change.
+    const v = userTasteAxes([
+      { placeAxes: axes({ mellow_lively: 1 }), sentiment: 'loved', ageDays: 0 },
+    ]);
+    expect(v.substance_scene).toBe(0);
   });
 });
 
@@ -174,11 +213,31 @@ describe('placeScore', () => {
 });
 
 describe('tasteReadout', () => {
-  it('names only the axes with a clear lean', () => {
+  it('names only the axes with a clear lean when confident', () => {
     const lines = tasteReadout(axes({ substance_scene: -0.6, value_splurge: 0.3 }));
     expect(lines).toContain('substance-first');
     expect(lines).toContain('splurges on the right thing');
     expect(lines.length).toBe(2);
+  });
+
+  it('never goes silent on weak-but-real signal (migration 65 fix)', () => {
+    // Below the ±0.25 confident threshold on every axis, but genuinely
+    // non-zero — exactly the founder's live shape post-dilution-fix
+    // (small residual signal, nothing crossing confident yet).
+    const lines = tasteReadout(axes({ substance_scene: -0.12, value_splurge: 0.08 }));
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines).toContain('leans substance over scene');
+  });
+
+  it('ranks the strongest lean first and caps at two', () => {
+    const lines = tasteReadout(
+      axes({ substance_scene: -0.2, mellow_lively: 0.15, adventurous_trusty: 0.05 }),
+    );
+    expect(lines).toEqual(['leans substance over scene', 'leans high-energy']);
+  });
+
+  it('says nothing for a genuinely all-zero vector (never logged, no priors)', () => {
+    expect(tasteReadout(ZERO_AXES)).toEqual([]);
   });
 });
 

@@ -254,12 +254,21 @@ export const ALL_TASTE_TAGS: TasteTag[] = [...FORMAT_TAGS, ...OCCASION_TAGS];
 
 export const clampAxis = (v: number): number => Math.max(-1, Math.min(1, v));
 
-/** Place fingerprint = category prior + Σ (tag vote-share · tag axis effect), clamped. */
+/**
+ * Place fingerprint = base + Σ (tag vote-share · tag axis effect), clamped.
+ * `curatedAxes` — a hand-fingerprinted per-place override (mirrors SQL
+ * place_axes() preferring canonical_places.axes over the category prior,
+ * migration 65) — wins over the category prior when present. Category
+ * priors stay coarse by design (e.g. "restaurant" spans a dhaba to a
+ * tasting menu); real per-venue signal comes from curation or crowd tags,
+ * not a shared category-wide guess.
+ */
 export function blendFingerprint(
   category: string | null,
   tagVoteShares: Record<string, number>, // slug -> share of the place's voters (0..1)
+  curatedAxes?: TasteAxes | null,
 ): TasteAxes {
-  const prior = (category && CATEGORY_PRIORS[category]) || {};
+  const prior = curatedAxes ?? ((category && CATEGORY_PRIORS[category]) || {});
   const out: TasteAxes = { ...ZERO_AXES, ...prior };
   for (const [slug, share] of Object.entries(tagVoteShares)) {
     const tag = ALL_TASTE_TAGS.find((t) => t.slug === slug);
@@ -282,6 +291,16 @@ export type ReactionForVector = {
  * User taste vector: recency-weighted mean of loved-place axes, with skips
  * pulling away at half strength and 'fine' contributing nothing. Onboarding
  * priors fold in as a pseudo-observation of weight `priorWeight`.
+ *
+ * PER-AXIS weighting (migration 65 fix): a place that is exactly neutral
+ * (0) on a given axis is excluded from THAT AXIS's denominator — it carries
+ * no information about that axis, so it must not dilute it. Before this
+ * fix, one shared scalar denominator meant every zero-signal love (the
+ * common case while most of the seed corpus carried no per-place
+ * fingerprint) diluted ALL five axes equally, including axes the place said
+ * nothing about — a strong ±0.5 quiz prior crossed below tasteReadout's
+ * ±0.25 threshold after only ~3 such loves. Mirrored in SQL
+ * user_taste_axes() (migration 65) — keep both in sync.
  */
 export function userTasteAxes(
   reactions: ReactionForVector[],
@@ -289,21 +308,30 @@ export function userTasteAxes(
 ): TasteAxes {
   const { reactionHalfLifeDays, skipWeight, priorWeight } = TASTE_TUNING;
   const sum: TasteAxes = { ...ZERO_AXES };
-  let totalWeight = 0;
+  const axisWeight: TasteAxes = { ...ZERO_AXES };
   for (const r of reactions) {
     const s = r.sentiment === 'loved' ? 1 : r.sentiment === 'skip' ? skipWeight : 0;
     if (s === 0) continue;
     const w = s * 2 ** (-r.ageDays / reactionHalfLifeDays);
-    for (const axis of TASTE_AXES) sum[axis] += w * r.placeAxes[axis];
-    totalWeight += Math.abs(w);
+    for (const axis of TASTE_AXES) {
+      const placeVal = r.placeAxes[axis];
+      if (placeVal === 0) continue;
+      sum[axis] += w * placeVal;
+      axisWeight[axis] += Math.abs(w);
+    }
   }
   if (onboardingPriors) {
-    for (const axis of TASTE_AXES) sum[axis] += priorWeight * (onboardingPriors[axis] ?? 0);
-    totalWeight += priorWeight;
+    for (const axis of TASTE_AXES) {
+      const p = onboardingPriors[axis] ?? 0;
+      if (p === 0) continue;
+      sum[axis] += priorWeight * p;
+      axisWeight[axis] += priorWeight;
+    }
   }
-  if (totalWeight === 0) return { ...ZERO_AXES };
   const out: TasteAxes = { ...ZERO_AXES };
-  for (const axis of TASTE_AXES) out[axis] = clampAxis(sum[axis] / totalWeight);
+  for (const axis of TASTE_AXES) {
+    out[axis] = axisWeight[axis] === 0 ? 0 : clampAxis(sum[axis] / axisWeight[axis]);
+  }
   return out;
 }
 
@@ -373,20 +401,42 @@ export function placeScore(lovers: LoverForScore[]): number {
   return (top ?? 0) + supportLambda * Math.log(1 + rest.reduce((s, w) => s + w, 0));
 }
 
-/** Human-readable taste line for a profile ("substance-first · adventurous · splurges"). */
+const LEAN_LABELS: Record<TasteAxis, readonly [string, string]> = {
+  substance_scene: ['leans substance over scene', 'leans scene over substance'],
+  mellow_lively: ['leans mellow', 'leans high-energy'],
+  adventurous_trusty: ['leans toward the new', 'leans toward the proven'],
+  refined_unfussy: ['leans polished', 'leans unfussy'],
+  value_splurge: ['leans value', 'leans splurge'],
+};
+
+/**
+ * Human-readable taste line for a profile ("substance-first · adventurous ·
+ * splurges"). Never silent once ANY real signal exists (migration 65 fix):
+ * if no axis crosses the confident ±0.25 threshold but at least one axis is
+ * non-zero (weak-but-real signal — the common case for a few loves, or once
+ * a strong prior has been softened by real logging), name the 1-2 axes with
+ * the largest |value| as a relative lean instead of returning nothing. Only
+ * a genuinely all-zero vector (no priors, no loves yet) returns [].
+ */
 export function tasteReadout(axes: TasteAxes): string[] {
-  const out: string[] = [];
-  const say = (axis: TasteAxis, neg: string, pos: string, threshold = 0.25) => {
+  const CONFIDENT_THRESHOLD = 0.25;
+  const confident: string[] = [];
+  const say = (axis: TasteAxis, neg: string, pos: string) => {
     const v = axes[axis];
-    if (v <= -threshold) out.push(neg);
-    else if (v >= threshold) out.push(pos);
+    if (v <= -CONFIDENT_THRESHOLD) confident.push(neg);
+    else if (v >= CONFIDENT_THRESHOLD) confident.push(pos);
   };
   say('substance_scene', 'substance-first', 'scene-first');
   say('mellow_lively', 'keeps it mellow', 'high-energy');
   say('adventurous_trusty', 'chases the new', 'sticks to the proven');
   say('refined_unfussy', 'likes it polished', 'happily unfussy');
   say('value_splurge', 'value-hunter', 'splurges on the right thing');
-  return out;
+  if (confident.length > 0) return confident;
+
+  const ranked = TASTE_AXES.filter((axis) => axes[axis] !== 0).sort(
+    (a, b) => Math.abs(axes[b]) - Math.abs(axes[a]),
+  );
+  return ranked.slice(0, 2).map((axis) => LEAN_LABELS[axis][axes[axis] < 0 ? 0 : 1]);
 }
 
 // ---------------------------------------------------------------------------

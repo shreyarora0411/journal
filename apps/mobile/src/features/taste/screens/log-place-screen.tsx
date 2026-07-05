@@ -11,7 +11,7 @@ import {
   type Sentiment,
   inferZone,
 } from '@journal/shared';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLogPlace } from '../api/use-log-place';
@@ -44,6 +44,10 @@ export function LogPlaceScreen() {
   const router = useRouter();
   const toast = useToast();
   const logPlace = useLogPlace();
+  // Arriving from a list's "+ Write a vouch" (list-detail-vouches-screen)
+  // carries list context so the new vouch lands back in that list instead
+  // of silently dropping the intent the user came here with.
+  const { listId, listTitle } = useLocalSearchParams<{ listId?: string; listTitle?: string }>();
 
   const [place, setPlace] = useState<PlaceDetails | null>(null);
   const [sentiment, setSentiment] = useState<Sentiment | null>(null);
@@ -91,6 +95,7 @@ export function LogPlaceScreen() {
         occasion,
         hub,
         zone,
+        listId,
       });
       if (!result.noteSaved) {
         // Keep the whole form: the rating saved (idempotent on re-save),
@@ -101,7 +106,25 @@ export function LogPlaceScreen() {
         });
         return;
       }
-      toast.show({ message: `${place.name} is on your map.`, variant: 'success' });
+      if (listId && !result.addedToList) {
+        // A list holds vouches, not bare reactions — no note means nothing
+        // was written to attach. Say so instead of silently dropping the
+        // list context the user arrived with.
+        toast.show({
+          message: note.trim()
+            ? `Saved — but couldn't add it to ${listTitle || 'your list'}. Try "+ Add existing" from the list.`
+            : `Saved to your map. Add a word or two next time to include it in ${listTitle || 'your list'}.`,
+          variant: note.trim() ? 'error' : 'success',
+        });
+        reset();
+        return;
+      }
+      toast.show({
+        message: listId
+          ? `${place.name} is on your map — and in ${listTitle || 'your list'}.`
+          : `${place.name} is on your map.`,
+        variant: 'success',
+      });
       reset();
     } catch (err) {
       log.error('log place failed', err);
@@ -117,6 +140,14 @@ export function LogPlaceScreen() {
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={styles.headline}>Log a place.</Text>
         <Text style={styles.sub}>Your map, your taste — ten seconds.</Text>
+        {listId ? (
+          <View style={styles.listBanner}>
+            <Text style={styles.listBannerText}>
+              Adding to <Text style={styles.listBannerTitle}>{listTitle || 'your list'}</Text> — a
+              note is what makes it count.
+            </Text>
+          </View>
+        ) : null}
 
         {/* 1. The place */}
         <Text style={styles.eyebrow}>WHERE</Text>
@@ -303,6 +334,17 @@ export function LogPlaceScreen() {
 const styles = StyleSheet.create({
   headline: { fontFamily: SERIF, fontSize: 30, color: INK, letterSpacing: -0.6, paddingTop: 8 },
   sub: { fontFamily: SANS, fontSize: 14, color: MUTE, marginTop: 6 },
+  listBanner: {
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: TINT,
+    borderWidth: 1,
+    borderColor: HAIR,
+  },
+  listBannerText: { fontFamily: SANS, fontSize: 13, color: MUTE, lineHeight: 19 },
+  listBannerTitle: { fontFamily: SANS_SEMI, color: INK },
   eyebrow: {
     fontFamily: SANS_BOLD,
     fontSize: 10,

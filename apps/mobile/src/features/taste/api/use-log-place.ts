@@ -30,6 +30,10 @@ export type LogPlaceVars = {
   /** Optional curated hub/zone (from the hub chips when known). */
   hub?: string | null;
   zone?: string | null;
+  /** Set when arriving from a list's "+ Write a vouch" (list-detail-vouches-
+   *  screen passes listId as a route param) — the new vouch gets linked into
+   *  that list, same M2M write the "+ Add existing" picker performs. */
+  listId?: string | null;
 };
 
 export type LogPlaceResult = {
@@ -37,6 +41,11 @@ export type LogPlaceResult = {
   /** False when the voiced note failed to persist — the screen must NOT
    *  claim full success and must keep the typed note recoverable. */
   noteSaved: boolean;
+  /** True only when a listId was given AND the new vouch was actually
+   *  linked into it. A list needs a vouch to hold — no note means nothing
+   *  was written to attach, so this is honestly false rather than silently
+   *  dropping the list context the user arrived with. */
+  addedToList: boolean;
 };
 
 /**
@@ -92,20 +101,36 @@ export const useLogPlace = () => {
       // Best-effort extras — a failed note/tag never fails the log, but the
       // note outcome is REPORTED so the screen never lies about it.
       let noteSaved = true;
+      let addedToList = false;
       const note = vars.note?.trim();
       if (note) {
-        const { error: vouchErr } = await supabase.from('vouches').insert({
-          user_id: userId,
-          text: note.slice(0, 500),
-          vouch_type: categoryToVouchType(googleTypesToCategory(vars.place.types)),
-          destination_text: vars.place.locality ?? vars.place.name,
-          place_id: pid,
-          source: 'user_created',
-          visibility: 'friends_of_friends',
-        });
+        const { data: vouchRow, error: vouchErr } = await supabase
+          .from('vouches')
+          .insert({
+            user_id: userId,
+            text: note.slice(0, 500),
+            vouch_type: categoryToVouchType(googleTypesToCategory(vars.place.types)),
+            destination_text: vars.place.locality ?? vars.place.name,
+            place_id: pid,
+            source: 'user_created',
+            visibility: 'friends_of_friends',
+          })
+          .select('id')
+          .single();
         if (vouchErr) {
           noteSaved = false;
           log.warn('log-place note skipped', { error: vouchErr.message });
+        } else if (vars.listId) {
+          // Same M2M write the "+ Add existing" picker performs — the list
+          // owner's write policy already covers it.
+          const { error: listErr } = await supabase
+            .from('vouch_list_items')
+            .upsert(
+              { vouch_id: vouchRow.id, list_id: vars.listId, added_by_user_id: userId },
+              { onConflict: 'vouch_id,list_id', ignoreDuplicates: true },
+            );
+          if (listErr) log.warn('log-place list-attach skipped', { error: listErr.message });
+          else addedToList = true;
         }
       }
       const votes = [...(vars.tags ?? []).slice(0, 3), ...(vars.occasion ? [vars.occasion] : [])];
@@ -131,12 +156,17 @@ export const useLogPlace = () => {
         sentiment: vars.sentiment,
         tags: votes.length,
         occasion: vars.occasion ?? 'none',
+        list: vars.listId ? 'yes' : 'no',
       });
-      return { placeId: pid, noteSaved };
+      return { placeId: pid, noteSaved, addedToList };
     },
-    onSuccess: () => {
+    onSuccess: (_result, vars) => {
       qc.invalidateQueries({ queryKey: ['taste'] });
       qc.invalidateQueries({ queryKey: ['vouches'] });
+      if (vars.listId) {
+        qc.invalidateQueries({ queryKey: ['lists', 'vouches', vars.listId] });
+        qc.invalidateQueries({ queryKey: ['lists'] });
+      }
     },
   });
 };

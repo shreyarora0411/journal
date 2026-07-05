@@ -8,9 +8,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  * Welcome (#01 of the lore redesign — pilot variant).
  *
  * The "what the app actually is" preview. Three sample friend cards
- * stacked editorial-style, then a one-line headline + 60-second CTA.
+ * stacked editorial-style, then a one-line headline + CTA.
  * Anonymous-auth means Sign-in and Get-started both land in /login —
  * we fire distinct analytics events to size returning-user intent.
+ *
+ * Card `category` is a vibe/occasion tag (e.g. "DATE NIGHT"), never a
+ * match percentage — there is no per-place taste fingerprint for real
+ * users yet, so a fabricated overlap score would be the first thing
+ * that breaks trust. The CTA makes no time promise either: the real
+ * flow is login, then name/city, then a taste quiz, then picking a
+ * few places — closer to a few minutes than a few seconds.
  */
 
 const INK = '#1A1410';
@@ -28,11 +35,15 @@ type SampleCard = {
   avatarInitial: string;
 };
 
+// Category is an honest vibe/occasion tag, not a match score — the
+// taste-matching engine has no per-place fingerprints for real users yet,
+// so a fabricated "% overlap" here would be the first thing that breaks
+// trust. Keep this specific, but never a number the product can't back up.
 const SAMPLE_CARDS: ReadonlyArray<SampleCard> = [
   {
     name: 'Arjun',
     city: 'THE KITCHENS',
-    category: '86% OVERLAP',
+    category: 'WEEKNIGHT PICK',
     quote: '"Easy Tiger, weeknight. Sit at the counter, order the raw bar, thank me later."',
     avatarBg: '#D8C3A5',
     avatarInitial: 'A',
@@ -40,7 +51,7 @@ const SAMPLE_CARDS: ReadonlyArray<SampleCard> = [
   {
     name: 'Mira',
     city: 'GCR',
-    category: '79% OVERLAP',
+    category: 'DATE NIGHT',
     quote: '"Comorin for the 6pm drink that turns into dinner. Get the kokum fizz."',
     avatarBg: '#A8C3D4',
     avatarInitial: 'M',
@@ -48,7 +59,7 @@ const SAMPLE_CARDS: ReadonlyArray<SampleCard> = [
   {
     name: 'Tara',
     city: '32ND AVENUE',
-    category: '74% OVERLAP',
+    category: 'LATE NIGHT',
     quote: '"Skip the queue places. The quiet listening bar upstairs is the actual move."',
     avatarBg: '#E2A29A',
     avatarInitial: 'T',
@@ -144,7 +155,7 @@ export function WelcomeScreen() {
           onPress={onStart}
           style={styles.cta}
         >
-          <Text style={styles.ctaLabel}>Get started — 60 seconds</Text>
+          <Text style={styles.ctaLabel}>Get started</Text>
         </Pressable>
       </View>
     </SafeAreaView>

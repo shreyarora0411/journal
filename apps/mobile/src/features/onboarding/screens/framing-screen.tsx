@@ -18,6 +18,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OnboardingStepHeader } from '../components/OnboardingStepHeader';
 
 /**
+ * Gurgaon is the single-city launch beachhead — most users typing into
+ * "where do you live?" are about to type this exact word. The chip below
+ * is a one-tap shortcut in front of the PlacePicker/free-text path, not a
+ * replacement for it: anyone elsewhere still searches or types free-text
+ * as before.
+ */
+const GURGAON_QUICK_PICK: PlaceDetails = {
+  google_place_id: 'gurgaon-quick-pick',
+  name: 'Gurgaon',
+  country: 'India',
+  country_iso: 'IN',
+  region: 'Haryana',
+  locality: 'Gurgaon',
+  lat: 28.4595,
+  lng: 77.0266,
+  types: ['locality'],
+};
+
+/**
  * Pilot onboarding step 1 of 2 — name + home city.
  *
  * Two fields: the display name your friends will see, and the city you
@@ -38,6 +57,12 @@ export function FramingScreen() {
   useEffect(() => {
     log.event('onboarding.screen_entered', { screen: 'framing' });
   }, []);
+
+  const onPickGurgaon = () => {
+    setHomeCity(GURGAON_QUICK_PICK.name);
+    setHomeCityPicked(GURGAON_QUICK_PICK);
+    setHomePickerOpen(false);
+  };
 
   const onContinue = async () => {
     const parsed = DisplayNameSchema.safeParse(name);
@@ -139,21 +164,53 @@ export function FramingScreen() {
                 WHERE DO YOU LIVE?
               </Text>
               {homePickerOpen || homeCity.length === 0 ? (
-                <PlacePicker
-                  mode="city"
-                  placeholder="Mumbai, Bangalore, Delhi…"
-                  initialQuery={homeCity}
-                  onPick={(details) => {
-                    setHomeCity(details.name);
-                    setHomeCityPicked(details);
-                    setHomePickerOpen(false);
-                  }}
-                  onFreeText={(typed) => {
-                    setHomeCity(typed);
-                    setHomeCityPicked(null);
-                    setHomePickerOpen(false);
-                  }}
-                />
+                <>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Gurgaon"
+                      onPress={onPickGurgaon}
+                      style={{
+                        alignSelf: 'flex-start',
+                        backgroundColor: '#FF4D2E',
+                        borderRadius: 999,
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                      }}
+                    >
+                      <Text
+                        style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: '#FFFFFF' }}
+                      >
+                        Gurgaon
+                      </Text>
+                    </Pressable>
+                    <Text variant="meta" style={{ flexShrink: 1 }}>
+                      Tap if that's home — or search any city below.
+                    </Text>
+                  </View>
+                  <PlacePicker
+                    mode="city"
+                    placeholder="Mumbai, Bangalore, Delhi…"
+                    initialQuery={homeCity}
+                    onPick={(details) => {
+                      setHomeCity(details.name);
+                      setHomeCityPicked(details);
+                      setHomePickerOpen(false);
+                    }}
+                    onFreeText={(typed) => {
+                      setHomeCity(typed);
+                      setHomeCityPicked(null);
+                      setHomePickerOpen(false);
+                    }}
+                  />
+                </>
               ) : (
                 <Pressable
                   accessibilityRole="button"

@@ -74,6 +74,30 @@ describe('FramingScreen', () => {
     expect(screen.getByLabelText('stub-pick-mumbai')).toBeTruthy();
   });
 
+  it('renders a one-tap Gurgaon chip in front of the picker', () => {
+    renderWithProviders(<FramingScreen />);
+    expect(screen.getByLabelText('Gurgaon')).toBeTruthy();
+  });
+
+  it('tapping the Gurgaon chip fills the home city with no typing, and Continue saves it', async () => {
+    mockUpdateMutateAsync.mockResolvedValue({});
+    renderWithProviders(<FramingScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText('Shrey Arora'), 'Shrey');
+    fireEvent.press(screen.getByLabelText('Gurgaon'));
+    fireEvent.press(screen.getByText('Continue'));
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          display_name: 'Shrey',
+          home_city: 'Gurgaon',
+          home_lat: 28.4595,
+          home_lng: 77.0266,
+        }),
+      );
+    });
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/taste-setup');
+  });
+
   it('blocks Continue when the name is empty', () => {
     renderWithProviders(<FramingScreen />);
     fireEvent.press(screen.getByText('Continue'));

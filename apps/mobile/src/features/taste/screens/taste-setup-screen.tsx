@@ -1,4 +1,5 @@
 import { Page, PlacePicker, StatusSpace } from '@/components';
+import { useUpdateProfile } from '@/features/auth';
 import { useToast } from '@/hooks/use-toast';
 import type { PlaceDetails } from '@/lib/google-places';
 import { log } from '@/lib/log';
@@ -63,6 +64,7 @@ export function TasteSetupScreen() {
   const toast = useToast();
   const savePriors = useSavePriors();
   const logPlace = useLogPlace();
+  const updateProfile = useUpdateProfile();
   const priorsQ = useMyPriors();
   const placesQ = useMyPlaces();
 
@@ -116,7 +118,7 @@ export function TasteSetupScreen() {
     }
   };
 
-  const onFinish = () => {
+  const onFinish = async () => {
     toast.show({
       message:
         picked.length > 0
@@ -124,6 +126,16 @@ export function TasteSetupScreen() {
           : 'Your taste setup is in.',
       variant: 'success',
     });
+    // Taste-setup is now the last gated step in the launch flow (circle/
+    // contacts moved to a later re-entry point) — stamp completion here so
+    // onboardingNextRoute() sends returning users straight to the map
+    // instead of looping them back through the quiz. Never block the
+    // navigate on this administrative write.
+    try {
+      await updateProfile.mutateAsync({ onboarding_completed: true });
+    } catch (err) {
+      log.warn('onboarding completion stamp failed', { error: String(err) });
+    }
     router.replace('/(tabs)/book' as never);
   };
 

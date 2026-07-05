@@ -91,7 +91,7 @@ describe('FramingScreen', () => {
     expect(mockUpdateMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('picking a city forwards name + lat/lng and routes to /circle', async () => {
+  it('picking a city forwards name + lat/lng and routes to taste-setup', async () => {
     mockUpdateMutateAsync.mockResolvedValue({});
     renderWithProviders(<FramingScreen />);
     fireEvent.changeText(screen.getByPlaceholderText('Shrey Arora'), 'Shrey');
@@ -107,7 +107,7 @@ describe('FramingScreen', () => {
         }),
       );
     });
-    expect(mockReplace).toHaveBeenCalledWith('/(auth)/circle');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/taste-setup');
   });
 
   it('free-text fallback saves the typed city with no lat/lng', async () => {

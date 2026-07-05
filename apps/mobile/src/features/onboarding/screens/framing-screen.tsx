@@ -65,7 +65,7 @@ export function FramingScreen() {
         home_country_code: undefined,
       });
       log.event('onboarding.screen_completed', { screen: 'framing' });
-      router.replace('/(auth)/circle');
+      router.replace('/(tabs)/taste-setup' as never);
     } catch (err) {
       const reason =
         err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'

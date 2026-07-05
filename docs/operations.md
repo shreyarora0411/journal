@@ -36,11 +36,13 @@ Two routes:
 
 ## TestFlight (iOS)
 
+See [testflight-setup.md](./testflight-setup.md) for the precise, copy-pasteable version of this section — it is newer and authoritative on build/distribution details.
+
 Prerequisites: Apple Developer Program membership ($99/yr), App Store Connect access, EAS account (free at expo.dev).
 
 1. **One-time:**
-   - `cd apps/mobile && npx eas init` — creates an EAS project, fills `extra.eas.projectId` in `app.json`.
-   - In Apple Developer portal → Identifiers, register the bundle ID `com.shreyarora.journal`.
+   - `cd apps/mobile && npx eas build:configure` — creates (or links) an EAS project, fills `extra.eas.projectId` in `app.json`.
+   - In Apple Developer portal → Identifiers, register the bundle ID `com.shreyarora.lore` (EAS can also auto-create it during the first build/submit). Do not change this bundle ID — deep links (`lore://`) and Supabase auth redirects depend on it.
    - In App Store Connect → Apps → New App, create the listing. Note the `ascAppId`.
    - Update `apps/mobile/eas.json` submit.production.ios with `appleId`, `ascAppId`, `appleTeamId`.
 2. **Build:**
@@ -53,16 +55,16 @@ Prerequisites: Apple Developer Program membership ($99/yr), App Store Connect ac
    ```bash
    eas submit --profile production --platform ios --latest
    ```
-4. **TestFlight invites:** App Store Connect → Apps → Journal → TestFlight → External Testers → add the 20 pilot user emails. They receive a TestFlight invite; install via the TestFlight app on iOS.
+4. **TestFlight invites:** App Store Connect → Apps → Vouch → TestFlight → External Testers → create a group, add the 20 pilot user emails, and submit for Beta App Review (first build only; usually resolves within 24 hours). They receive a TestFlight invite; install via the TestFlight app on iOS.
 
-Each subsequent push to TestFlight: bump version (handled by `autoIncrement: true` in eas.json), build, submit.
+Each subsequent push to TestFlight: bump nothing manually (the build number is managed remotely by EAS via `autoIncrement: true` and `appVersionSource: "remote"` in eas.json), build, submit.
 
 ## Play Internal (Android)
 
 Prerequisites: Google Play Console account ($25 one-time), service account JSON for `eas submit`.
 
 1. **One-time:**
-   - Play Console → Create App, with package name `com.shreyarora.journal`.
+   - Play Console → Create App, with package name `com.shreyarora.lore`.
    - Generate a service account in Google Cloud, grant it the Service Agent role on the Play Console.
    - Download the JSON key and store as `apps/mobile/service-account.json` (gitignored).
 2. **Build:**

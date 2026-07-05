@@ -1,3 +1,6 @@
-import { AskThreadScreen } from '@/features/ask';
+import { Redirect } from 'expo-router';
 
-export default AskThreadScreen;
+// Legacy trip-era route — dead-ends into the Book tab post taste-pivot.
+export default function LegacyRedirect() {
+  return <Redirect href="/(tabs)/book" />;
+}

@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 const CORAL = '#FF4D2E';
-const MUTE = '#8A8178';
+const MUTE = '#7A716A';
 const HAIR = '#E7E1D7';
-const CARD = '#FFFDFA';
+const CARD = '#FFFFFF';
 
 const SANS = 'HankenGrotesk_400Regular';
 const SANS_SEMI = 'HankenGrotesk_600SemiBold';

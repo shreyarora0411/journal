@@ -31,9 +31,9 @@ import { TasteShareCard } from '../components/taste-share-card';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
-const MUTE = '#8A8178';
+const MUTE = '#7A716A';
 const HAIR = '#E7E1D7';
-const CARD = '#FFFDFA';
+const CARD = '#FFFFFF';
 const TINT = '#FAF6F0';
 
 const SERIF = 'Fraunces_500';

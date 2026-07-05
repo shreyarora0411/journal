@@ -12,9 +12,9 @@ import { LoadError } from '../components/LoadError';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
-const MUTE = '#8A8178';
+const MUTE = '#7A716A';
 const HAIR = '#E7E1D7';
-const CARD = '#FFFDFA';
+const CARD = '#FFFFFF';
 
 const SERIF = 'Fraunces_500';
 const SANS = 'HankenGrotesk_400Regular';
@@ -56,8 +56,8 @@ export function PeopleScreen() {
       <StatusSpace />
       <Text style={styles.headline}>Borrow better taste.</Text>
       <Text style={styles.sub}>
-        This isn't about meeting anyone — these are maps to follow. When someone's taste overlaps
-        yours, their loved places become your answers.
+        These are maps to follow. When someone's taste overlaps yours, their loved places become
+        your answers.
       </Text>
 
       {twinsQ.isLoading || placesQ.isLoading ? (

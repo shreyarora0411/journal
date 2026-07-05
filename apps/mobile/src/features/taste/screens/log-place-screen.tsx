@@ -18,7 +18,7 @@ import { useLogPlace } from '../api/use-log-place';
 
 const CORAL = '#FF4D2E';
 const INK = '#1B1714';
-const MUTE = '#8A8178';
+const MUTE = '#7A716A';
 const HAIR = '#E7E1D7';
 const TINT = '#FAF6F0';
 

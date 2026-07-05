@@ -146,6 +146,8 @@ export function PlacePicker({
         lat: canonical.lat,
         lng: canonical.lng,
         types: [],
+        hub: canonical.hub,
+        zone: canonical.zone,
       });
       return;
     }

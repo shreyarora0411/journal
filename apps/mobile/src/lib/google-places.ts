@@ -43,6 +43,12 @@ export type PlaceDetails = {
   lat: number | null;
   lng: number | null;
   types: string[];
+  /** Set only for canonical_places hits (the founder-seeded corpus) — the
+   *  hub/zone PlacePicker already resolved server-side. Raw Google Places
+   *  hits leave these undefined; other callers (taste-setup, framing) never
+   *  set them and keep working unmodified. */
+  hub?: string | null;
+  zone?: string | null;
 };
 
 export const getGooglePlacesKey = (): string | null => {

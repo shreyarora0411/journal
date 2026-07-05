@@ -55,6 +55,11 @@ export function LogPlaceScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [occasion, setOccasion] = useState<string | null>(null);
   const [hub, setHub] = useState<string | null>(null);
+  // Collapsed by default (design critique: three walls of chips at once).
+  // A recognized hub still gets silently auto-set below even while this
+  // stays collapsed — the user only needs to open it to override or add
+  // tags/occasion.
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     log.event('taste.log_entered');
@@ -76,6 +81,16 @@ export function LogPlaceScreen() {
     setTags([]);
     setOccasion(null);
     setHub(null);
+    setDetailsOpen(false);
+  };
+
+  // A canonical hit already carries its hub from the server (PlacePicker);
+  // trust that instead of making the user re-tap a pill for a place the
+  // system already recognizes. Raw Google Places hits (e.g. travelling)
+  // have no hub — leave the existing manual, optional selection alone.
+  const onPickPlace = (details: PlaceDetails) => {
+    setPlace(details);
+    if (details.hub) setHub(details.hub);
   };
 
   const onSave = async () => {
@@ -171,7 +186,7 @@ export function LogPlaceScreen() {
             </Pressable>
           </View>
         ) : (
-          <PlacePicker mode="broad" placeholder="Search the place…" onPick={setPlace} />
+          <PlacePicker mode="broad" placeholder="Search the place…" onPick={onPickPlace} />
         )}
 
         {/* 2. The one-tap sentiment (required, private) */}
@@ -220,84 +235,103 @@ export function LogPlaceScreen() {
               <Text style={styles.noteCount}>{500 - note.length} characters left</Text>
             ) : null}
 
-            {/* 4. Tags (optional, ≤3) */}
-            <Text style={styles.eyebrow}>WHAT KIND OF PLACE? (UP TO 3)</Text>
-            <View style={styles.tagWrap}>
-              {FORMAT_TAGS.map((t) => {
-                const on = tags.includes(t.slug);
-                return (
-                  <Pressable
-                    key={t.slug}
-                    accessibilityRole="button"
-                    accessibilityLabel={t.label}
-                    accessibilityState={{ selected: on }}
-                    onPress={() => toggleTag(t.slug)}
-                    style={[styles.tagChip, on && styles.tagChipOn]}
-                  >
-                    <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{t.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {/* 4. Tags/occasion/hub — collapsed by default (design critique:
+                three walls of identical chips at once). A recognized hub is
+                already silently set via onPickPlace; opening this is only
+                for overriding it or adding tags/occasion. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={detailsOpen ? 'Hide detail' : 'Add detail'}
+              accessibilityState={{ expanded: detailsOpen }}
+              onPress={() => setDetailsOpen((v) => !v)}
+              style={styles.disclosureRow}
+            >
+              <Text style={styles.disclosureLabel}>Add detail</Text>
+              <Text style={styles.disclosureChevron}>{detailsOpen ? '▴' : '▾'}</Text>
+            </Pressable>
 
-            {/* 4b. Occasion (optional, single) — Go Out's occasion filter
-                matches on these votes; without them it returns nothing. */}
-            <Text style={styles.eyebrow}>WHEN'S IT FOR? (OPTIONAL)</Text>
-            <View style={styles.tagWrap}>
-              {OCCASION_TAGS.map((o) => {
-                const on = occasion === o.slug;
-                return (
-                  <Pressable
-                    key={o.slug}
-                    accessibilityRole="button"
-                    accessibilityLabel={o.label}
-                    accessibilityState={{ selected: on }}
-                    onPress={() => setOccasion(on ? null : o.slug)}
-                    style={[styles.tagChip, on && styles.tagChipOn]}
-                  >
-                    <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{o.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {detailsOpen ? (
+              <>
+                {/* 4a. Tags (optional, ≤3) */}
+                <Text style={styles.eyebrow}>WHAT KIND OF PLACE? (UP TO 3)</Text>
+                <View style={styles.tagWrap}>
+                  {FORMAT_TAGS.map((t) => {
+                    const on = tags.includes(t.slug);
+                    return (
+                      <Pressable
+                        key={t.slug}
+                        accessibilityRole="button"
+                        accessibilityLabel={t.label}
+                        accessibilityState={{ selected: on }}
+                        onPress={() => toggleTag(t.slug)}
+                        style={[styles.tagChip, on && styles.tagChipOn]}
+                      >
+                        <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{t.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
 
-            {/* 5. Hub (optional — both zones; the hub decides the zone) */}
-            <Text style={styles.eyebrow}>HUB (OPTIONAL)</Text>
-            <View style={styles.tagWrap}>
-              {GURGAON_HUBS.map((h) => {
-                const on = hub === h.slug;
-                return (
-                  <Pressable
-                    key={h.slug}
-                    accessibilityRole="button"
-                    accessibilityLabel={h.label}
-                    accessibilityState={{ selected: on }}
-                    onPress={() => setHub(on ? null : h.slug)}
-                    style={[styles.tagChip, on && styles.tagChipOn]}
-                  >
-                    <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{h.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={styles.zoneSub}>DELHI</Text>
-            <View style={styles.tagWrap}>
-              {DELHI_HUBS.map((h) => {
-                const on = hub === h.slug;
-                return (
-                  <Pressable
-                    key={h.slug}
-                    accessibilityRole="button"
-                    accessibilityLabel={h.label}
-                    accessibilityState={{ selected: on }}
-                    onPress={() => setHub(on ? null : h.slug)}
-                    style={[styles.tagChip, on && styles.tagChipOn]}
-                  >
-                    <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{h.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+                {/* 4b. Occasion (optional, single) — Go Out's occasion filter
+                    matches on these votes; without them it returns nothing. */}
+                <Text style={styles.eyebrow}>WHEN'S IT FOR? (OPTIONAL)</Text>
+                <View style={styles.tagWrap}>
+                  {OCCASION_TAGS.map((o) => {
+                    const on = occasion === o.slug;
+                    return (
+                      <Pressable
+                        key={o.slug}
+                        accessibilityRole="button"
+                        accessibilityLabel={o.label}
+                        accessibilityState={{ selected: on }}
+                        onPress={() => setOccasion(on ? null : o.slug)}
+                        style={[styles.tagChip, on && styles.tagChipOn]}
+                      >
+                        <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{o.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/* 4c. Hub (optional — both zones; the hub decides the zone) */}
+                <Text style={styles.eyebrow}>HUB (OPTIONAL)</Text>
+                <View style={styles.tagWrap}>
+                  {GURGAON_HUBS.map((h) => {
+                    const on = hub === h.slug;
+                    return (
+                      <Pressable
+                        key={h.slug}
+                        accessibilityRole="button"
+                        accessibilityLabel={h.label}
+                        accessibilityState={{ selected: on }}
+                        onPress={() => setHub(on ? null : h.slug)}
+                        style={[styles.tagChip, on && styles.tagChipOn]}
+                      >
+                        <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{h.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text style={styles.zoneSub}>DELHI</Text>
+                <View style={styles.tagWrap}>
+                  {DELHI_HUBS.map((h) => {
+                    const on = hub === h.slug;
+                    return (
+                      <Pressable
+                        key={h.slug}
+                        accessibilityRole="button"
+                        accessibilityLabel={h.label}
+                        accessibilityState={{ selected: on }}
+                        onPress={() => setHub(on ? null : h.slug)}
+                        style={[styles.tagChip, on && styles.tagChipOn]}
+                      >
+                        <Text style={[styles.tagLabel, on && { color: '#FFFFFF' }]}>{h.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
 
             <Pressable
               accessibilityRole="button"
@@ -362,6 +396,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   noteCount: { fontFamily: SANS, fontSize: 11.5, color: MUTE, marginTop: 6 },
+  disclosureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 22,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderColor: HAIR,
+  },
+  disclosureLabel: { fontFamily: SANS_SEMI, fontSize: 13.5, color: INK },
+  disclosureChevron: { fontFamily: SANS_SEMI, fontSize: 13, color: MUTE },
   pickedRow: {
     flexDirection: 'row',
     alignItems: 'center',

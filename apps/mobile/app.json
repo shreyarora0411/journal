@@ -3,7 +3,7 @@
     "name": "Vouch",
     "slug": "lore",
     "scheme": "lore",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -14,7 +14,8 @@
     "android": {
       "package": "com.shreyarora.lore",
       "adaptiveIcon": {
-        "backgroundColor": "#FAF8F3"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FAF8F5"
       }
     },
     "web": {
@@ -40,6 +41,7 @@
       "eas": {
         "projectId": "TBD"
       }
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }

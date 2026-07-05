@@ -57,7 +57,7 @@ function AuthGate() {
   const router = useRouter();
   const profileQ = useProfile();
 
-  // Deep-link auto-follow: opening lore://follow?id=<userId> follows that user
+  // Deep-link auto-follow: opening vouch://follow?id=<userId> follows that user
   // once the viewer has a session. Captures both the cold-open URL
   // (getInitialURL) and warm-open URLs (addEventListener). If the link arrives
   // before a session exists it's stashed and replayed here when `session`

@@ -1,21 +1,21 @@
 import { INVITE_URL, buildFollowLink, buildPersonalInviteText } from './invite-link';
 
 describe('buildFollowLink', () => {
-  it('emits a lore://follow?id=<userId> scheme link while INVITE_URL is empty', () => {
+  it('emits a vouch://follow?id=<userId> scheme link while INVITE_URL is empty', () => {
     // Guard: this test encodes the current pre-launch state.
     expect(INVITE_URL).toBe('');
-    expect(buildFollowLink('user-42')).toBe('lore://follow?id=user-42');
+    expect(buildFollowLink('user-42')).toBe('vouch://follow?id=user-42');
   });
 
   it('URL-encodes the user id', () => {
-    expect(buildFollowLink('a b/c')).toBe('lore://follow?id=a%20b%2Fc');
+    expect(buildFollowLink('a b/c')).toBe('vouch://follow?id=a%20b%2Fc');
   });
 });
 
 describe('buildPersonalInviteText', () => {
   it('includes a follow link carrying the inviter id when signed in', () => {
     const text = buildPersonalInviteText('me-1');
-    expect(text).toContain('lore://follow?id=me-1');
+    expect(text).toContain('vouch://follow?id=me-1');
     expect(text).toContain('places i actually love');
   });
 

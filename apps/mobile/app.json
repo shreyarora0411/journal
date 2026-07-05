@@ -2,7 +2,7 @@
   "expo": {
     "name": "Vouch",
     "slug": "lore",
-    "scheme": "lore",
+    "scheme": "vouch",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",

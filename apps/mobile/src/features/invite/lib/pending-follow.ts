@@ -2,7 +2,7 @@ import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
 
 /**
- * Auto-follow plumbing for the `lore://follow?id=<userId>` deep link.
+ * Auto-follow plumbing for the `vouch://follow?id=<userId>` deep link.
  *
  * The link can arrive in two situations:
  *
@@ -40,10 +40,10 @@ export const consumePendingFollow = (): string | null => {
 };
 
 /**
- * Parse a `lore://follow?id=<userId>` URL and return the inviter id, or null
+ * Parse a `vouch://follow?id=<userId>` URL and return the inviter id, or null
  * if the URL isn't a follow link / has no usable id. Tolerant of the host
- * landing in either the host slot (`lore://follow?id=...`) or as the first
- * path segment (`lore:///follow?id=...`), and of an `https://…/follow?id=…`
+ * landing in either the host slot (`vouch://follow?id=...`) or as the first
+ * path segment (`vouch:///follow?id=...`), and of an `https://…/follow?id=…`
  * web form once a real INVITE_URL exists.
  */
 export const parseFollowUrl = (url: string | null | undefined): string | null => {

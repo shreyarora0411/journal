@@ -32,8 +32,11 @@ export const INVITE_URL: string = '';
 export const appendInviteLink = (text: string): string =>
   INVITE_URL ? `${text}\n\n${INVITE_URL}` : text;
 
-/** The app's deep-link scheme (matches app.json `scheme`). */
-const APP_SCHEME = 'lore';
+/** The app's deep-link scheme (matches app.json `scheme`). Renamed from
+ *  `lore` to `vouch` 2026-07-05, before any TestFlight build/install base
+ *  exists — a scheme rename after real links are in circulation breaks
+ *  existing QR codes and shared links, so this is the last safe moment. */
+const APP_SCHEME = 'vouch';
 
 /**
  * Build a personal follow link for the given user. Opening it on a device with
@@ -43,7 +46,7 @@ const APP_SCHEME = 'lore';
  *   - When a real INVITE_URL exists, we hang `?id=<userId>` off it, so the link
  *     doubles as a web install link (the store/universal-link page can forward
  *     the id into the app). Preserves any existing query string on INVITE_URL.
- *   - Until then, we emit the raw `lore://follow?id=<userId>` scheme link —
+ *   - Until then, we emit the raw `vouch://follow?id=<userId>` scheme link —
  *     usable by already-installed users and QR codes, just not fresh installs
  *     (see the cold-install limitation in pending-follow.ts).
  */

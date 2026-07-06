@@ -4,7 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 
-const INK = '#1A1410';
+const INK = '#1B1714';
 const MUTE = '#7A716A';
 const PAPER = '#FFFFFF';
 const CORAL = '#FF4D2E';
@@ -63,6 +63,14 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 
   const focusedKey = state.routes[state.index]?.key;
 
+  // The gated taste-setup step is hidden from the bar's own tab list
+  // (`href: null` in app/(tabs)/_layout.tsx) but the bar itself still
+  // renders on top of it. A stray tap there would navigate away and
+  // AuthGate bounces the user straight back, remounting taste-setup-screen
+  // and wiping in-progress quiz answers (only persisted on its own
+  // Continue tap). Render nothing while that route is focused.
+  if (state.routes[state.index]?.name === 'taste-setup') return null;
+
   return (
     <View
       pointerEvents="box-none"
@@ -106,9 +114,10 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           return (
             <Pressable
               key={route.key}
-              accessibilityRole="button"
+              accessibilityRole="tab"
               accessibilityLabel={accessibilityLabel}
               accessibilityState={{ selected: isFocused }}
+              hitSlop={{ top: 8, bottom: 8 }}
               onPress={onPress}
               style={styles.tab}
             >

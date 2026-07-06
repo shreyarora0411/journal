@@ -96,9 +96,13 @@ export function TasteShareCard({
               <Wordmark size="sm" />
 
               {readout.length > 0 ? (
-                <Text style={styles.readout}>{readout.join(' · ')}.</Text>
+                <Text style={styles.readout} maxFontSizeMultiplier={1.3}>
+                  {readout.join(' · ')}.
+                </Text>
               ) : (
-                <Text style={styles.readoutPrompt}>Still finding its shape.</Text>
+                <Text style={styles.readoutPrompt} maxFontSizeMultiplier={1.3}>
+                  Still finding its shape.
+                </Text>
               )}
 
               <View style={styles.axesBlock}>
@@ -116,8 +120,8 @@ export function TasteShareCard({
                 })}
               </View>
 
-              <Text style={styles.stats}>
-                {lovedCount} love{lovedCount === 1 ? '' : 's'} · {hubCount} hub
+              <Text style={styles.stats} maxFontSizeMultiplier={1.3}>
+                {lovedCount} love{lovedCount === 1 ? '' : 's'} · {hubCount} neighbourhood
                 {hubCount === 1 ? '' : 's'}
               </Text>
 
@@ -125,7 +129,7 @@ export function TasteShareCard({
                 <View style={styles.places}>
                   {shownPlaces.map((p) => (
                     <View key={p.name} style={styles.placeRow}>
-                      <Text style={styles.placeName} numberOfLines={1}>
+                      <Text style={styles.placeName} numberOfLines={1} maxFontSizeMultiplier={1.3}>
                         {p.name}
                       </Text>
                       {p.note ? (
@@ -134,6 +138,7 @@ export function TasteShareCard({
                           size="sm"
                           numberOfLines={2}
                           style={styles.placeNote}
+                          maxFontSizeMultiplier={1.3}
                         />
                       ) : null}
                     </View>
@@ -141,7 +146,7 @@ export function TasteShareCard({
                 </View>
               ) : null}
 
-              <Text style={styles.invite} numberOfLines={2}>
+              <Text style={styles.invite} numberOfLines={2} maxFontSizeMultiplier={1.3}>
                 {inviteText}
               </Text>
             </View>

@@ -64,6 +64,17 @@ type Props = {
    */
   onFreeText?: (name: string) => void;
   testID?: string;
+  /**
+   * Overrides for the search input's border/placeholder/font, so a
+   * taste-feature screen can match its own tokens instead of this
+   * component's hardcoded legacy/onboarding defaults below. Falls back to
+   * the existing hardcoded values when not passed — do not change those
+   * defaults, framing-screen.tsx and other legacy/onboarding call sites
+   * still depend on the current look.
+   */
+  borderColor?: string;
+  placeholderTextColor?: string;
+  inputFontFamily?: string;
 };
 
 /**
@@ -85,6 +96,9 @@ export function PlacePicker({
   onPick,
   onFreeText,
   testID,
+  borderColor,
+  placeholderTextColor,
+  inputFontFamily,
 }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [hits, setHits] = useState<PlaceAutocompleteHit[]>([]);
@@ -162,14 +176,14 @@ export function PlacePicker({
 
   return (
     <View testID={testID}>
-      <View style={styles.inputCard}>
+      <View style={[styles.inputCard, borderColor ? { borderColor } : null]}>
         <TextInput
           accessibilityLabel="Search place"
           placeholder={placeholder}
-          placeholderTextColor="#B7AEA5"
+          placeholderTextColor={placeholderTextColor ?? '#B7AEA5'}
           value={query}
           onChangeText={setQuery}
-          style={styles.input}
+          style={[styles.input, inputFontFamily ? { fontFamily: inputFontFamily } : null]}
           selectionColor={CORAL}
           autoCorrect={false}
           autoCapitalize="words"

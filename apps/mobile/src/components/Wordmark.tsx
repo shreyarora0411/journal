@@ -24,7 +24,7 @@ const CORAL = '#FF4D2E';
  * its own Text node so it can sit slightly offset (the brief calls it "the
  * brand dot", not punctuation).
  */
-export function Wordmark({ size = 'md', color = '#1A1410' }: Props) {
+export function Wordmark({ size = 'md', color = '#1B1714' }: Props) {
   const fontSize = SIZE_MAP[size];
   const baseStyle: TextStyle = {
     fontFamily: 'Fraunces_500',

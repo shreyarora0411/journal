@@ -38,7 +38,7 @@ describe('Wordmark', () => {
       const arr = Array.isArray(s) ? s : [s];
       return Object.assign({}, ...arr);
     };
-    expect(flatStyle().color).toBe('#1A1410');
+    expect(flatStyle().color).toBe('#1B1714');
     rerender(<Wordmark color="#FFFFFF" />);
     expect(flatStyle().color).toBe('#FFFFFF');
   });

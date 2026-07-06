@@ -61,7 +61,7 @@ describe('TasteShareCard', () => {
     renderWithProviders(<TasteShareCard visible {...baseProps} />);
     expect(screen.getByLabelText('Vouch.')).toBeTruthy();
     expect(screen.getByText('substance-first · high-energy.')).toBeTruthy();
-    expect(screen.getByText('19 loves · 5 hubs')).toBeTruthy();
+    expect(screen.getByText('19 loves · 5 neighbourhoods')).toBeTruthy();
     expect(screen.getByText('Anardana')).toBeTruthy();
     expect(screen.getByText('“the butter chicken is not optional”')).toBeTruthy();
     expect(screen.getByText('“best cold brew in Gurgaon”')).toBeTruthy();
@@ -71,11 +71,11 @@ describe('TasteShareCard', () => {
     expect(screen.getByText(baseProps.inviteText)).toBeTruthy();
   });
 
-  it('shows the singular love/hub count correctly', () => {
+  it('shows the singular love/neighbourhood count correctly', () => {
     renderWithProviders(
       <TasteShareCard visible {...baseProps} lovedCount={1} hubCount={1} places={[]} />,
     );
-    expect(screen.getByText('1 love · 1 hub')).toBeTruthy();
+    expect(screen.getByText('1 love · 1 neighbourhood')).toBeTruthy();
   });
 
   it('falls back to a neutral prompt when the readout is empty', () => {

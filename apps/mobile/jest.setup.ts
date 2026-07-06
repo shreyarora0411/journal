@@ -119,6 +119,7 @@ jest.mock('@/lib/supabase', () => {
         data: { subscription: { unsubscribe: jest.fn() } },
       }),
       signInAnonymously: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
+      getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
     },
   });
   return {

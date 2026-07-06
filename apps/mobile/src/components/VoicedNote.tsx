@@ -6,6 +6,7 @@ type Props = {
   color?: string;
   numberOfLines?: number;
   style?: TextStyle;
+  maxFontSizeMultiplier?: number;
 };
 
 const SIZE_MAP: Record<NonNullable<Props['size']>, { fontSize: number; lineHeight: number }> = {
@@ -22,11 +23,19 @@ const INK = '#1B1714';
  * Fraunces italic, never a UI label. Route every rendered `.note` through
  * here rather than hand-rolling quote marks + a local italic style.
  */
-export function VoicedNote({ note, size = 'md', color = INK, numberOfLines, style }: Props) {
+export function VoicedNote({
+  note,
+  size = 'md',
+  color = INK,
+  numberOfLines,
+  style,
+  maxFontSizeMultiplier,
+}: Props) {
   const { fontSize, lineHeight } = SIZE_MAP[size];
   return (
     <Text
       numberOfLines={numberOfLines}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[{ fontFamily: 'Fraunces_400Italic', fontSize, lineHeight, color }, style]}
     >
       {'“'}

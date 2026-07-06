@@ -19,14 +19,55 @@ export const MUTE = '#7A716A';
 export const HAIR = '#E7E1D7';
 export const CORAL = '#FF4D2E';
 export const CARD = '#FFFFFF';
-export const TINT = '#FAF6F0';
+
+/**
+ * Deepened one step from the near-collision with Page.tsx's default
+ * background (#FAF8F5) — the two were close enough that tinted chips/cards
+ * barely read as filled sitting on the page. #F5EEE2 stays in the same
+ * warm-paper family but is clearly distinct at a glance. Page.tsx itself is
+ * untouched — many non-taste screens depend on its current default.
+ */
+export const TINT = '#F5EEE2';
+
+/**
+ * "White text on a coral/accent fill" — named separately from CARD (white
+ * surface background) even though they share a hex value today, so a future
+ * change to one doesn't silently change the other's meaning.
+ */
+export const ON_ACCENT = '#FFFFFF';
+
+/**
+ * Small coral TEXT only (match percentages, tier lines, sub-19px links) —
+ * never for large fills. CORAL itself (#FF4D2E) is 3.1–3.3:1 on white/page,
+ * below WCAG AA (4.5:1) for text; it stays unchanged for the tab-bar disc
+ * and selected-chip fills with big white labels, which are fine at that
+ * value. #C43310 computes to ~5.5:1 on white / ~5.2:1 on page/TINT.
+ */
+export const CORAL_TEXT = '#C43310';
 
 /**
  * Second accent, deliberately distinct from CORAL (match/action): reserved
  * for "this moment is about YOUR identity" — the taste-readout eyebrow
  * only. Used in you-screen.tsx and your-map-screen.tsx; keep in sync.
+ * Darkened from #C8A24A (~2.3:1 on white/page at 10px — the worst ratio in
+ * the app, on the "YOUR TASTE" eyebrow) to #8A6B24 (~5.0:1 on white, ~4.7:1
+ * on page), clearing WCAG AA for small uppercase text.
  */
-export const GOLD = '#C8A24A';
+export const GOLD = '#8A6B24';
+
+/**
+ * One color per log sentiment, consolidated from what was previously
+ * scattered per-screen (log-place-screen.tsx's picker fills and
+ * your-map-screen.tsx's display chips disagreed on fine/skip). Mirrors
+ * log-place-screen's existing selected-fill scale — CORAL (strong
+ * positive) / MUTE (neutral) / INK (strong negative) — since that was
+ * already the more internally-consistent of the two.
+ */
+export const SENTIMENT = {
+  loved: CORAL,
+  fine: MUTE,
+  skip: INK,
+} as const;
 
 export const SERIF = 'Fraunces_500';
 export const SERIF_IT = 'Fraunces_400Italic';

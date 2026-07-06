@@ -71,7 +71,7 @@ export function Button({
           ) : (
             <Text
               style={{ color: fg, fontSize: sizing[size].fontSize }}
-              fontFamily="Inter_500Medium"
+              fontFamily="DMSans_600SemiBold"
             >
               {label}
             </Text>

@@ -65,7 +65,10 @@ export function Toast({ toast, onDone }: { toast: Visible; onDone: () => void })
       ]}
     >
       <View style={[styles.toast, { backgroundColor: colorFor(toast.variant ?? 'info', theme) }]}>
-        <Text style={{ color: theme.colors.paper }} fontFamily="Inter_400Regular" fontSize={15}>
+        {/* DM Sans matches the theme's `body` text variant — Toast is
+            cross-cutting and shows over both onboarding (DM Sans) and
+            taste (Hanken Grotesk) screens, so DM Sans is the safer default. */}
+        <Text style={{ color: theme.colors.paper }} fontFamily="DMSans_400Regular" fontSize={15}>
           {toast.message}
         </Text>
       </View>

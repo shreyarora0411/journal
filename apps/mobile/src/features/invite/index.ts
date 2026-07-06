@@ -5,6 +5,7 @@ export {
   buildWhatsAppLink,
   buildFollowLink,
   buildPersonalInviteText,
+  buildShareSignOff,
 } from './lib/invite-link';
 export {
   applyFollow,

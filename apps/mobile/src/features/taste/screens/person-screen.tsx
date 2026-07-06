@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     borderColor: MUTE,
     borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   followBtnOn: { borderColor: HAIR },
   followLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: MUTE },
@@ -165,5 +165,5 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   rowNote: { marginTop: 6 },
-  chevron: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.headlineLg, color: '#B7AE9F' },
+  chevron: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.headline, color: '#B7AE9F' },
 });

@@ -79,3 +79,12 @@ export const buildPersonalInviteText = (userId?: string | null): string => {
  * source of truth — every invite surface shares this exact copy.
  */
 export const INVITE_TEXT = appendInviteLink(INVITE_BASE);
+
+/**
+ * Quiet sign-off for utility shares of a single place/list — deliberately
+ * NOT the full personal-invite pitch above. A friend asking "where should we
+ * go" wants the place info the share carries, not a recruitment ad
+ * underneath it. Reserve buildPersonalInviteText for the explicit invite
+ * surfaces (People/You screens' own invite cards).
+ */
+export const buildShareSignOff = (): string => '— shared from Vouch';

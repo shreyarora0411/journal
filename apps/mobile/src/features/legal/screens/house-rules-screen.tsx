@@ -5,16 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const RULES = [
   {
-    title: 'Be kind.',
-    body: 'A friend wrote this trip. Treat it like a postcard, not a review.',
+    title: 'Read it like a friend.',
+    body: 'A note here means a friend loved the place enough to tell you. Take it as their word, not a star rating.',
   },
   {
-    title: 'Recommend honestly.',
-    body: "If a place was mid, say so. Vouch is only useful when it's truthful.",
+    title: 'Log honestly.',
+    body: "If a place was just fine, say fine — your map is only worth borrowing when it's true.",
   },
   {
-    title: 'Only your circle.',
-    body: 'No screenshots, no forwarding. What gets shared here stays here.',
+    title: 'Share what helps.',
+    body: "Send a place to the friend who needs it — that's what Vouch is for. Just carry the trust it came with when you pass it on.",
   },
 ];
 
@@ -37,7 +37,8 @@ export function HouseRulesScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <Text style={styles.title}>House rules</Text>
         <Text style={styles.intro}>
-          Vouch works because friends trust what friends write. Three rules keep it that way.
+          Vouch works because you only hear from people whose taste you'd actually borrow. Three
+          rules keep it that way.
         </Text>
         {RULES.map((r) => (
           <View key={r.title} style={styles.rule}>

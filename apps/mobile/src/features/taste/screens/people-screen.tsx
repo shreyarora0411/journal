@@ -92,7 +92,7 @@ export function PeopleScreen() {
         <View style={styles.gateCard}>
           <Text style={styles.gateTitle}>No maps to borrow yet.</Text>
           <Text style={styles.gateBody}>
-            You're past the gate — people appear here as more of the tribe logs {gate}+ loves.
+            You're past the gate — people appear here as more people log {gate}+ loves.
           </Text>
         </View>
       ) : (
@@ -131,6 +131,7 @@ export function PeopleScreen() {
                     onPress={() =>
                       t.followed ? unfollow.mutate(t.user_id) : follow.mutate(t.user_id)
                     }
+                    hitSlop={{ top: 8, bottom: 8 }}
                     style={[styles.followBtn, t.followed && styles.followBtnOn]}
                   >
                     <Text style={styles.followLabel}>{t.followed ? 'Following' : 'Follow'}</Text>
@@ -193,11 +194,11 @@ const styles = StyleSheet.create({
   gateCta: {
     marginTop: 16,
     backgroundColor: CORAL,
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
   },
-  gateCtaLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: '#FFFFFF' },
+  gateCtaLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: '#FFFFFF' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

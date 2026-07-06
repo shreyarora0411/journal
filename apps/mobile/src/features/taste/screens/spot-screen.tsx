@@ -1,6 +1,5 @@
 import { Eyebrow, Face, Page, StatusSpace, VoicedNote } from '@/components';
-import { useAuthStore } from '@/features/auth';
-import { buildPersonalInviteText } from '@/features/invite';
+import { buildShareSignOff } from '@/features/invite';
 import { log } from '@/lib/log';
 import { hubLabel } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -37,7 +36,6 @@ export function SpotScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = usePlaceDetail(id ?? null);
-  const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
 
   const place = q.data?.place ?? null;
   const lovers = q.data?.lovers ?? [];
@@ -51,16 +49,13 @@ export function SpotScreen() {
 
   // Whatever voiced note is already on this page — your own take first (it's
   // yours to share), else the top love — so the share never invents a quote.
+  // Only place name + note + maps link + a quiet sign-off: a friend asking
+  // "where should we go" wants the place, not a recruitment pitch under it.
   const shareSpot = () => {
     if (!place) return;
     log.event('taste.place_shared', { place_id: place.id, from: 'spot' });
     const note = mine?.note ?? lovers[0]?.note ?? null;
-    const message = [
-      place.name,
-      note ? `"${note}"` : null,
-      mapsUrl(place),
-      buildPersonalInviteText(viewerId),
-    ]
+    const message = [place.name, note ? `"${note}"` : null, mapsUrl(place), buildShareSignOff()]
       .filter((line): line is string => Boolean(line))
       .join('\n\n');
     Share.share({ message }).catch(() => undefined);
@@ -130,7 +125,9 @@ export function SpotScreen() {
           <View style={{ marginTop: 28, marginBottom: 80 }}>
             <Eyebrow>Who loved it</Eyebrow>
             {lovers.length === 0 ? (
-              <Text style={styles.empty}>No loves in your orbit yet — if you know it, log it.</Text>
+              <Text style={styles.empty}>
+                No loves in your circle yet — if you know it, log it.
+              </Text>
             ) : (
               <View style={{ gap: 10, marginTop: 12 }}>
                 {lovers.map((l) => {
@@ -139,7 +136,9 @@ export function SpotScreen() {
                     <Pressable
                       key={l.user_id}
                       accessibilityRole="button"
-                      accessibilityLabel={`Open ${who}'s map`}
+                      accessibilityLabel={
+                        l.note ? `Open ${who}'s map: "${l.note}"` : `Open ${who}'s map`
+                      }
                       onPress={() => router.push(`/(tabs)/person/${l.user_id}` as never)}
                       style={styles.loverCard}
                     >

@@ -161,7 +161,7 @@ export function ListDetailScreen() {
     }
   };
   const onDelete = (v: ListVouch) =>
-    Alert.alert('Delete this vouch?', 'It will be removed from your list and search.', [
+    Alert.alert('Delete this note?', 'It will be removed from your list and search.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -251,23 +251,23 @@ export function ListDetailScreen() {
           </View>
         )}
         <Text style={styles.meta}>
-          {isMine ? 'Your list' : 'A list from your circle'} · {vouches.length} vouch
-          {vouches.length === 1 ? '' : 'es'}
+          {isMine ? 'Your list' : 'A list from your circle'} · {vouches.length} note
+          {vouches.length === 1 ? '' : 's'}
         </Text>
 
         {isMine ? (
           <View style={styles.addRow}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Write a new vouch for this list"
+              accessibilityLabel="Write a new note for this list"
               onPress={onAddVouch}
               style={styles.addBtn}
             >
-              <Text style={styles.addLabel}>+ Write a vouch</Text>
+              <Text style={styles.addLabel}>+ Write a note</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Add a vouch you've already written"
+              accessibilityLabel="Add a note you've already written"
               onPress={() => setAddExistingOpen(true)}
               style={styles.addBtn}
             >
@@ -280,7 +280,7 @@ export function ListDetailScreen() {
           <Text style={styles.empty}>Loading…</Text>
         ) : vouches.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No vouches yet.</Text>
+            <Text style={styles.emptyTitle}>No notes here yet.</Text>
             <Text style={styles.emptyBody}>
               {isMine ? 'Add the first one — a place, a dish, a thing to do.' : 'Nothing here yet.'}
             </Text>
@@ -317,7 +317,7 @@ export function ListDetailScreen() {
                                 {editing ? (
                                   <>
                                     <TextInput
-                                      accessibilityLabel="Edit vouch"
+                                      accessibilityLabel="Edit note"
                                       value={draft}
                                       onChangeText={(t) => setDraft(t.slice(0, 500))}
                                       multiline
@@ -380,7 +380,7 @@ export function ListDetailScreen() {
                                       ) : null}
                                       <Pressable
                                         accessibilityRole="button"
-                                        accessibilityLabel="Share this vouch"
+                                        accessibilityLabel="Share this note"
                                         onPress={() => shareVouch(v)}
                                         hitSlop={12}
                                         style={styles.actionBtn}
@@ -392,7 +392,7 @@ export function ListDetailScreen() {
                                           <View style={{ flex: 1 }} />
                                           <Pressable
                                             accessibilityRole="button"
-                                            accessibilityLabel="Edit vouch"
+                                            accessibilityLabel="Edit note"
                                             onPress={() => startEdit(v)}
                                             hitSlop={12}
                                             style={styles.actionBtn}
@@ -401,7 +401,7 @@ export function ListDetailScreen() {
                                           </Pressable>
                                           <Pressable
                                             accessibilityRole="button"
-                                            accessibilityLabel="Delete vouch"
+                                            accessibilityLabel="Delete note"
                                             onPress={() => onDelete(v)}
                                             hitSlop={12}
                                             style={styles.actionBtn}

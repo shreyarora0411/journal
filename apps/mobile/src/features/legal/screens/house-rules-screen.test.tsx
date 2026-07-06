@@ -14,9 +14,9 @@ describe('HouseRulesScreen', () => {
   it('renders the title and the three house rules', () => {
     renderWithProviders(<HouseRulesScreen />);
     expect(screen.getByText('House rules')).toBeTruthy();
-    expect(screen.getByText(/Be kind/i)).toBeTruthy();
-    expect(screen.getByText(/Recommend honestly/i)).toBeTruthy();
-    expect(screen.getByText(/Only your circle/i)).toBeTruthy();
+    expect(screen.getByText(/Read it like a friend/i)).toBeTruthy();
+    expect(screen.getByText(/Log honestly/i)).toBeTruthy();
+    expect(screen.getByText(/Share what helps/i)).toBeTruthy();
   });
 
   it('renders a back button that calls router.back when pressed', () => {

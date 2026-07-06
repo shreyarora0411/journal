@@ -246,7 +246,7 @@ describe('TasteSetupScreen — follow-seed-maps step', () => {
     await screen.findByLabelText('Remove Sequel');
     fireEvent.press(screen.getByLabelText('Finish taste setup'));
 
-    await screen.findByText('Follow a few seed maps.');
+    await screen.findByText('Borrow a few maps to start.');
     expect(screen.getByText('Riya')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Follow Riya'));

@@ -273,22 +273,26 @@ export function TasteSetupScreen() {
   const followedCount = seedTwins.filter((t) => t.followed).length;
 
   return (
-    <Page>
+    <Page scroll={false}>
       <StatusSpace />
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.headline}>
           {phase === 'quiz'
             ? 'Two minutes of taste.'
             : phase === 'places'
               ? 'Eight places that are so you.'
-              : 'Follow a few seed maps.'}
+              : 'Borrow a few maps to start.'}
         </Text>
         <Text style={styles.sub}>
           {phase === 'quiz'
             ? 'Four quick calls — they seed your taste until your logs take over.'
             : phase === 'places'
               ? 'The places you already know you love. They become your map — and how we learn whose picks will land for you.'
-              : 'A few taste-matched maps to start your book with. Entirely optional — skip whenever.'}
+              : 'People whose taste already fits yours. Entirely optional — skip whenever.'}
         </Text>
 
         {phase === 'quiz' ? (
@@ -422,35 +426,6 @@ export function TasteSetupScreen() {
                 ))}
               </View>
             ) : null}
-
-            {picked.length >= GOAL ? (
-              // A fresh element at this position (vs. reusing the same Text
-              // as the count keeps climbing) so the scale-in plays once, on
-              // the tap that revealed it — not on every re-render after.
-              <Animated.Text entering={ZoomIn.duration(280)} style={styles.counter}>
-                {picked.length}/{GOAL} — that’s a taste.
-              </Animated.Text>
-            ) : (
-              <Text style={styles.counter}>
-                {picked.length}/{GOAL} — keep going.
-              </Text>
-            )}
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Finish taste setup"
-              onPress={onPlacesDone}
-              disabled={!canFinish}
-              style={[styles.cta, !canFinish && styles.ctaDisabled]}
-            >
-              <Text style={styles.ctaLabel}>
-                {picked.length >= GOAL
-                  ? 'Done — show my map'
-                  : picked.length === 0 && existingLoves > 0
-                    ? 'Done — back to my map'
-                    : `Finish with ${picked.length}`}
-              </Text>
-            </Pressable>
           </>
         ) : (
           <>
@@ -516,6 +491,43 @@ export function TasteSetupScreen() {
         )}
         <View style={{ height: 60 }} />
       </ScrollView>
+
+      {phase === 'places' ? (
+        // Sticky footer, outside the ScrollView — the counter and the CTA
+        // are the one piece of feedback and the one way to finish this
+        // phase; on a ~71-venue grid they must never require scrolling past
+        // every hub section to reach.
+        <View style={styles.placesFooter}>
+          {picked.length >= GOAL ? (
+            // A fresh element at this position (vs. reusing the same Text
+            // as the count keeps climbing) so the scale-in plays once, on
+            // the tap that revealed it — not on every re-render after.
+            <Animated.Text entering={ZoomIn.duration(280)} style={styles.counter}>
+              {picked.length}/{GOAL} — that’s a taste.
+            </Animated.Text>
+          ) : (
+            <Text style={styles.counter}>
+              {picked.length}/{GOAL} — keep going.
+            </Text>
+          )}
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Finish taste setup"
+            onPress={onPlacesDone}
+            disabled={!canFinish}
+            style={[styles.cta, !canFinish && styles.ctaDisabled]}
+          >
+            <Text style={styles.ctaLabel}>
+              {picked.length >= GOAL
+                ? 'That’s a taste — continue'
+                : picked.length === 0 && existingLoves > 0
+                  ? 'Continue'
+                  : `Finish with ${picked.length}`}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </Page>
   );
 }
@@ -563,6 +575,16 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: { opacity: 0.4 },
   ctaLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.emphasis, color: '#FFFFFF' },
+  // Pinned below the grid's ScrollView (sibling, not inside it) — the one
+  // piece of feedback and the one way to finish the pick-8 must survive
+  // scrolling past ~71 seeded venues. Background matches Page's own paper
+  // color so it reads as anchored chrome, not a card floating over tiles.
+  placesFooter: {
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: HAIR,
+    backgroundColor: '#FAF8F5',
+  },
   hubSection: { marginBottom: 18 },
   hubHeader: {
     fontFamily: SANS_BOLD,
@@ -622,7 +644,6 @@ const styles = StyleSheet.create({
     fontFamily: SANS_SEMI,
     fontSize: TASTE_TYPE_SCALE.body,
     color: MUTE,
-    marginTop: 16,
     textAlign: 'center',
   },
   followRow: {

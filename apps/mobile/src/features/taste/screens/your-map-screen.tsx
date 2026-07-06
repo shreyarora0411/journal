@@ -1,4 +1,4 @@
-import { Eyebrow, Face, Icon, Page, StatusSpace, VoicedNote } from '@/components';
+import { Eyebrow, Face, Icon, Page, StatusSpace, VoicedNote, Wordmark } from '@/components';
 import { useProfile } from '@/features/auth';
 import { hapticSuccess } from '@/lib/haptics';
 import { TASTE_TUNING } from '@journal/shared';
@@ -12,6 +12,7 @@ import { LoadError } from '../components/LoadError';
 import {
   CARD,
   CORAL,
+  CORAL_TEXT,
   GOLD,
   HAIR,
   INK,
@@ -19,6 +20,7 @@ import {
   SANS,
   SANS_BOLD,
   SANS_SEMI,
+  SENTIMENT,
   SERIF,
   TASTE_TYPE_SCALE,
 } from '../lib/taste-tokens';
@@ -27,6 +29,16 @@ const SENTIMENT_LABEL: Record<string, string> = {
   loved: 'Loved',
   fine: 'Fine',
   skip: 'Skip',
+};
+
+// Chip text only, never a fill — CORAL_TEXT (not SENTIMENT.loved's raw CORAL,
+// which is tuned for large fills/white-on-coral) so "Loved" clears AA
+// contrast while staying the quiet default. Coral itself stays reserved for
+// the identity readout + the one primary action (Log a place).
+const SENTIMENT_TEXT_COLOR: Record<string, string> = {
+  loved: CORAL_TEXT,
+  fine: SENTIMENT.fine,
+  skip: SENTIMENT.skip,
 };
 
 // A love logged last week hasn't gone stale — resurfacing it would read as a
@@ -107,9 +119,7 @@ export function YourMapScreen() {
       <StatusSpace />
 
       <View style={styles.header}>
-        <Text accessibilityLabel="Vouch." style={styles.wordmark}>
-          Vouch<Text style={{ color: CORAL }}>.</Text>
-        </Text>
+        <Wordmark size="md" />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Your profile"
@@ -154,16 +164,24 @@ export function YourMapScreen() {
         )}
       </View>
 
-      {/* Log CTA — the single most important action on an empty map. */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Log a place"
-        onPress={() => router.push('/(tabs)/add' as never)}
-        style={styles.logCta}
-      >
-        <Icon name="plus" size={16} color="#FFFFFF" />
-        <Text style={styles.logCtaLabel}>Log a place</Text>
-      </Pressable>
+      {/* Log CTA — the single most important action once the quiz is done
+          and nothing's logged yet. Suppressed in that exact zero-places
+          case: the empty-state card below already ends in its own
+          "Log a place ›" door, so a second identical CTA stacked above it
+          would split attention rather than reinforce it. It returns the
+          moment either the quiz is unfinished (different door: "Set up
+          your taste") or the list is non-empty. */}
+      {!(places.length === 0 && priorsQ.data) ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Log a place"
+          onPress={() => router.push('/(tabs)/add' as never)}
+          style={styles.logCta}
+        >
+          <Icon name="plus" size={16} color="#FFFFFF" />
+          <Text style={styles.logCtaLabel}>Log a place</Text>
+        </Pressable>
+      ) : null}
 
       {/* Re-entry door: the quiz was skippable — keep it reachable until
           priors exist (it stops rendering the moment they do). */}
@@ -175,7 +193,7 @@ export function YourMapScreen() {
           style={styles.setupNudge}
         >
           <Text style={styles.setupNudgeText}>
-            Finish your taste setup — four quick calls sharpen your map. ›
+            Finish your taste setup — four quick questions sharpen your map. ›
           </Text>
         </Pressable>
       ) : null}
@@ -212,8 +230,8 @@ export function YourMapScreen() {
             >
               <Text style={styles.emptyTitle}>Nothing logged yet.</Text>
               <Text style={styles.emptyBody}>
-                Two minutes: four quick calls, then the five places that are so you — and your taste
-                is live.
+                Two minutes: four quick questions, then the eight places that are so you — and your
+                taste is live.
               </Text>
               <Text style={styles.emptyCta}>Set up your taste ›</Text>
             </Pressable>
@@ -281,7 +299,6 @@ export function YourMapScreen() {
                   <Pressable
                     key={row.place.id}
                     accessibilityRole="button"
-                    accessibilityLabel={`Open ${row.place.name}`}
                     onPress={() => router.push(`/(tabs)/spot/${row.place?.id}` as never)}
                     style={styles.row}
                   >
@@ -298,17 +315,11 @@ export function YourMapScreen() {
                         <VoicedNote note={row.note} numberOfLines={2} style={styles.rowNote} />
                       ) : null}
                     </View>
-                    <View
-                      style={[
-                        styles.sentimentChip,
-                        row.sentiment === 'loved' && styles.sentimentLoved,
-                        row.sentiment === 'skip' && styles.sentimentSkip,
-                      ]}
-                    >
+                    <View style={styles.sentimentChip}>
                       <Text
                         style={[
                           styles.sentimentText,
-                          row.sentiment === 'loved' && { color: '#FFFFFF' },
+                          { color: SENTIMENT_TEXT_COLOR[row.sentiment] },
                         ]}
                       >
                         {SENTIMENT_LABEL[row.sentiment]}
@@ -332,7 +343,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 8,
   },
-  wordmark: { fontFamily: SERIF, fontSize: 26, color: INK, letterSpacing: -0.5 },
   eyebrowGold: {
     fontFamily: SANS_BOLD,
     fontSize: TASTE_TYPE_SCALE.micro,
@@ -383,7 +393,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 13,
     paddingVertical: 7,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
   },
   chipOn: { backgroundColor: CORAL, borderColor: CORAL },
   chipLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: INK },
@@ -425,8 +435,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  sentimentLoved: { backgroundColor: CORAL, borderColor: CORAL },
-  sentimentSkip: { backgroundColor: '#F2E2D2', borderColor: '#F2E2D2' },
   sentimentText: { fontFamily: SANS_SEMI, fontSize: 11.5, color: MUTE },
   empty: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 14 },
   emptyCard: {

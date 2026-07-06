@@ -39,7 +39,6 @@ import {
   SANS_BOLD,
   SANS_SEMI,
   SERIF,
-  SERIF_IT,
   TASTE_TYPE_SCALE,
   TINT,
 } from '../lib/taste-tokens';
@@ -160,7 +159,7 @@ export function YouScreen() {
   );
 
   const confirmDeleteList = (name: string, onDelete: () => Promise<void>) => {
-    Alert.alert('Delete this list?', `"${name}" will be removed. Items inside are not deleted.`, [
+    Alert.alert(`Delete "${name}"?`, 'The places on it stay on your map — only the shelf goes.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -206,16 +205,22 @@ export function YouScreen() {
       // eslint-disable-next-line no-alert
       if (
         typeof window !== 'undefined' &&
-        window.confirm('Sign out? You can sign back in with the same number.')
+        window.confirm(
+          "Sign out? Getting back in isn't self-serve yet — you'd need a hand from us.",
+        )
       ) {
         void run();
       }
       return;
     }
-    Alert.alert('Sign out?', 'You can sign back in with the same number.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: run },
-    ]);
+    Alert.alert(
+      'Sign out?',
+      "Getting back in isn't self-serve yet — you'd need a hand from us. Sure?",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign out', style: 'destructive', onPress: run },
+      ],
+    );
   };
 
   const following = reachQ.data?.following ?? 0;
@@ -255,7 +260,7 @@ export function YouScreen() {
         </Pressable>
       </View>
 
-      {bio && !editing ? <Text style={styles.bio}>"{bio}"</Text> : null}
+      {bio && !editing ? <VoicedNote note={bio} style={styles.bio} /> : null}
 
       {editing ? (
         <View style={styles.editCard}>
@@ -304,13 +309,7 @@ export function YouScreen() {
       ) : null}
 
       {/* 2. Taste identity card — the anti-dating affordance turned inward. */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="See your map as others do"
-        disabled={!viewerId}
-        onPress={() => viewerId && router.push(`/(tabs)/person/${viewerId}` as never)}
-        style={styles.identityCard}
-      >
+      <View style={styles.identityCard}>
         <Text style={styles.eyebrowGold}>YOUR TASTE</Text>
         {tasteQ.isLoading || placesQ.isLoading ? (
           <Text style={styles.readoutPrompt}>…</Text>
@@ -338,10 +337,17 @@ export function YouScreen() {
           </Text>
         )}
         <Text style={styles.identityStats}>
-          {lovedPlaces.length} love{lovedPlaces.length === 1 ? '' : 's'} · {hubCount} hub
+          {lovedPlaces.length} love{lovedPlaces.length === 1 ? '' : 's'} · {hubCount} neighbourhood
           {hubCount === 1 ? '' : 's'}
         </Text>
-        <Text style={styles.identityCta}>See your map as others do ›</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="See your map as others do"
+          disabled={!viewerId}
+          onPress={() => viewerId && router.push(`/(tabs)/person/${viewerId}` as never)}
+        >
+          <Text style={styles.identityCta}>See your map as others do ›</Text>
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Share your taste"
@@ -350,7 +356,7 @@ export function YouScreen() {
         >
           <Text style={styles.shareTastePillLabel}>Share your taste ›</Text>
         </Pressable>
-      </Pressable>
+      </View>
 
       <TasteShareCard
         visible={shareVisible}
@@ -368,6 +374,8 @@ export function YouScreen() {
         <Eyebrow>Your voice</Eyebrow>
         {placesQ.isLoading ? (
           <Text style={styles.empty}>Loading…</Text>
+        ) : placesQ.isError ? (
+          <LoadError message="Couldn't load your notes." onRetry={() => placesQ.refetch()} />
         ) : (
           <View style={{ marginTop: 12 }}>
             <Text style={styles.voiceCount}>
@@ -408,6 +416,8 @@ export function YouScreen() {
         </View>
         {listsQ.isLoading ? (
           <Text style={styles.empty}>Loading…</Text>
+        ) : listsQ.isError ? (
+          <LoadError message="Couldn't load your lists." onRetry={() => listsQ.refetch()} />
         ) : (listsQ.data ?? []).length === 0 ? (
           <Pressable
             accessibilityRole="button"
@@ -447,14 +457,18 @@ export function YouScreen() {
       {/* 5. Reach — borrowing framing, never bare "followers/following". */}
       <View style={{ marginTop: 30 }}>
         <Eyebrow>Reach</Eyebrow>
-        <View style={styles.reachCard}>
-          <Text style={styles.reachLine}>
-            {borrowers} {borrowers === 1 ? 'person' : 'people'} borrowing your map
-          </Text>
-          <Text style={styles.reachSub}>
-            Following {following} map{following === 1 ? '' : 's'}
-          </Text>
-        </View>
+        {reachQ.isError ? (
+          <LoadError message="Couldn't load your reach." onRetry={() => reachQ.refetch()} />
+        ) : (
+          <View style={styles.reachCard}>
+            <Text style={styles.reachLine}>
+              {borrowers} {borrowers === 1 ? 'person' : 'people'} borrowing your map
+            </Text>
+            <Text style={styles.reachSub}>
+              Following {following} map{following === 1 ? '' : 's'}
+            </Text>
+          </View>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Invite someone"
@@ -522,13 +536,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 8 },
   name: { fontFamily: SERIF, fontSize: TASTE_TYPE_SCALE.display, color: INK, letterSpacing: -0.5 },
   handle: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 3 },
-  bio: {
-    fontFamily: SERIF_IT,
-    fontSize: 14.5,
-    lineHeight: 21,
-    color: INK,
-    marginTop: 10,
-  },
+  bio: { marginTop: 10 },
 
   editCard: {
     marginTop: 14,

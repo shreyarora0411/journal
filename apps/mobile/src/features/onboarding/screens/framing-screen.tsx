@@ -97,7 +97,7 @@ export function FramingScreen() {
           ? err.message
           : String(err);
       log.error('framing update failed', { error: reason });
-      toast.show({ message: `Could not save: ${reason}`, variant: 'error' });
+      toast.show({ message: 'Could not save — try again.', variant: 'error' });
     }
   };
 
@@ -119,13 +119,13 @@ export function FramingScreen() {
                 {'A little\nabout you.'}
               </Text>
               <Text variant="caption" marginTop="m" style={{ fontSize: 14, lineHeight: 22 }}>
-                Your name shows up next to your notes. Your home city stays private — we use it to
-                tell weekend hangs from real trips.
+                Your name shows up next to your notes. Your home city stays private — it helps us
+                keep your map local.
               </Text>
             </Box>
 
             <Box marginTop="xl">
-              <Text variant="label" marginBottom="s">
+              <Text variant="label" marginBottom="s" style={{ fontSize: 10, lineHeight: 14 }}>
                 YOUR NAME
               </Text>
               <View
@@ -160,7 +160,7 @@ export function FramingScreen() {
             </Box>
 
             <Box marginTop="xl">
-              <Text variant="label" marginBottom="s">
+              <Text variant="label" marginBottom="s" style={{ fontSize: 10, lineHeight: 14 }}>
                 WHERE DO YOU LIVE?
               </Text>
               {homePickerOpen || homeCity.length === 0 ? (

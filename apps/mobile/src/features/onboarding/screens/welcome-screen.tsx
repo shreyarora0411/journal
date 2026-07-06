@@ -108,7 +108,7 @@ export function WelcomeScreen() {
               style={[
                 styles.card,
                 {
-                  marginTop: idx === 0 ? 0 : -28,
+                  marginTop: idx === 0 ? 0 : -16,
                   marginLeft: idx === 1 ? 36 : idx === 2 ? -16 : 0,
                   transform: [{ rotate: idx === 0 ? '-2deg' : idx === 1 ? '1.5deg' : '-1deg' }],
                   zIndex: idx,
@@ -126,7 +126,9 @@ export function WelcomeScreen() {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.cardQuote}>{c.quote}</Text>
+              <Text style={styles.cardQuote} numberOfLines={2}>
+                {c.quote}
+              </Text>
             </View>
           ))}
         </View>

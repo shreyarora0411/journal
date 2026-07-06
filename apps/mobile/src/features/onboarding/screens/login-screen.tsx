@@ -1,5 +1,6 @@
 import { KnownPhoneNoRecoveryError, useAuthStore, useStartSession } from '@/features/auth';
 import { fetchSelf } from '@/features/auth/api/use-profile';
+import { onboardingNextRoute } from '@/features/onboarding';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
@@ -81,17 +82,11 @@ export function LoginScreen() {
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData?.user?.id ?? null;
       if (!userId) {
-        toast.show({ message: 'Sign in succeeded but no user — try again.', variant: 'error' });
+        toast.show({ message: 'Something broke on our side — try again.', variant: 'error' });
         return;
       }
       const profile = await fetchSelf(userId);
-      if (profile?.onboarding_completed_at) {
-        router.replace('/(tabs)/book');
-      } else if (profile?.display_name) {
-        router.replace('/(auth)/circle');
-      } else {
-        router.replace('/(auth)/framing');
-      }
+      router.replace(onboardingNextRoute(profile) as never);
     } catch (err) {
       if (err instanceof KnownPhoneNoRecoveryError) {
         toast.show({ message: err.message, variant: 'error' });
@@ -131,7 +126,7 @@ export function LoginScreen() {
               Sign in with the number{'\n'}your friends already have.
             </Text>
             <Text style={styles.sub}>
-              Used only to match you with people you actually know — never shown or shared.
+              Used to recognize your account if you come back — never shown or shared.
             </Text>
 
             {/* Phone row — country pill + 10-digit input. */}
@@ -178,7 +173,8 @@ export function LoginScreen() {
                 <Text style={styles.privacyCheckGlyph}>✓</Text>
               </View>
               <Text style={styles.privacyText}>
-                Only your circle sees you. <Text style={{ color: INK }}>Promise.</Text>
+                Your number is never visible to anyone
+                <Text style={{ color: INK }}> — not even your friends.</Text>
               </Text>
             </View>
           </View>

@@ -1,5 +1,6 @@
 import { Eyebrow } from '@/components/Eyebrow';
 import { Wordmark } from '@/components/Wordmark';
+import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 type Props = {
@@ -28,13 +29,17 @@ export function OnboardingStepHeader({
   onBack,
   showWordmark = false,
 }: Props) {
+  const router = useRouter();
+  // No onBack means "this is the top of a Stack screen" — fall back to the
+  // router's own back() rather than leaving the visible chevron dead.
+  const handleBack = onBack ?? (() => router.back());
   return (
-    <View style={{ paddingHorizontal: 22, paddingTop: 8, gap: 16 }}>
+    <View style={{ paddingTop: 8, gap: 16 }}>
       {showBack ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={onBack}
+          onPress={handleBack}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={{ alignSelf: 'flex-start' }}
         >

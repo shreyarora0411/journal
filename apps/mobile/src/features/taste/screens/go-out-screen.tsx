@@ -11,6 +11,7 @@ import { LoadError } from '../components/LoadError';
 import {
   CARD,
   CORAL,
+  CORAL_TEXT,
   HAIR,
   INK,
   MUTE,
@@ -30,6 +31,20 @@ const TIER_LINE: Record<RecommendedPlace['tier'], string> = {
 
 const mapsUrl = (p: RecommendedPlace) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}&query_place_id=${p.google_place_id}`;
+
+const excerpt = (s: string, max = 60) => (s.length > max ? `${s.slice(0, max).trim()}…` : s);
+
+// The card's own accessibilityLabel used to be "Open ${p.name}", which (since
+// the card is one accessible Pressable) replaced every child Text for screen
+// readers — silently dropping the tier, the friend, the match%, and the note.
+// Compose the same information here instead of letting it go dark.
+const cardAccessibilityLabel = (p: RecommendedPlace) => {
+  const top = p.top_lovers[0];
+  const who = top ? (top.display_name ?? top.handle ?? 'Someone') : null;
+  const match = top?.match != null ? `${Math.round(top.match * 100)}% overlap` : null;
+  const note = top?.note ? `"${excerpt(top.note)}"` : null;
+  return [p.name, TIER_LINE[p.tier], who, match, note].filter(Boolean).join(', ');
+};
 
 /**
  * Go out — the demand payoff (spec §3, screen 3). Query = hub + occasion;
@@ -91,6 +106,7 @@ export function GoOutScreen() {
                 setZone(z);
                 setHub(null);
               }}
+              hitSlop={{ top: 6, bottom: 6 }}
               style={[styles.zoneChip, zone === z && styles.zoneChipOn]}
             >
               <Text style={[styles.zoneLabel, zone === z && styles.zoneLabelOn]}>
@@ -101,13 +117,15 @@ export function GoOutScreen() {
         </View>
 
         {/* Hub chips — how NCR actually decides ("CyberHub or 32nd?"). */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+        <Text style={styles.sectionEyebrow}>Where</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Anywhere"
               accessibilityState={{ selected: hub === null }}
               onPress={() => setHub(null)}
+              hitSlop={{ top: 6, bottom: 6 }}
               style={[styles.chip, hub === null && styles.chipOn]}
             >
               <Text style={[styles.chipLabel, hub === null && styles.chipLabelOn]}>Anywhere</Text>
@@ -119,6 +137,7 @@ export function GoOutScreen() {
                 accessibilityLabel={h.label}
                 accessibilityState={{ selected: hub === h.slug }}
                 onPress={() => setHub(hub === h.slug ? null : h.slug)}
+                hitSlop={{ top: 6, bottom: 6 }}
                 style={[styles.chip, hub === h.slug && styles.chipOn]}
               >
                 <Text style={[styles.chipLabel, hub === h.slug && styles.chipLabelOn]}>
@@ -130,7 +149,8 @@ export function GoOutScreen() {
         </ScrollView>
 
         {/* Occasion chips — gate the query by the need you're in right now. */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
+        <Text style={[styles.sectionEyebrow, { marginTop: 16 }]}>Occasion</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {OCCASION_TAGS.map((o) => (
               <Pressable
@@ -139,6 +159,7 @@ export function GoOutScreen() {
                 accessibilityLabel={o.label}
                 accessibilityState={{ selected: occasion === o.slug }}
                 onPress={() => setOccasion(occasion === o.slug ? null : o.slug)}
+                hitSlop={{ top: 6, bottom: 6 }}
                 style={[styles.chipSoft, occasion === o.slug && styles.chipOn]}
               >
                 <Text style={[styles.chipLabel, occasion === o.slug && styles.chipLabelOn]}>
@@ -191,7 +212,7 @@ export function GoOutScreen() {
               <Pressable
                 key={p.place_id}
                 accessibilityRole="button"
-                accessibilityLabel={`Open ${p.name}`}
+                accessibilityLabel={cardAccessibilityLabel(p)}
                 onPress={() => router.push(`/(tabs)/spot/${p.place_id}` as never)}
                 style={styles.card}
               >
@@ -264,6 +285,17 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   zoneRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  // Labels the "where" (hub) vs "what kind of night" (occasion) rails so the
+  // filter stack above the first result reads as two questions, not one
+  // undifferentiated wall of chips — matches taste-setup-screen's hubHeader.
+  sectionEyebrow: {
+    fontFamily: SANS_BOLD,
+    fontSize: TASTE_TYPE_SCALE.micro,
+    letterSpacing: 0.8,
+    color: MUTE,
+    textTransform: 'uppercase',
+    marginTop: 20,
+  },
   zoneChip: {
     borderWidth: 1,
     borderColor: HAIR,
@@ -338,12 +370,12 @@ const styles = StyleSheet.create({
     fontFamily: SANS_BOLD,
     fontSize: 10.5,
     letterSpacing: 1,
-    color: CORAL,
+    color: MUTE,
     textTransform: 'uppercase',
   },
   loverRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   loverName: { fontFamily: SANS_SEMI, fontSize: 13.5, color: INK },
-  loverMatch: { fontFamily: SANS_BOLD, fontSize: TASTE_TYPE_SCALE.label, color: CORAL },
+  loverMatch: { fontFamily: SANS_BOLD, fontSize: TASTE_TYPE_SCALE.label, color: CORAL_TEXT },
   loverNote: { marginTop: 3 },
   cardActions: { flexDirection: 'row', gap: 8 },
   actionBtn: {

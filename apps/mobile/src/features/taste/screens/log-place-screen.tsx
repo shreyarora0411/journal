@@ -43,6 +43,25 @@ const SENTIMENTS: { key: Sentiment; label: string }[] = [
   { key: 'skip', label: 'Skip' },
 ];
 
+// Shared by the place search input and the note input below it — one
+// border/placeholder/font treatment for both text inputs on this form,
+// instead of PlacePicker silently falling back to its own older defaults.
+const INPUT_PLACEHOLDER_COLOR = '#B7AE9F';
+
+// find_or_create_place (the log mutation's RPC) requires a non-empty
+// google_place_id — it's the canonical key places are keyed on. A free-text
+// place (Google/the seeded corpus couldn't find it) has no real one, so
+// synthesize a stable one from the typed name, the same trick
+// framing-screen.tsx uses for its Gurgaon quick-pick's fake id.
+const freeTextPlaceId = (name: string) => {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `free-text-${slug || Date.now()}`;
+};
+
 // A tiny scale pulse so the tap reads as registered before the mutation even
 // starts — the network round-trip is invisible, the tap shouldn't be.
 function SentimentChip({
@@ -146,6 +165,24 @@ export function LogPlaceScreen() {
     if (details.hub) setHub(details.hub);
   };
 
+  // The "Use "X" anyway" escape hatch — without this wired, any place Google
+  // and the seeded corpus can't find was a dead end with no way to log it.
+  const onFreeTextPlace = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    onPickPlace({
+      google_place_id: freeTextPlaceId(trimmed),
+      name: trimmed,
+      country: null,
+      country_iso: null,
+      region: null,
+      locality: null,
+      lat: null,
+      lng: null,
+      types: [],
+    });
+  };
+
   const onSave = async () => {
     if (!place || !sentiment || logPlace.isPending) return;
     // A place must land in SOME zone to surface in Go Out. The picked hub
@@ -167,10 +204,10 @@ export function LogPlaceScreen() {
       });
       hapticSuccess();
       if (!result.noteSaved) {
-        // Keep the whole form: the rating saved (idempotent on re-save),
+        // Keep the whole form: the sentiment saved (idempotent on re-save),
         // the note didn't — one more Save retries exactly that.
         toast.show({
-          message: "Rating saved, but your note didn't stick — tap Save again.",
+          message: "Saved how it was, but your note didn't stick — tap Save again.",
           variant: 'error',
         });
         return;
@@ -240,7 +277,15 @@ export function LogPlaceScreen() {
             </Pressable>
           </View>
         ) : (
-          <PlacePicker mode="broad" placeholder="Search the place…" onPick={onPickPlace} />
+          <PlacePicker
+            mode="broad"
+            placeholder="Search the place…"
+            onPick={onPickPlace}
+            onFreeText={onFreeTextPlace}
+            borderColor={HAIR}
+            placeholderTextColor={INPUT_PLACEHOLDER_COLOR}
+            inputFontFamily={SANS}
+          />
         )}
 
         {/* 2. The one-tap sentiment (required, private) */}
@@ -266,7 +311,7 @@ export function LogPlaceScreen() {
             <TextInput
               accessibilityLabel="Your note"
               placeholder="“Get the corner table, order the raan…”"
-              placeholderTextColor="#B7AE9F"
+              placeholderTextColor={INPUT_PLACEHOLDER_COLOR}
               value={note}
               onChangeText={(t) => setNote(t.slice(0, 500))}
               maxLength={500}
@@ -284,12 +329,14 @@ export function LogPlaceScreen() {
                 for overriding it or adding tags/occasion. */}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={detailsOpen ? 'Hide detail' : 'Add detail'}
+              accessibilityLabel={detailsOpen ? 'Hide detail' : 'Add detail — kind, occasion, hub'}
               accessibilityState={{ expanded: detailsOpen }}
               onPress={() => setDetailsOpen((v) => !v)}
               style={styles.disclosureRow}
             >
-              <Text style={styles.disclosureLabel}>Add detail</Text>
+              <Text style={styles.disclosureLabel}>
+                {detailsOpen ? 'Hide detail' : 'Add detail — kind, occasion, hub'}
+              </Text>
               <Text style={styles.disclosureChevron}>{detailsOpen ? '▴' : '▾'}</Text>
             </Pressable>
 
@@ -393,7 +440,7 @@ export function LogPlaceScreen() {
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Done logging"
+              accessibilityLabel="Back to your map"
               onPress={() => router.push('/(tabs)/book' as never)}
               hitSlop={8}
               style={{ alignSelf: 'center', marginTop: 14 }}
@@ -497,16 +544,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // Geometry + selected fill match go-out-screen's hub/occasion chips —
+  // both screens render the same underlying tags and previously disagreed
+  // on padding/font-size/selected-fill-color.
   tagChip: {
     borderWidth: 1,
     borderColor: HAIR,
     borderRadius: 999,
-    paddingHorizontal: 12,
+    paddingHorizontal: 13,
     paddingVertical: 7,
     backgroundColor: '#FFFFFF',
   },
-  tagChipOn: { backgroundColor: INK, borderColor: INK },
-  tagLabel: { fontFamily: SANS_SEMI, fontSize: 12.5, color: INK },
+  tagChipOn: { backgroundColor: CORAL, borderColor: CORAL },
+  tagLabel: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.body, color: INK },
   save: {
     marginTop: 26,
     backgroundColor: CORAL,

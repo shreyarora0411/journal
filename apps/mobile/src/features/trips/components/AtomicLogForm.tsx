@@ -277,7 +277,7 @@ export function AtomicLogForm() {
       }
 
       log.event('log.saved', { mode: 'tip', category, verdict });
-      toast.show({ message: 'Added to your book.', variant: 'success' });
+      toast.show({ message: 'Added to your map.', variant: 'success' });
       setSavedVenueId(venueId);
     } catch (err) {
       // Pull every field a PostgrestError might carry so we know

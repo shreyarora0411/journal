@@ -95,7 +95,7 @@ export function ProfileScreen() {
     }
   };
   const onDeleteVouch = (vouchId: string) =>
-    Alert.alert('Delete this vouch?', 'It will be removed from your book and search.', [
+    Alert.alert('Delete this vouch?', 'It will be removed from your map and search.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',

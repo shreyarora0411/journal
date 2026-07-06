@@ -200,7 +200,7 @@ export function CircleScreen() {
             />
             <View style={{ flex: 1 }}>
               <Text style={styles.matchedTitle}>{friends.length} friends already on Vouch.</Text>
-              <Text style={styles.matchedSub}>Add them and your book gets useful immediately.</Text>
+              <Text style={styles.matchedSub}>Add them and your map gets useful immediately.</Text>
             </View>
           </View>
           <Pressable

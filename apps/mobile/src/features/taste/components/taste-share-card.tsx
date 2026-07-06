@@ -2,7 +2,7 @@ import { VoicedNote, Wordmark } from '@/components';
 import { TASTE_AXES, type TasteAxes, type TasteAxis } from '@journal/shared';
 import { useRef, useState } from 'react';
 import { Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
-import ViewShot, { type ViewShotRef } from 'react-native-view-shot';
+import ViewShot from 'react-native-view-shot';
 import {
   CARD,
   CORAL,
@@ -64,7 +64,9 @@ export function TasteShareCard({
   places,
   inviteText,
 }: Props) {
-  const shotRef = useRef<ViewShotRef>(null);
+  // v4 (the SDK 54-pinned release) types the ref as the ViewShot class
+  // itself; capture() is optional on it, hence the ?. below.
+  const shotRef = useRef<ViewShot>(null);
   const [sharing, setSharing] = useState(false);
 
   const notedPlaces = places.filter((p) => p.note !== null);
@@ -74,7 +76,7 @@ export function TasteShareCard({
     if (sharing) return;
     setSharing(true);
     try {
-      const uri = await shotRef.current?.capture();
+      const uri = await shotRef.current?.capture?.();
       if (!uri) return;
       await Share.share({ url: uri, message: inviteText });
     } catch {

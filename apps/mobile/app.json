@@ -28,6 +28,7 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/icon.png",
           "backgroundColor": "#FAF8F3",
           "resizeMode": "contain"
         }
@@ -37,11 +38,13 @@
     "experiments": {
       "typedRoutes": true
     },
+    "icon": "./assets/icon.png",
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "TBD"
+        "projectId": "b1980f76-1d60-41d3-acc0-cd84bfe60df6"
       }
     },
-    "icon": "./assets/icon.png"
+    "owner": "shreyarora"
   }
 }

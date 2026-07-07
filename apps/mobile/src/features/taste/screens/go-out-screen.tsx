@@ -2,6 +2,7 @@ import { Face, Page, StatusSpace, VoicedNote } from '@/components';
 import { useAuthStore } from '@/features/auth';
 import { buildPersonalInviteText } from '@/features/invite';
 import { log } from '@/lib/log';
+import { recordPlaceSignal } from '@/lib/signals';
 import { DELHI_HUBS, GURGAON_HUBS, OCCASION_TAGS, hubLabel } from '@journal/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -70,12 +71,14 @@ export function GoOutScreen() {
 
   const openMaps = (p: RecommendedPlace) => {
     log.event('taste.maps_opened', { place_id: p.place_id, from: 'goout' });
+    recordPlaceSignal('maps_opened', p.place_id);
     Linking.openURL(mapsUrl(p)).catch(() => undefined);
   };
 
   // Top voiced note already on the card — never invent a quote for the share.
   const shareSpot = (p: RecommendedPlace) => {
     log.event('taste.place_shared', { place_id: p.place_id, from: 'goout' });
+    recordPlaceSignal('place_shared', p.place_id);
     const note = p.top_lovers[0]?.note ?? null;
     const message = [
       p.name,

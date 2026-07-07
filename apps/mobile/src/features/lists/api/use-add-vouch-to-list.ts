@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/features/auth';
+import { recordPlaceSignal } from '@/lib/signals';
 import { getSupabase } from '@/lib/supabase';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -23,6 +24,18 @@ export const useAddVouchToList = () => {
           { onConflict: 'vouch_id,list_id', ignoreDuplicates: true },
         );
       if (error) throw error;
+      // place_interactions needs the vouch's canonical place (nullable, not in
+      // the vars) — resolve it out-of-band so the lookup can never delay or
+      // fail the add; fire-and-forget like the signal itself.
+      void (async () => {
+        const { data } = await getSupabase()
+          .from('vouches')
+          .select('place_id')
+          .eq('id', vouchId)
+          .maybeSingle();
+        const placeId = (data as { place_id: string | null } | null)?.place_id;
+        if (placeId) recordPlaceSignal('list_add', placeId);
+      })().catch(() => undefined);
       return { vouchId, listId };
     },
     onSuccess: (_d, vars) => {

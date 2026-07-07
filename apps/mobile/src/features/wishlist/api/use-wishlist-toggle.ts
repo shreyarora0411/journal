@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/features/auth';
+import { recordPlaceSignal } from '@/lib/signals';
 import { getSupabase } from '@/lib/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -87,6 +88,9 @@ export const useToggleStash = () => {
       parentExternalId: string;
       parentLabel: string;
       venueLabel: string;
+      /** Canonical place id, when the caller resolved one — wishlist rows are
+       *  label-keyed, so the place_interactions signal only fires with this. */
+      placeId?: string | null;
     }) => {
       if (!userId) throw new Error('Not signed in');
       const supabase = getSupabase();
@@ -138,6 +142,7 @@ export const useToggleStash = () => {
         target_label: vars.venueLabel,
       });
       if (error) throw error;
+      if (vars.placeId) recordPlaceSignal('wishlist_add', vars.placeId);
       return { added: true };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: wishlistToggleKey(userId) }),

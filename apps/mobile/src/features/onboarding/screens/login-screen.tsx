@@ -129,10 +129,10 @@ export function LoginScreen() {
               Used to recognize your account if you come back — never shown or shared.
             </Text>
 
-            {/* Phone row — country pill + 10-digit input. */}
+            {/* Phone row — country pill + 10-digit input. No flag emoji:
+                it renders as a "?" tofu box in the custom fonts. */}
             <View style={styles.phoneRow}>
               <View style={styles.countryPill}>
-                <Text style={styles.countryFlag}>🇮🇳</Text>
                 <Text style={styles.countryCode}>+91</Text>
               </View>
               <View style={styles.divider} />
@@ -232,11 +232,9 @@ const styles = StyleSheet.create({
   countryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
-  countryFlag: { fontSize: 18 },
   countryCode: {
     fontFamily: 'DMSans_600SemiBold',
     fontSize: 16,

@@ -2,9 +2,9 @@ import { renderWithProviders, screen } from '@/test/render';
 import { CountryPill } from './CountryPill';
 
 describe('CountryPill', () => {
-  it('renders flag, +91 dial code, and chevron', () => {
+  it('renders +91 dial code and chevron — no flag emoji (tofu in custom fonts)', () => {
     renderWithProviders(<CountryPill />);
-    expect(screen.getByText('🇮🇳')).toBeTruthy();
+    expect(screen.queryByText('🇮🇳')).toBeNull();
     expect(screen.getByText('+91')).toBeTruthy();
     expect(screen.getByText('▾')).toBeTruthy();
   });

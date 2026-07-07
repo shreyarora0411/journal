@@ -11,7 +11,10 @@ import { buildPersonalInviteText, buildWhatsAppLink } from '@/features/invite';
 import { useDeleteList, useMyLists } from '@/features/lists';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/lib/log';
+import { recordPlaceSignal } from '@/lib/signals';
+import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import { type Visibility, ZERO_AXES } from '@journal/shared';
+import { useQuery } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -151,6 +154,32 @@ export function YouScreen() {
   const latestVoiced = voicedPlaces[0] ?? null;
   const lovedWithoutNote = lovedPlaces.filter((p) => p.note === null).length;
 
+  // Which places already carry the viewer's "what to order" picks —
+  // useMyPlaces doesn't return dishes and widening it isn't this screen's
+  // call, so one cheap own-row select (RLS-scoped) feeds the diff below.
+  const dishPlacesQ = useQuery({
+    queryKey: ['taste', 'my-dish-places', viewerId],
+    // The config guard keeps getSupabase from throwing in env-less contexts
+    // (jest included) — this screen's other data arrives via mocked hooks.
+    enabled: Boolean(viewerId) && isSupabaseConfigured(),
+    staleTime: 60_000,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await getSupabase()
+        .from('place_dishes')
+        .select('place_id')
+        .eq('user_id', viewerId as string);
+      if (error) throw error;
+      return (data ?? []).map((r) => r.place_id as string);
+    },
+  });
+  // Undefined data (loading or failed) computes to 0 — a nudge built on bad
+  // data would guilt-trip toward a broken flow, so it just stays hidden.
+  const lovedMissingOrder = useMemo(() => {
+    if (!dishPlacesQ.data) return 0;
+    const withDishes = new Set(dishPlacesQ.data);
+    return lovedPlaces.filter((p) => p.place && !withDishes.has(p.place.id)).length;
+  }, [lovedPlaces, dishPlacesQ.data]);
+
   // Feed the share card named loves — flatMap over a type guard keeps TS
   // happy without a verbose predicate function for the nullable `place`.
   const shareCardPlaces = useMemo(
@@ -184,6 +213,7 @@ export function YouScreen() {
 
   const onShareTaste = () => {
     log.event('you.share_taste_tapped');
+    recordPlaceSignal('taste_card_shared');
     setShareVisible(true);
   };
 
@@ -394,6 +424,20 @@ export function YouScreen() {
                 <Text style={styles.nudgeText}>
                   {lovedWithoutNote} loved place{lovedWithoutNote === 1 ? '' : 's'}{' '}
                   {lovedWithoutNote === 1 ? 'is' : 'are'} still waiting for your words. ›
+                </Text>
+              </Pressable>
+            ) : lovedMissingOrder > 0 ? (
+              // The lower-priority sibling nudge — never stacked under the
+              // notes one: one ask at a time, not a guilt pile.
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Log a place"
+                onPress={() => router.push('/(tabs)/add' as never)}
+                style={styles.nudgeCard}
+              >
+                <Text style={styles.nudgeText}>
+                  {lovedMissingOrder} loved place{lovedMissingOrder === 1 ? '' : 's'}{' '}
+                  {lovedMissingOrder === 1 ? 'is' : 'are'} missing the order. ›
                 </Text>
               </Pressable>
             ) : null}

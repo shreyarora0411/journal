@@ -124,6 +124,8 @@ export function LogPlaceScreen() {
   const [place, setPlace] = useState<PlaceDetails | null>(null);
   const [sentiment, setSentiment] = useState<Sentiment | null>(null);
   const [note, setNote] = useState('');
+  const [dishes, setDishes] = useState<string[]>([]);
+  const [dishDraft, setDishDraft] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [occasion, setOccasion] = useState<string | null>(null);
   const [hub, setHub] = useState<string | null>(null);
@@ -146,10 +148,40 @@ export function LogPlaceScreen() {
           : prev,
     );
 
+  const addDish = (raw: string) => {
+    const dish = raw.trim().slice(0, 40);
+    if (!dish) return;
+    setDishes((prev) =>
+      prev.length >= 3 || prev.some((d) => d.toLowerCase() === dish.toLowerCase())
+        ? prev
+        : [...prev, dish],
+    );
+  };
+
+  // Comma commits a chip mid-typing, same as return — "raan, kokum fizz"
+  // pasted or typed in one go still lands as separate dishes.
+  const onDishDraftChange = (t: string) => {
+    if (!t.includes(',')) {
+      setDishDraft(t);
+      return;
+    }
+    const parts = t.split(',');
+    const rest = parts.pop() ?? '';
+    for (const part of parts) addDish(part);
+    setDishDraft(rest.trimStart());
+  };
+
+  const commitDishDraft = () => {
+    addDish(dishDraft);
+    setDishDraft('');
+  };
+
   const reset = () => {
     setPlace(null);
     setSentiment(null);
     setNote('');
+    setDishes([]);
+    setDishDraft('');
     setTags([]);
     setOccasion(null);
     setHub(null);
@@ -191,11 +223,16 @@ export function LogPlaceScreen() {
     const zone = hub
       ? (ALL_HUBS.find((h) => h.slug === hub)?.zone ?? null)
       : inferZone(place.lat, place.lng);
+    // An uncommitted draft still counts — Save must not eat a typed dish
+    // just because the user never hit return/comma.
+    const draft = dishDraft.trim();
+    const dishesToSave = draft ? [...dishes, draft] : dishes;
     try {
       const result = await logPlace.mutateAsync({
         place,
         sentiment,
         note: note.trim() || undefined,
+        dishes: dishesToSave,
         tags,
         occasion,
         hub,
@@ -321,6 +358,47 @@ export function LogPlaceScreen() {
             />
             {note.length > 400 ? (
               <Text style={styles.noteCount}>{500 - note.length} characters left</Text>
+            ) : null}
+
+            {/* 3b. What to order (optional, ≤3) — a first-class ask beside
+                the note, NOT detail: the order is the most borrowable thing
+                a lover knows. Return or comma commits a chip. */}
+            <Text style={styles.eyebrow}>WHAT SHOULD THEY ORDER? (OPTIONAL)</Text>
+            {dishes.length > 0 ? (
+              <View style={styles.dishWrap}>
+                {dishes.map((d) => (
+                  <View key={d} style={styles.dishChip}>
+                    <Text style={styles.dishChipLabel} numberOfLines={1}>
+                      {d}
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${d}`}
+                      onPress={() => setDishes((prev) => prev.filter((x) => x !== d))}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.removeGlyph}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {dishes.length < 3 ? (
+              <TextInput
+                accessibilityLabel="What should they order"
+                placeholder="raan, kokum fizz…"
+                placeholderTextColor={INPUT_PLACEHOLDER_COLOR}
+                value={dishDraft}
+                onChangeText={onDishDraftChange}
+                onSubmitEditing={commitDishDraft}
+                maxLength={40}
+                returnKeyType="done"
+                // Keep the keyboard up after return — most people add a
+                // second dish right away.
+                submitBehavior="submit"
+                style={[styles.dishInput, dishes.length > 0 && { marginTop: 8 }]}
+                selectionColor={CORAL}
+              />
             ) : null}
 
             {/* 4. Tags/occasion/hub — collapsed by default (design critique:
@@ -537,6 +615,37 @@ const styles = StyleSheet.create({
     color: INK,
     minHeight: 72,
     textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 14,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  dishWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  dishChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: HAIR,
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    backgroundColor: '#FFFFFF',
+  },
+  dishChipLabel: {
+    fontFamily: SANS_SEMI,
+    fontSize: TASTE_TYPE_SCALE.body,
+    color: INK,
+    maxWidth: 200,
+  },
+  // Same treatment as taste-setup-screen's picked-row remove.
+  removeGlyph: { fontSize: TASTE_TYPE_SCALE.subhead, color: MUTE },
+  // The note input's border/placeholder/font treatment, single-line.
+  dishInput: {
+    fontFamily: SANS,
+    fontSize: 16,
+    color: INK,
     borderWidth: 1,
     borderColor: HAIR,
     borderRadius: 14,

@@ -24,6 +24,9 @@ export type LogPlaceVars = {
   note?: string;
   /** Optional ≤3 format-tag slugs. */
   tags?: string[];
+  /** Optional ≤3 "what to order" entries — caps (3 × 40 chars) and dedup
+   *  are re-enforced in the mutation, not just by the UI. */
+  dishes?: string[];
   /** Optional single occasion-tag slug — Go Out's occasion filter matches
    *  on these votes, so they must be castable at log time. */
   occasion?: string | null;
@@ -152,9 +155,41 @@ export const useLogPlace = () => {
         if (tagErr) log.warn('log-place tags skipped', { error: tagErr.message });
       }
 
+      // "What to order" — same delete-then-insert restatement as tags above
+      // (a re-log states your CURRENT picks) and the same best-effort
+      // contract: a dishes failure never fails the log.
+      const seenDish = new Set<string>();
+      const dishes = (vars.dishes ?? [])
+        .map((d) => d.trim().slice(0, 40))
+        .filter((d) => {
+          const key = d.toLowerCase();
+          if (!d || seenDish.has(key)) return false;
+          seenDish.add(key);
+          return true;
+        })
+        .slice(0, 3);
+      if (dishes.length > 0) {
+        const { error: dishClearErr } = await supabase
+          .from('place_dishes')
+          .delete()
+          .eq('place_id', pid);
+        const { error: dishErr } = dishClearErr
+          ? { error: dishClearErr }
+          : await supabase.from('place_dishes').insert(
+              dishes.map((dish, i) => ({
+                user_id: userId,
+                place_id: pid,
+                dish,
+                position: i + 1,
+              })),
+            );
+        if (dishErr) log.warn('log-place dishes skipped', { error: dishErr.message });
+      }
+
       log.event('taste.place_logged', {
         sentiment: vars.sentiment,
         tags: votes.length,
+        dishes: dishes.length,
         occasion: vars.occasion ?? 'none',
         list: vars.listId ? 'yes' : 'no',
       });

@@ -1,11 +1,13 @@
 import { Eyebrow, Face, Page, StatusSpace, VoicedNote } from '@/components';
 import { buildShareSignOff } from '@/features/invite';
 import { log } from '@/lib/log';
+import { recordPlaceSignal } from '@/lib/signals';
 import { hubLabel } from '@journal/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { usePlaceDetail } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
+import { aggregateDishes } from '../lib/dish-aggregate';
 import {
   CARD,
   CORAL,
@@ -41,21 +43,34 @@ export function SpotScreen() {
   const lovers = q.data?.lovers ?? [];
   const mine = q.data?.mine ?? null;
 
+  // The consensus "what to order" line — lovers' picks + the viewer's own.
+  const theOrder = aggregateDishes(lovers, mine?.dishes);
+
   const openMaps = () => {
     if (!place) return;
     log.event('taste.maps_opened', { place_id: place.id, from: 'spot' });
+    recordPlaceSignal('maps_opened', place.id);
     Linking.openURL(mapsUrl(place)).catch(() => undefined);
   };
 
   // Whatever voiced note is already on this page — your own take first (it's
   // yours to share), else the top love — so the share never invents a quote.
-  // Only place name + note + maps link + a quiet sign-off: a friend asking
-  // "where should we go" wants the place, not a recruitment pitch under it.
+  // Only place name + note + the order + maps link + a quiet sign-off: a
+  // friend asking "where should we go" wants the place, not a recruitment
+  // pitch under it.
   const shareSpot = () => {
     if (!place) return;
     log.event('taste.place_shared', { place_id: place.id, from: 'spot' });
+    recordPlaceSignal('place_shared', place.id);
     const note = mine?.note ?? lovers[0]?.note ?? null;
-    const message = [place.name, note ? `"${note}"` : null, mapsUrl(place), buildShareSignOff()]
+    const orderTop = theOrder.slice(0, 3);
+    const message = [
+      place.name,
+      note ? `"${note}"` : null,
+      orderTop.length > 0 ? `Order: ${orderTop.join(', ')}` : null,
+      mapsUrl(place),
+      buildShareSignOff(),
+    ]
       .filter((line): line is string => Boolean(line))
       .join('\n\n');
     Share.share({ message }).catch(() => undefined);
@@ -92,6 +107,13 @@ export function SpotScreen() {
               .join(' · ')
               .toUpperCase()}
           </Text>
+
+          {theOrder.length > 0 ? (
+            <View style={{ marginTop: 18 }}>
+              <Eyebrow>The order</Eyebrow>
+              <Text style={styles.orderLine}>{theOrder.join(' · ')}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.actionRow}>
             <Pressable
@@ -159,6 +181,11 @@ export function SpotScreen() {
                         </Text>
                       </View>
                       {l.note ? <VoicedNote note={l.note} size="lg" /> : null}
+                      {l.dishes && l.dishes.length > 0 ? (
+                        <Text style={styles.loverDishes} numberOfLines={1}>
+                          orders: {l.dishes.join(' · ')}
+                        </Text>
+                      ) : null}
                     </Pressable>
                   );
                 })}
@@ -187,6 +214,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     color: MUTE,
     marginTop: 6,
+  },
+  orderLine: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.headline,
+    lineHeight: 24,
+    color: INK,
+    letterSpacing: -0.3,
+    marginTop: 8,
   },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
   mapsBtn: {
@@ -219,6 +254,7 @@ const styles = StyleSheet.create({
   },
   mineSentiment: { fontFamily: SANS_SEMI, fontSize: 12.5, color: MUTE },
   loverHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  loverDishes: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.label, color: MUTE },
   loverName: { fontFamily: SANS_SEMI, fontSize: TASTE_TYPE_SCALE.subhead, color: INK },
   loverMatch: { fontFamily: SANS_BOLD, fontSize: TASTE_TYPE_SCALE.label, color: CORAL },
 });

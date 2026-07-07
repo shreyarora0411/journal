@@ -15,9 +15,11 @@ export {
   useMyPlaces,
   useRecommendPlaces,
   useTasteTwins,
+  useSeedMembers,
   usePlaceDetail,
   type MyPlaceRow,
   type RecommendedPlace,
   type TasteTwin,
+  type SeedMember,
   type PlaceLover,
 } from './api/use-taste-data';

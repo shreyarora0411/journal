@@ -205,6 +205,30 @@ export const useTasteTwins = () => {
   });
 };
 
+/** A member row from seed_members() — same shape as TasteTwin but match is
+ *  honestly nullable (no 8-love gate; NULL when a match isn't computable). */
+export type SeedMember = Omit<TasteTwin, 'match'> & { match: number | null };
+
+/** Everyone who has actually logged places, ordered by love count — the
+ *  ungated counterpart to useTasteTwins for the onboarding follow step,
+ *  where the gated query is guaranteed empty at seed scale. */
+export const useSeedMembers = () => {
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  return useQuery({
+    queryKey: ['taste', 'seed-members', userId],
+    enabled: Boolean(userId),
+    staleTime: 60_000,
+    queryFn: async (): Promise<SeedMember[]> => {
+      const { data, error } = await getSupabase().rpc('seed_members', { p_limit: 20 });
+      if (error) {
+        if (isMissing(error)) return [];
+        throw error;
+      }
+      return (data ?? []) as SeedMember[];
+    },
+  });
+};
+
 export type PlaceLover = {
   user_id: string;
   display_name: string | null;
@@ -213,6 +237,8 @@ export type PlaceLover = {
   match: number | null;
   followed: boolean;
   note: string | null;
+  /** "What to order" per lover, position-ordered (migration 67). */
+  dishes: string[] | null;
 };
 
 /** A place + who in the graph loved it (attributed, visibility-gated notes). */
@@ -223,7 +249,7 @@ export const usePlaceDetail = (placeId: string | null) => {
     enabled: Boolean(userId) && Boolean(placeId),
     queryFn: async () => {
       const supabase = getSupabase();
-      const [placeRes, loversRes, myReactRes, myNoteRes] = await Promise.all([
+      const [placeRes, loversRes, myReactRes, myNoteRes, myDishesRes] = await Promise.all([
         supabase
           .from('canonical_places')
           .select('id, name, hub, zone, category, google_place_id, lat, lng, destination_text')
@@ -247,11 +273,18 @@ export const usePlaceDetail = (placeId: string | null) => {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from('place_dishes')
+          .select('dish, position')
+          .eq('user_id', userId as string)
+          .eq('place_id', placeId as string)
+          .order('position', { ascending: true }),
       ]);
       if (placeRes.error && !isMissing(placeRes.error)) throw placeRes.error;
       if (loversRes.error && !isMissing(loversRes.error)) throw loversRes.error;
       if (myReactRes.error && !isMissing(myReactRes.error)) throw myReactRes.error;
       if (myNoteRes.error && !isMissing(myNoteRes.error)) throw myNoteRes.error;
+      if (myDishesRes.error && !isMissing(myDishesRes.error)) throw myDishesRes.error;
       return {
         place: placeRes.data ?? null,
         lovers: ((loversRes.data ?? []) as PlaceLover[]) ?? [],
@@ -259,6 +292,7 @@ export const usePlaceDetail = (placeId: string | null) => {
           ? {
               sentiment: myReactRes.data.sentiment as Sentiment,
               note: myNoteRes.data?.text ?? null,
+              dishes: (myDishesRes.data ?? []).map((d) => d.dish as string),
             }
           : null,
       };

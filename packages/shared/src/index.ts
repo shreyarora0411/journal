@@ -7,3 +7,4 @@ export * from './types';
 export * from './extractors';
 export * from './phone';
 export * from './taste';
+export * from './config';

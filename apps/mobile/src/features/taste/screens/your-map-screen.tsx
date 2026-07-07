@@ -3,6 +3,7 @@ import { useProfile } from '@/features/auth';
 import { hapticSuccess } from '@/lib/haptics';
 import { TASTE_TUNING } from '@journal/shared';
 import { hubLabel } from '@journal/shared';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -48,6 +49,8 @@ const RESURFACE_MIN_DAYS = 60;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DAYS_PER_MONTH = 30.44;
 
+const HOW_IT_WORKS_KEY = 'vouch.how-it-works-dismissed';
+
 /**
  * Your Map — home + identity (spec §3, screen 1). The make-or-break surface:
  * it must beat a Notes list as a personal artifact, because it's what makes
@@ -81,6 +84,21 @@ export function YourMapScreen() {
   }, [placesQ.data, lovedCount, gate]);
 
   const displayName = profile.data?.display_name ?? 'Your map';
+
+  // One-time orientation card — at seed scale the borrow-a-map loop is
+  // invisible (testers "didn't get what it was about"), so spell it out
+  // until the map has a little life. null = flag still loading → render
+  // nothing, so returning users who dismissed it never see a flash.
+  const [howItWorksDismissed, setHowItWorksDismissed] = useState<boolean | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(HOW_IT_WORKS_KEY)
+      .then((v) => setHowItWorksDismissed(v != null))
+      .catch(() => setHowItWorksDismissed(true)); // unreadable flag → stay hidden
+  }, []);
+  const dismissHowItWorks = () => {
+    setHowItWorksDismissed(true);
+    AsyncStorage.setItem(HOW_IT_WORKS_KEY, '1').catch(() => undefined);
+  };
 
   // Hub chips — derived client-side from the viewer's own places, not a new
   // query. Sorted by count so the hub they log most is the first tap.
@@ -163,6 +181,27 @@ export function YourMapScreen() {
           </>
         )}
       </View>
+
+      {/* How it works — the three-beat loop, shown only while the map is
+          nearly empty and never after an explicit dismiss. */}
+      {howItWorksDismissed === false && !placesQ.isLoading && places.length < 3 ? (
+        <View style={styles.howCard}>
+          <View style={styles.howHeader}>
+            <Text style={styles.howEyebrow}>HOW IT WORKS</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss how it works"
+              onPress={dismissHowItWorks}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.howDismiss}>✕</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.howLine}>Log places you love, in your words.</Text>
+          <Text style={styles.howLine}>Follow people whose taste matches yours.</Text>
+          <Text style={styles.howLine}>Go out on their word.</Text>
+        </View>
+      ) : null}
 
       {/* Log CTA — the single most important action once the quiz is done
           and nothing's logged yet. Suppressed in that exact zero-places
@@ -406,6 +445,23 @@ const styles = StyleSheet.create({
     borderColor: HAIR,
     backgroundColor: CARD,
   },
+  howCard: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: CARD,
+  },
+  howHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  howEyebrow: {
+    fontFamily: SANS_BOLD,
+    fontSize: TASTE_TYPE_SCALE.micro,
+    letterSpacing: 1.6,
+    color: MUTE,
+  },
+  howDismiss: { fontSize: TASTE_TYPE_SCALE.subhead, color: MUTE },
+  howLine: { fontFamily: SANS, fontSize: 13.5, lineHeight: 20, color: INK, marginTop: 6 },
   resurfaceText: { fontFamily: SANS, fontSize: 13.5, lineHeight: 20, color: MUTE },
   resurfaceName: { fontFamily: SANS_SEMI, color: INK },
   row: {

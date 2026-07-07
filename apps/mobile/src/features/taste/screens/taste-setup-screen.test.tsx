@@ -1,4 +1,5 @@
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/render';
+import { SEED_FOLLOW_USER_IDS } from '@journal/shared';
 import * as Haptics from 'expo-haptics';
 import { TasteSetupScreen } from './taste-setup-screen';
 
@@ -14,16 +15,23 @@ jest.mock('@/hooks/use-toast', () => ({
 }));
 
 const mockUpdateProfileMutateAsync = jest.fn();
+const mockProfile = jest.fn();
 jest.mock('@/features/auth', () => ({
   useAuthStore: <T,>(selector: (s: { session: { user: { id: string } } | null }) => T) =>
     selector({ session: { user: { id: 'user-1' } } }),
   useUpdateProfile: () => ({ mutateAsync: mockUpdateProfileMutateAsync, isPending: false }),
+  useProfile: () => mockProfile(),
 }));
 
 const mockFollowMutate = jest.fn();
+const mockFollowMutateAsync = jest.fn();
 const mockUnfollowMutate = jest.fn();
 jest.mock('@/features/follows', () => ({
-  useFollow: () => ({ mutate: mockFollowMutate, mutateAsync: jest.fn(), isPending: false }),
+  useFollow: () => ({
+    mutate: mockFollowMutate,
+    mutateAsync: mockFollowMutateAsync,
+    isPending: false,
+  }),
   useUnfollow: () => ({ mutate: mockUnfollowMutate, mutateAsync: jest.fn(), isPending: false }),
 }));
 
@@ -39,11 +47,11 @@ jest.mock('../api/use-save-priors', () => ({
 
 const mockMyPriors = jest.fn();
 const mockMyPlaces = jest.fn();
-const mockTasteTwins = jest.fn();
+const mockSeedMembers = jest.fn();
 jest.mock('../api/use-taste-data', () => ({
   useMyPriors: () => mockMyPriors(),
   useMyPlaces: () => mockMyPlaces(),
-  useTasteTwins: () => mockTasteTwins(),
+  useSeedMembers: () => mockSeedMembers(),
 }));
 
 type CorpusRow = {
@@ -64,6 +72,12 @@ const mockDeleteEq2 = jest.fn(() => Promise.resolve({ error: null as { message: 
 const mockDeleteEq1 = jest.fn(() => ({ eq: mockDeleteEq2 }));
 const mockDelete = jest.fn(() => ({ eq: mockDeleteEq1 }));
 
+// Auto-follow deliberately bypasses useFollow (its onError toasts "Couldn't
+// follow — try again." for a silent, invisible action) and inserts directly.
+const mockFollowsInsert = jest.fn(() =>
+  Promise.resolve({ error: null as { code?: string; message: string } | null }),
+);
+
 jest.mock('@/lib/supabase', () => ({
   getSupabase: () => ({
     from: (table: string) => {
@@ -81,6 +95,9 @@ jest.mock('@/lib/supabase', () => ({
       if (table === 'place_reactions') {
         return { delete: mockDelete };
       }
+      if (table === 'follows') {
+        return { insert: mockFollowsInsert };
+      }
       throw new Error(`taste-setup-screen.test: unexpected table "${table}"`);
     },
   }),
@@ -91,8 +108,16 @@ beforeEach(() => {
   mockToastShow.mockReset();
   mockUpdateProfileMutateAsync.mockReset();
   mockUpdateProfileMutateAsync.mockResolvedValue({});
+  mockProfile.mockReset();
+  // Default: profile not yet loaded / onboarding never completed — the
+  // auto-seed branch treats both as first-finish.
+  mockProfile.mockReturnValue({ data: null });
   mockFollowMutate.mockReset();
+  mockFollowMutateAsync.mockReset();
+  mockFollowMutateAsync.mockResolvedValue({ followedId: 'seeded' });
   mockUnfollowMutate.mockReset();
+  mockFollowsInsert.mockReset();
+  mockFollowsInsert.mockResolvedValue({ error: null });
   mockLogPlaceMutateAsync.mockReset();
   mockLogPlaceMutateAsync.mockImplementation(async ({ place }) => ({
     placeId: `place-for-${place.google_place_id}`,
@@ -105,8 +130,8 @@ beforeEach(() => {
   mockMyPriors.mockReturnValue({ data: null });
   mockMyPlaces.mockReset();
   mockMyPlaces.mockReturnValue({ data: [] });
-  mockTasteTwins.mockReset();
-  mockTasteTwins.mockReturnValue({ data: [], isLoading: false });
+  mockSeedMembers.mockReset();
+  mockSeedMembers.mockReturnValue({ data: [], isLoading: false });
   mockDeleteEq2.mockClear();
   mockDeleteEq1.mockClear();
   mockDelete.mockClear();
@@ -225,19 +250,20 @@ describe('TasteSetupScreen — places phase (curated grid)', () => {
 });
 
 describe('TasteSetupScreen — follow-seed-maps step', () => {
-  const twin = (over: Partial<Record<string, unknown>> = {}) => ({
-    user_id: 'twin-1',
+  const member = (over: Partial<Record<string, unknown>> = {}) => ({
+    user_id: 'member-1',
     display_name: 'Riya',
     handle: '@riya',
     avatar_url: null,
-    match: 0.82,
+    // seed_members' match is honestly nullable — no 8-love gate.
+    match: null,
     followed: false,
     love_count: 12,
     ...over,
   });
 
   it('after finishing the places phase, offers seed maps to follow — and Follow calls useFollow', async () => {
-    mockTasteTwins.mockReturnValue({ data: [twin()], isLoading: false });
+    mockSeedMembers.mockReturnValue({ data: [member()], isLoading: false });
     renderWithProviders(<TasteSetupScreen />);
     await answerQuizAndContinue();
     await screen.findByText('Sequel');
@@ -250,11 +276,11 @@ describe('TasteSetupScreen — follow-seed-maps step', () => {
     expect(screen.getByText('Riya')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Follow Riya'));
-    expect(mockFollowMutate).toHaveBeenCalledWith('twin-1');
+    expect(mockFollowMutate).toHaveBeenCalledWith('member-1');
   });
 
   it('the follow step is skippable and never blocks finishing onboarding, even with no seed suggestions', async () => {
-    mockTasteTwins.mockReturnValue({ data: [], isLoading: false });
+    mockSeedMembers.mockReturnValue({ data: [], isLoading: false });
     renderWithProviders(<TasteSetupScreen />);
     await answerQuizAndContinue();
     await screen.findByText('Sequel');
@@ -272,6 +298,56 @@ describe('TasteSetupScreen — follow-seed-maps step', () => {
       );
       expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
     });
+  });
+
+  it('finishing first-time onboarding auto-follows the seed graph via a direct insert, fire-and-forget', async () => {
+    renderWithProviders(<TasteSetupScreen />);
+    await answerQuizAndContinue();
+    await screen.findByText('Sequel');
+
+    fireEvent.press(screen.getByLabelText('Add Sequel'));
+    await screen.findByLabelText('Remove Sequel');
+    fireEvent.press(screen.getByLabelText('Finish taste setup'));
+
+    await screen.findByText('No seed maps yet.');
+    fireEvent.press(screen.getByLabelText('Finish taste setup'));
+
+    await waitFor(() => {
+      expect(mockFollowsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({ follower_id: 'user-1', followed_id: SEED_FOLLOW_USER_IDS[0] }),
+      );
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
+    });
+    // Never routed through useFollow — its onError would toast an error the
+    // user has no context for, for an action they never took.
+    expect(mockFollowMutateAsync).not.toHaveBeenCalled();
+    expect(mockToastShow).not.toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining("Couldn't follow") }),
+    );
+  });
+
+  it('still navigates to the map — silently, no error toast — when the auto-follow insert rejects', async () => {
+    mockFollowsInsert.mockResolvedValue({ error: { code: '23503', message: 'network down' } });
+    renderWithProviders(<TasteSetupScreen />);
+    await answerQuizAndContinue();
+    await screen.findByText('Sequel');
+
+    fireEvent.press(screen.getByLabelText('Add Sequel'));
+    await screen.findByLabelText('Remove Sequel');
+    fireEvent.press(screen.getByLabelText('Finish taste setup'));
+
+    await screen.findByText('No seed maps yet.');
+    fireEvent.press(screen.getByLabelText('Finish taste setup'));
+
+    await waitFor(() => {
+      expect(mockFollowsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({ follower_id: 'user-1', followed_id: SEED_FOLLOW_USER_IDS[0] }),
+      );
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/book');
+    });
+    expect(mockToastShow).not.toHaveBeenCalledWith(
+      expect.objectContaining({ variant: 'error', message: expect.stringContaining('follow') }),
+    );
   });
 });
 

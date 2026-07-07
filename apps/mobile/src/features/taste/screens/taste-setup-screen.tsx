@@ -1,12 +1,19 @@
 import { Face, Page, PlacePicker, StatusSpace } from '@/components';
-import { useAuthStore, useUpdateProfile } from '@/features/auth';
+import { useAuthStore, useProfile, useUpdateProfile } from '@/features/auth';
 import { useFollow, useUnfollow } from '@/features/follows';
 import { useToast } from '@/hooks/use-toast';
 import type { PlaceDetails } from '@/lib/google-places';
 import { hapticSuccess } from '@/lib/haptics';
 import { log } from '@/lib/log';
 import { getSupabase } from '@/lib/supabase';
-import { ALL_HUBS, TASTE_AXES, type TasteAxes, type TasteAxis, hubLabel } from '@journal/shared';
+import {
+  ALL_HUBS,
+  SEED_FOLLOW_USER_IDS,
+  TASTE_AXES,
+  type TasteAxes,
+  type TasteAxis,
+  hubLabel,
+} from '@journal/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,7 +21,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useLogPlace } from '../api/use-log-place';
 import { useSavePriors } from '../api/use-save-priors';
-import { useMyPlaces, useMyPriors, useTasteTwins } from '../api/use-taste-data';
+import { useMyPlaces, useMyPriors, useSeedMembers } from '../api/use-taste-data';
 import {
   CORAL,
   HAIR,
@@ -147,10 +154,16 @@ export function TasteSetupScreen() {
   const updateProfile = useUpdateProfile();
   const follow = useFollow();
   const unfollow = useUnfollow();
+  const profileQ = useProfile();
+  const viewerId = useAuthStore((s) => s.session?.user.id ?? null);
   const priorsQ = useMyPriors();
   const placesQ = useMyPlaces();
   const corpusQ = useCorpusPlaces();
-  const twinsQ = useTasteTwins();
+  // The follow step is deliberately UNGATED (seed_members, not taste_twins):
+  // the 8-love-both-sides twins query is guaranteed empty at seed scale, and
+  // an empty follow step is exactly the 0-follow cold start this step exists
+  // to prevent. The People tab keeps the honest gated twins.
+  const seedQ = useSeedMembers();
 
   const [answers, setAnswers] = useState<Partial<TasteAxes>>({});
   const [phase, setPhase] = useState<'quiz' | 'places' | 'follow'>('quiz');
@@ -252,6 +265,34 @@ export function TasteSetupScreen() {
           : 'Your taste setup is in.',
       variant: 'success',
     });
+    // Auto-seed the graph on FIRST finish only: 0-follow graphs make the
+    // product incomprehensible (Go Out is empty, borrowing a map is
+    // invisible). Best-effort and fire-and-forget — must never block or
+    // delay the navigate, and must never surface an error the user has no
+    // context for. Deliberately NOT useFollow(): its mutation has a built-in
+    // onError that shows "Couldn't follow — try again." regardless of
+    // whether the caller also catches the promise — exactly wrong for an
+    // action the user never took. A direct insert keeps this silent.
+    // Remove when contact-matching can seed the graph instead.
+    if (!profileQ.data?.onboarding_completed_at && viewerId) {
+      const alreadyFollowed = new Set(
+        (seedQ.data ?? []).filter((m) => m.followed).map((m) => m.user_id),
+      );
+      const supabase = getSupabase();
+      for (const seedId of SEED_FOLLOW_USER_IDS) {
+        if (seedId === viewerId || alreadyFollowed.has(seedId)) continue;
+        supabase
+          .from('follows')
+          .insert({ follower_id: viewerId, followed_id: seedId })
+          .then(({ error }) => {
+            if (error && error.code !== '23505') {
+              log.warn('auto-seed follow failed', { error: error.message });
+              return;
+            }
+            log.event('follow.auto_seeded');
+          });
+      }
+    }
     // Taste-setup is now the last gated step in the launch flow (circle/
     // contacts moved to a later re-entry point) — stamp completion here so
     // onboardingNextRoute() sends returning users straight to the map
@@ -269,7 +310,7 @@ export function TasteSetupScreen() {
   // picks — the pick-8 is for the cold start, not a toll booth.
   const canFinish = picked.length > 0 || existingLoves > 0;
 
-  const seedTwins = (twinsQ.data ?? []).slice(0, 3);
+  const seedTwins = (seedQ.data ?? []).slice(0, 3);
   const followedCount = seedTwins.filter((t) => t.followed).length;
 
   return (
@@ -430,7 +471,7 @@ export function TasteSetupScreen() {
         ) : (
           <>
             <View style={{ marginTop: 20, gap: 8 }}>
-              {twinsQ.isLoading ? (
+              {seedQ.isLoading ? (
                 <Text style={styles.sub}>Finding a few maps worth following…</Text>
               ) : seedTwins.length === 0 ? (
                 <View style={styles.emptyFollowCard}>

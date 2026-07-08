@@ -18,12 +18,18 @@ export const buildWhatsAppLink = (text: string, phone?: string): string => {
 
 /**
  * Canonical install destination — the single place the app's invite link lives.
- * EMPTY until the real App Store / TestFlight URL is ready; the maintainer will
- * supply it. Set it here and every invite/share surface picks it up at once,
- * because they all read from this one constant. Never point this at a domain
- * that isn't actually reachable (we had two dead ones — journal.app, lore.app).
+ * Points at the invite-redirect edge function (supabase/functions/invite-
+ * redirect), NOT directly at an EAS build artifact — build URLs change every
+ * release (four different ones in one session, previously), which would
+ * silently break every link already sent out in old WhatsApp threads. The
+ * function 302s to whatever app_config.invite_install_url currently is
+ * (migration 70) — updateable with one SQL UPDATE, no app release needed, so
+ * a link already in someone's chat history keeps working across every future
+ * build. Never point this at a domain that isn't actually reachable (we had
+ * two dead ones before this — journal.app, lore.app).
  */
-export const INVITE_URL: string = '';
+export const INVITE_URL: string =
+  'https://zcqnffylqfzoeibtkuty.supabase.co/functions/v1/invite-redirect';
 
 /**
  * Appends the install link to a share message — but only once a real URL exists.

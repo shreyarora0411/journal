@@ -229,6 +229,35 @@ export const useSeedMembers = () => {
   });
 };
 
+export type NoteReachRow = {
+  place_id: string;
+  place_name: string;
+  maps_opens: number;
+  shares: number;
+  last_used_at: string;
+};
+
+/** The payoff loop (migration 69): aggregate, identity-free counts of other
+ *  users opening maps / sharing places the viewer has voiced notes on.
+ *  Copy caveat lives in the migration header — say "places you've written
+ *  about", never "because of your note". */
+export const useNoteReach = () => {
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  return useQuery({
+    queryKey: ['taste', 'note-reach', userId],
+    enabled: Boolean(userId),
+    staleTime: 60_000,
+    queryFn: async (): Promise<NoteReachRow[]> => {
+      const { data, error } = await getSupabase().rpc('note_reach');
+      if (error) {
+        if (isMissing(error)) return [];
+        throw error;
+      }
+      return (data ?? []) as NoteReachRow[];
+    },
+  });
+};
+
 export type PlaceLover = {
   user_id: string;
   display_name: string | null;

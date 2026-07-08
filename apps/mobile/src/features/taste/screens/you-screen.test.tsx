@@ -55,9 +55,11 @@ jest.mock('@/hooks/use-toast', () => ({
 
 const mockMyTaste = jest.fn();
 const mockMyPlaces = jest.fn();
+const mockNoteReach = jest.fn();
 jest.mock('../api/use-taste-data', () => ({
   useMyTaste: () => mockMyTaste(),
   useMyPlaces: () => mockMyPlaces(),
+  useNoteReach: () => mockNoteReach(),
 }));
 
 const place = (over: Partial<Record<string, unknown>> = {}) => ({
@@ -82,6 +84,7 @@ beforeEach(() => {
   mockLists.mockReset();
   mockMyTaste.mockReset();
   mockMyPlaces.mockReset();
+  mockNoteReach.mockReset();
 
   mockProfile.mockReturnValue({
     data: {
@@ -117,6 +120,7 @@ beforeEach(() => {
     isError: false,
     refetch: jest.fn(),
   });
+  mockNoteReach.mockReturnValue({ data: [], isLoading: false, isError: false, refetch: jest.fn() });
 });
 
 describe('YouScreen', () => {
@@ -135,5 +139,55 @@ describe('YouScreen', () => {
     renderWithProviders(<YouScreen />);
     fireEvent.press(screen.getByLabelText('See your map as others do'));
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/person/user-self');
+  });
+
+  it('stays silent on the payoff card when nobody has used a noted place yet', () => {
+    renderWithProviders(<YouScreen />);
+    expect(screen.queryByText(/Your words are getting used/)).toBeNull();
+  });
+
+  it('surfaces the payoff card with an honest, non-causal line once someone acts on a noted place', () => {
+    mockNoteReach.mockReturnValue({
+      data: [
+        {
+          place_id: 'p1',
+          place_name: 'Anardana',
+          maps_opens: 2,
+          shares: 1,
+          last_used_at: '2026-07-01',
+        },
+        {
+          place_id: 'p2',
+          place_name: 'Comorin',
+          maps_opens: 1,
+          shares: 0,
+          last_used_at: '2026-06-20',
+        },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    renderWithProviders(<YouScreen />);
+    expect(
+      screen.getByText(
+        "Your words are getting used — 3 map opens and 1 share on places you've written about.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText('Most recently: Anardana')).toBeTruthy();
+    // Never claims causation — no "because of your note" / "thanks to you" wording.
+    expect(screen.queryByText(/because of your note/i)).toBeNull();
+  });
+
+  it('shows a retry affordance if the payoff query fails, without hiding the rest of the screen', () => {
+    mockNoteReach.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: jest.fn(),
+    });
+    renderWithProviders(<YouScreen />);
+    expect(screen.getByText("Couldn't check where your words traveled.")).toBeTruthy();
+    expect(screen.getByText('4 people borrowing your map')).toBeTruthy();
   });
 });

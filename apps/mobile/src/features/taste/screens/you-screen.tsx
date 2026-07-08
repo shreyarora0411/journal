@@ -28,7 +28,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useMyPlaces, useMyTaste } from '../api/use-taste-data';
+import { useMyPlaces, useMyTaste, useNoteReach } from '../api/use-taste-data';
 import { LoadError } from '../components/LoadError';
 import { TasteShareCard } from '../components/taste-share-card';
 import {
@@ -71,6 +71,7 @@ export function YouScreen() {
   const listsQ = useMyLists();
   const deleteList = useDeleteList();
   const reachQ = useReachCounts(viewerId);
+  const noteReachQ = useNoteReach();
   const toast = useToast();
 
   const [editing, setEditing] = useState(false);
@@ -255,6 +256,17 @@ export function YouScreen() {
 
   const following = reachQ.data?.following ?? 0;
   const borrowers = reachQ.data?.borrowers ?? 0;
+
+  // note_reach() returns per-place rows ordered by recency; the card shows
+  // one aggregate line + the most recent place name.
+  const noteReach = useMemo(() => {
+    const rows = noteReachQ.data ?? [];
+    return {
+      totalOpens: rows.reduce((n, r) => n + r.maps_opens, 0),
+      totalShares: rows.reduce((n, r) => n + r.shares, 0),
+      latestName: rows[0]?.place_name ?? null,
+    };
+  }, [noteReachQ.data]);
 
   return (
     <Page>
@@ -513,6 +525,31 @@ export function YouScreen() {
             </Text>
           </View>
         )}
+        {/* The payoff loop (migration 69): identity-free counts of others
+            acting on places you've voiced. Copy honesty: they opened the map
+            to a place you WROTE ABOUT — we can't prove they read the note
+            first, so the line never claims causation. Silent when empty:
+            a payoff surface must never guilt. */}
+        {noteReachQ.isError ? (
+          <LoadError
+            message="Couldn't check where your words traveled."
+            onRetry={() => noteReachQ.refetch()}
+          />
+        ) : noteReach.totalOpens + noteReach.totalShares > 0 ? (
+          <View style={styles.payoffCard}>
+            <Text style={styles.payoffLine}>
+              Your words are getting used — {noteReach.totalOpens} map
+              {noteReach.totalOpens === 1 ? ' open' : ' opens'}
+              {noteReach.totalShares > 0
+                ? ` and ${noteReach.totalShares} share${noteReach.totalShares === 1 ? '' : 's'}`
+                : ''}{' '}
+              on places you've written about.
+            </Text>
+            {noteReach.latestName ? (
+              <Text style={styles.payoffSub}>Most recently: {noteReach.latestName}</Text>
+            ) : null}
+          </View>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Invite someone"
@@ -732,6 +769,24 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   reachSub: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 4 },
+  // TINT ground: the payoff is the emotional beat of this section — it earns
+  // one step more warmth than the stats card above it, without touching coral.
+  payoffCard: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: HAIR,
+    backgroundColor: TINT,
+  },
+  payoffLine: {
+    fontFamily: SERIF,
+    fontSize: TASTE_TYPE_SCALE.headline,
+    lineHeight: 24,
+    color: INK,
+    letterSpacing: -0.3,
+  },
+  payoffSub: { fontFamily: SANS, fontSize: TASTE_TYPE_SCALE.body, color: MUTE, marginTop: 4 },
   inviteCard: {
     marginTop: 10,
     padding: 16,
